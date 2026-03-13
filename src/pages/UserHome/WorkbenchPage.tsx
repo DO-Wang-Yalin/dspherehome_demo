@@ -44,6 +44,7 @@ import {
   Compass,
   ArrowLeftRight,
   Search,
+  Hourglass,
 } from 'lucide-react'
 import { DesignFeedbackApp } from '../DesignFeedback/DesignFeedbackApp'
 import BudgetSankey from '../../components/BudgetSankey'
@@ -79,6 +80,7 @@ export function WorkbenchPage({
   onViewOrderDetail,
 }: WorkbenchPageProps) {
   const [active, setActive] = React.useState<NavKey>('home')
+  const [selectedOrderId, setSelectedOrderId] = React.useState<string | null>(null)
   const SIDEBAR_WIDTH_KEY = 'ai-studio:workbench:sidebarWidth:v1'
   const SIDEBAR_COLLAPSED_KEY = 'ai-studio:workbench:sidebarCollapsed:v1'
   const MIN_SIDEBAR_WIDTH = 220
@@ -380,10 +382,17 @@ export function WorkbenchPage({
                 onBackHome={() => setActive('home')}
               />
             ) : active === 'orders' ? (
-              <OrderManagementSection 
-                onGoToDesignFeedback={() => setActive('designFeedback')} 
-                onSelectOrder={onViewOrderDetail}
-              />
+              selectedOrderId ? (
+                <OrderDetailView 
+                  orderId={selectedOrderId} 
+                  onBack={() => setSelectedOrderId(null)} 
+                />
+              ) : (
+                <OrderManagementSection 
+                  onGoToDesignFeedback={() => setActive('designFeedback')} 
+                  onSelectOrder={(id) => setSelectedOrderId(id)}
+                />
+              )
             ) : active === 'budget' ? (
               <BudgetConfirmPanel />
             ) : active === 'contracts' ? (
@@ -555,8 +564,85 @@ function BudgetConfirmPanel() {
   const mockBumMax = 50
   const [sankeyTab, setSankeyTab] = React.useState<BudgetSankeyTab>('flow')
 
+  const summary = {
+    totalBudget: 50.0,
+    won: 15.5,
+    notWon: 34.5,
+    totalIncome: 26.0,
+    remainingIncome: 24.0
+  };
+
   return (
     <div className="space-y-6">
+      {/* 1. 财务概览卡片 */}
+      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">项目总预算</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-gray-900">{summary.totalBudget.toFixed(1)}</span>
+              <span className="text-xs text-gray-500 font-medium">万</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">已成交金额</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-[#4887FF]">{summary.won.toFixed(1)}</span>
+              <span className="text-xs text-gray-500 font-medium">万</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">未成交金额</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-gray-400">{summary.notWon.toFixed(1)}</span>
+              <span className="text-xs text-gray-500 font-medium">万</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">项目总入金</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-[#FBBF24]">{summary.totalIncome.toFixed(1)}</span>
+              <span className="text-xs text-gray-500 font-medium">万</span>
+            </div>
+          </div>
+          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">入金剩余金额</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-[#F97316]">{summary.remainingIncome.toFixed(1)}</span>
+              <span className="text-xs text-gray-500 font-medium">万</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. 预算流动可视化 (Sankey) - 挪到顶部 */}
+      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+          <div className="text-sm font-semibold text-gray-900">预算流动可视化</div>
+          <div className="text-xs text-gray-400">示意图 · 与 dsphr 桑基图布局对齐</div>
+        </div>
+        <div className="mb-3">
+          <div className="flex rounded-xl border border-gray-200 p-0.5 bg-gray-50 w-fit">
+            <button
+              type="button"
+              onClick={() => setSankeyTab('flow')}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'flow' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              订单预算拆解
+            </button>
+            <button
+              type="button"
+              onClick={() => setSankeyTab('epe')}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'epe' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              EPC预算拆解
+            </button>
+          </div>
+        </div>
+        {sankeyTab === 'flow' ? <BudgetSankey /> : <BudgetSankeyByEPE />}
+      </section>
+
+      {/* 3. 其他卡片内容 - 挪到底部 */}
       <section className="bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">预算方案确认</h1>
@@ -648,7 +734,7 @@ function BudgetConfirmPanel() {
             </button>
             <button
               type="button"
-              className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-2xl bg白色 text-sm font-medium px-4 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+              className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-sm font-medium px-4 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
             >
               提交反馈，调整预算结构（示意）
             </button>
@@ -663,36 +749,177 @@ function BudgetConfirmPanel() {
         </div>
       </section>
 
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <div className="text-sm font-semibold text-gray-900">预算流动可视化</div>
-          <div className="text-xs text-gray-400">示意图 · 与 dsphr 桑基图布局对齐</div>
-        </div>
-        <div className="mb-3">
-          <div className="flex rounded-xl border border-gray-200 p-0.5 bg-gray-50 w-fit">
-            <button
-              type="button"
-              onClick={() => setSankeyTab('flow')}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'flow' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              订单预算拆解
-            </button>
-            <button
-              type="button"
-              onClick={() => setSankeyTab('epe')}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'epe' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              EPC预算拆解
-            </button>
-          </div>
-        </div>
-        {sankeyTab === 'flow' ? <BudgetSankey /> : <BudgetSankeyByEPE />}
-      </section>
-
       <section className="bg-emerald-50 border border-emerald-100 rounded-3xl px-6 py-3 text-xs text-emerald-800 flex items-center justify-between">
         <span>正式环境下，这里会显示「已生效预算方案」与最近一次确认时间。</span>
         <span className="font-medium">演示版本 · 不写入任何真实数据</span>
       </section>
+    </div>
+  )
+}
+
+function OrderDetailView({ orderId, onBack }: { orderId: string; onBack: () => void }) {
+  // Mock data based on the image
+  const orderData = {
+    id: orderId,
+    title: '铝合金智能化幕墙采购与施工订单',
+    status: 'S06-订单交付中',
+    subStatus: 'S06-04 交付施工中',
+    totalAmount: '250,000',
+    coreRequirement: {
+      tone: '“现代主义风格，要求高透明度视觉效果，避免可见拼缝。”',
+      remarks: '客户对玻璃平整度有极高要求，需提供原片质检报告。'
+    },
+    quotations: [
+      { ver: 'V2', title: '订购报价单', status: '方案价未完成 / 待内审', statusColor: 'bg-gray-100 text-gray-500', time: '2023-11-24 15:00' },
+      { ver: 'V1', title: '订购报价单', status: '客户反馈调整 / 有评论', statusColor: 'bg-purple-50 text-purple-600', time: '2023-11-10 10:00' },
+      { ver: 'V0', title: '意向报价单', status: '客户决策通过 / 已结案', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-10-20 09:00' },
+    ]
+  }
+
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <button 
+            onClick={onBack}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-2"
+          >
+            <ArrowLeftRight size={14} className="rotate-180" />
+            返回列表
+          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">{orderData.id}</h1>
+            <div className="flex gap-2">
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-600 text-[10px] font-bold border border-blue-100 uppercase">
+                {orderData.status}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-orange-50 text-orange-600 text-[10px] font-bold border border-orange-100 uppercase">
+                {orderData.subStatus}
+              </span>
+            </div>
+          </div>
+          <p className="text-lg font-medium text-gray-500">{orderData.title}</p>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">订单概算总额</div>
+          <div className="flex items-baseline justify-end gap-1">
+            <span className="text-xs font-bold text-gray-900">¥</span>
+            <span className="text-4xl font-bold text-gray-900 tabular-nums">{orderData.totalAmount}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 需求核心 Card */}
+      <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden flex relative">
+        <div className="w-1.5 bg-blue-500 shrink-0" />
+        <div className="p-6 sm:p-8 flex-1 grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-1 flex items-start justify-center">
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+              <Bot size={20} />
+            </div>
+          </div>
+          <div className="md:col-span-7 space-y-4">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">需求核心</div>
+            <div className="space-y-2">
+              <div className="text-[10px] text-gray-400 font-bold uppercase">设计基调</div>
+              <p className="text-sm text-gray-900 leading-relaxed">
+                以<span className="text-blue-600 font-semibold">{orderData.coreRequirement.tone}</span>为准。
+              </p>
+            </div>
+          </div>
+          <div className="md:col-span-4 space-y-4">
+            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">关键备注</div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {orderData.coreRequirement.remarks}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 多轮报价进度管理 Section */}
+      <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+              <BarChart3 size={18} />
+            </div>
+            <h2 className="text-base font-bold text-gray-900">多轮报价进度管理</h2>
+          </div>
+          <button className="inline-flex items-center gap-2 bg-[#1A1C1E] text-white px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-black transition-all active:scale-95">
+            管理工作台
+            <ChevronRight size={14} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {orderData.quotations.map((q, idx) => (
+            <div 
+              key={idx}
+              className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-gray-50 hover:border-gray-200 hover:bg-gray-50/30 transition-all cursor-pointer"
+            >
+              <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 ${
+                q.ver === 'V2' ? 'bg-[#1A1C1E] text-white' : 
+                q.ver === 'V1' ? 'bg-[#8B5CF6] text-white' : 
+                'bg-[#10B981] text-white'
+              }`}>
+                <span className="text-[8px] font-bold opacity-60 uppercase">VER</span>
+                <span className="text-lg font-bold">{q.ver}</span>
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-base font-bold text-gray-900">{q.title}</h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${q.statusColor}`}>
+                    {q.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 font-medium tracking-tight">
+                  最后更新：{q.time}
+                </p>
+              </div>
+              <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-900 transition-colors" />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 财务结算清单 Section */}
+      <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-12">
+          <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
+            <LayoutGrid size={18} />
+          </div>
+          <h2 className="text-base font-bold text-gray-900">财务结算清单</h2>
+        </div>
+
+        <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-200">
+            <div className="animate-pulse">
+              <Hourglass size={32} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-gray-900">结算流程尚未开启</h3>
+            <p className="text-xs text-gray-400 font-medium">
+              结算单将在进入验收阶段（S07）后基于实际完成量生成。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer Info */}
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex items-center gap-6 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            云端连接正常
+          </div>
+          <div>同步节点: 东亚-01</div>
+        </div>
+        <div className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+          V4.5.0 PREMIUM
+        </div>
+      </div>
     </div>
   )
 }

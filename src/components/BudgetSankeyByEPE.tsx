@@ -298,14 +298,22 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
     const totalP = epeBuckets.P.closed + epeBuckets.P.open
     const totalC = epeBuckets.C.closed + epeBuckets.C.open
     const sum = totalE + totalP + totalC || layoutTotalBudget
+    
     let accum = 0
-    return (['E', 'P', 'C'] as const).map((key) => {
+    const stops: { offset: string; color: string }[] = []
+    
+    ;(['E', 'P', 'C'] as const).forEach((key, idx) => {
       const total = key === 'E' ? totalE : key === 'P' ? totalP : totalC
-      const offsetStart = (accum / sum) * 100
+      const start = (accum / sum) * 100
       accum += total
-      const offsetEnd = (accum / sum) * 100
-      return { offsetStart: `${offsetStart}%`, offsetEnd: `${offsetEnd}%`, color: EPE_COLORS[key] }
+      const end = (accum / sum) * 100
+      
+      // 在每个阶段的中心点放置纯色停靠点，让颜色自然过渡
+      if (idx === 0) stops.push({ offset: '0%', color: EPE_COLORS[key] })
+      stops.push({ offset: `${(start + end) / 2}%`, color: EPE_COLORS[key] })
+      if (idx === 2) stops.push({ offset: '100%', color: EPE_COLORS[key] })
     })
+    return stops
   }, [epeBuckets, layoutTotalBudget])
 
   const todayIncome = incomeLayout.find((inc) => inc.isToday)
@@ -342,7 +350,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
             <defs>
               <linearGradient id="bep-gradBudget" x1="0" y1="0" x2="0" y2="1">
                 {budgetGradientStops.map((stop, index) => (
-                  <stop key={index} offset={stop.offsetStart} stopColor={stop.color} stopOpacity="0.95" />
+                  <stop key={index} offset={stop.offset} stopColor={stop.color} stopOpacity="0.95" />
                 ))}
               </linearGradient>
               {(['E', 'P', 'C'] as const).map((epe) => (
@@ -351,12 +359,23 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
                   <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.4" />
                 </linearGradient>
               ))}
-              {(['E', 'P', 'C'] as const).map((epe) => (
-                <linearGradient key={`block-${epe}`} id={`bep-epe-block-${epe}`} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.15" />
-                  <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.25" />
-                </linearGradient>
-              ))}
+              {(['E', 'P', 'C'] as const).map((epe) => {
+                const bucket = epeBuckets[epe]
+                const total = bucket.closed + bucket.open
+                const ratio = total > 0 ? (bucket.closed / total) * 100 : 50
+                // 增加 12% 的过渡缓冲区，让渐变更自然
+                const buffer = 12
+                const s1 = Math.max(0, ratio - buffer)
+                const s2 = Math.min(100, ratio + buffer)
+                return (
+                  <linearGradient key={`block-${epe}`} id={`bep-epe-block-${epe}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.25" />
+                    <stop offset={`${s1}%`} stopColor={EPE_COLORS[epe]} stopOpacity="0.18" />
+                    <stop offset={`${s2}%`} stopColor={UNWON_GRAY} stopOpacity="0.18" />
+                    <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.1" />
+                  </linearGradient>
+                )
+              })}
               {(['E', 'P', 'C'] as const).map((epe) => (
                 <React.Fragment key={epe}>
                   <linearGradient id={`bep-epe-deal-${epe}-closed`} x1="0" y1="0" x2="1" y2="0">
@@ -490,18 +509,26 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
               <text x={(X.budgetLeft + X.budgetRight) / 2} y={budgetTop - 8} textAnchor="middle" fill="#6B7280" fontSize={11} fontWeight={600}>¥{layoutTotalBudget}w</text>
             </g>
 
-            {epeLayout.map((epe) => (
-              <g
-                key={`epe-${epe.key}`}
-                opacity={hovered === null || hovered === `epe-${epe.key}` ? 1 : 0.3}
-                onMouseEnter={() => setHovered(`epe-${epe.key}`)}
-              >
-                <rect x={X.epeLeft} y={epe.y} width={X.epeRight - X.epeLeft} height={epe.h} rx={5} fill={`url(#bep-epe-block-${epe.key})`} stroke={rgba(UNWON_GRAY, 0.2)} strokeWidth={1} />
-                <rect x={X.epeLeft} y={epe.y} width={4} height={epe.h} rx={2} fill={EPE_COLORS[epe.key]} opacity={0.8} />
-                <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + 4} fill="#1F2937" fontSize={12} fontWeight={600}>{EPE_LABELS[epe.key]}</text>
-                <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + 18} fill="#6B7280" fontSize={11}>已成交 ¥{epe.closed}w / 未成交 ¥{epe.open}w</text>
-              </g>
-            ))}
+            {epeLayout.map((epe) => {
+              const bucket = epeBuckets[epe.key]
+              const total = bucket.closed + bucket.open
+              const ratio = total > 0 ? bucket.closed / total : 0.5
+              // 动态调整文字位置：如果成交多，文字往上走；未成交多，文字往下走
+              const labelYOffset = ratio > 0.6 ? -10 : ratio < 0.4 ? 10 : 4
+              
+              return (
+                <g
+                  key={`epe-${epe.key}`}
+                  opacity={hovered === null || hovered === `epe-${epe.key}` ? 1 : 0.3}
+                  onMouseEnter={() => setHovered(`epe-${epe.key}`)}
+                >
+                  <rect x={X.epeLeft} y={epe.y} width={X.epeRight - X.epeLeft} height={epe.h} rx={5} fill={`url(#bep-epe-block-${epe.key})`} stroke={rgba(UNWON_GRAY, 0.2)} strokeWidth={1} />
+                  <rect x={X.epeLeft} y={epe.y} width={4} height={epe.h} rx={2} fill={EPE_COLORS[epe.key]} opacity={0.8} />
+                  <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + labelYOffset} fill="#1F2937" fontSize={12} fontWeight={600}>{EPE_LABELS[epe.key]}</text>
+                  <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + labelYOffset + 14} fill="#6B7280" fontSize={11}>已成交 ¥{epe.closed}w / 未成交 ¥{epe.open}w</text>
+                </g>
+              )
+            })}
 
             {dealNodes.map((d) => {
               const baseColor = d.closed ? EPE_COLORS[d.epe] : UNWON_GRAY

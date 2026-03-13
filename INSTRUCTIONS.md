@@ -14,6 +14,7 @@ This document serves as the mandatory operating guideline for the AI assistant w
 - **Safety**: If a UI change requires a logic change, the assistant must explain this to the user and seek confirmation before proceeding.
 
 ## 3. Communication Protocol (沟通协议)
+- **Language Rule (语言规则)**: The assistant MUST communicate in **Chinese** throughout the entire development process. All responses, explanations, and summaries must be in Chinese.
 - **NN Prefix Rule (NN 前缀规则)**: If a user message starts with `NN` (case-insensitive), the assistant MUST NOT call any code-editing tools. It must only respond with text.
 - **Pre-Action**: State clearly which page/file is being targeted.
 - **Post-Action**: Summarize exactly what was changed in that specific file.
