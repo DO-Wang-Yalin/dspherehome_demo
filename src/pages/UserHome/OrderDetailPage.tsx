@@ -249,6 +249,7 @@ export default function OrderDetailPage() {
               {orderData.quotations.map((q, idx) => (
                 <div 
                   key={idx}
+                  onClick={() => navigate('/quotation')}
                   className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-gray-50 hover:border-gray-200 hover:bg-gray-50/30 transition-all cursor-pointer"
                 >
                   <div className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 ${

@@ -18,9 +18,11 @@ import contractFlowImg from '../assets/contract-flow.png';
 import { HomeStyleEval } from '../pages/StyleEval/HomeStyleEval';
 
 interface StepProps {
+  key?: string | number;
   data: FormData;
   updateData: (fields: Partial<FormData>) => void;
   nextStep: () => void;
+  prevStep?: () => void;
   goToStep?: (stepId: string) => void;
   goToWorkbench?: () => void;
   goToLogin?: () => void;
