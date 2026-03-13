@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
   User,
@@ -6,6 +7,7 @@ import {
   DollarSign,
   CheckCircle2,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import { DesignDetails } from "./components/DesignDetails";
 import { ProductDetails } from "./components/ProductDetails";
@@ -14,7 +16,7 @@ import { SignatureModal } from "./components/SignatureModal";
 import { FeedbackModal } from "./components/FeedbackModal";
 import { toast } from "sonner";
 
-// 模拟数据
+// 模拟数据 (保持不变)
 const quotationData = {
   orderNumber: "EPC-2026-0115-001",
   date: "2026年01月15日",
@@ -320,6 +322,9 @@ const quotationData = {
 };
 
 export default function QuotationPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { orderNumber, orderTitle } = location.state || {};
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -356,6 +361,15 @@ export default function QuotationPage() {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-screen-2xl mx-auto p-6">
+        {/* 返回按钮 */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-[#6B7280] hover:text-[#0A0A0A] mb-6 transition-colors font-medium"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          返回订单详情
+        </button>
+
         {/* 头部 */}
         <div className="bg-white rounded-[24px] shadow-card hover:shadow-xl transition-shadow duration-300 p-8 mb-24 border border-[#E5E7EB]">
           <div className="flex items-center justify-between mb-6">
@@ -382,8 +396,15 @@ export default function QuotationPage() {
                 订单编号
               </div>
               <div className="text-[16px] font-bold text-[#0A0A0A] mt-1">
-                {quotationData.orderNumber}
+                {orderNumber || quotationData.orderNumber}
               </div>
+              {orderTitle && (
+                <div className="mt-2 pt-2 border-t border-[#E5E7EB]">
+                  <p className="text-[16px] font-bold text-[#0A0A0A]">
+                    {orderTitle}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -486,6 +507,155 @@ export default function QuotationPage() {
           items={quotationData.constructionItems}
           total={quotationData.pricing.construction}
         />
+
+        {/* 页脚说明 */}
+        <div className="bg-white rounded-[24px] shadow-card p-8 mt-24 border border-[#E5E7EB]">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-6 bg-[#EF6B00] rounded-full"></div>
+            <h3 className="font-black text-[#0A0A0A] text-[30px]">
+              您可向居梦科技对公收款账户付款：
+            </h3>
+          </div>
+          <ul className="space-y-3 text-[16px] text-[#0A0A0A] mb-6">
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>
+                <span className="font-semibold">账户名称：</span>
+                居梦科技（深圳）有限公司
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>
+                <span className="font-semibold">账户号码：</span>
+                755953465810902
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>
+                <span className="font-semibold">开户银行：</span>
+                招商银行深圳分行滨海支行
+              </span>
+            </li>
+          </ul>
+
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-1 h-6 bg-[#EF6B00] rounded-full"></div>
+            <h3 className="font-black text-[#0A0A0A] text-[30px]">
+              EPC 订单报价备注：
+            </h3>
+          </div>
+          <ul className="space-y-3 text-[16px] text-[#0A0A0A]">
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>本报价单内报价均为含税报价</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>产品与服务报价数量仅供参考</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#EF6B00] font-bold">•</span>
+              <span>实际数量以验收后结算单为准</span>
+            </li>
+          </ul>
+
+          {/* 确认报价单区域 */}
+          <div className="mt-8 pt-6 border-t border-[#E5E7EB]">
+            {!isConfirmed && !isFeedbackSubmitted ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={handleConfirmClick}
+                    className="flex items-center gap-3 bg-[#EF6B00] hover:bg-[#CC5B00] text-white px-8 py-4 rounded-[16px] shadow-card hover:shadow-xl transition-all duration-300 font-bold text-[16px]"
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                    确认报价单
+                  </button>
+                  <button
+                    onClick={handleFeedbackClick}
+                    className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 font-bold text-[16px]"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                    希望调整方案
+                  </button>
+                </div>
+                <p className="text-[12px] text-[#6B7280] font-medium">
+                  您可以直接确认，或告诉我们您的想法和建议
+                </p>
+              </div>
+            ) : isConfirmed ? (
+              <div className="bg-green-50 rounded-[24px] p-6 border border-green-200">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-green-600 p-2 rounded-xl">
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-green-900 text-[30px]">
+                          报价单已确认
+                        </h4>
+                        <p className="text-[12px] text-green-700 mt-1 font-medium">
+                          确认时间：{new Date().toLocaleString("zh-CN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[16px] text-[#6B7280]">
+                      感谢您的信任！我们将尽快安排项目启动事宜，并与您保持密切沟通。
+                    </p>
+                  </div>
+                  {signatureData && (
+                    <div className="flex-shrink-0">
+                      <div className="text-[12px] text-[#6B7280] mb-2 text-center font-medium">
+                        客户签名
+                      </div>
+                      <img
+                        src={signatureData}
+                        alt="客户签名"
+                        className="w-48 h-24 border-2 border-green-300 rounded-xl bg-white object-contain"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : isFeedbackSubmitted ? (
+              <div className="bg-orange-50 rounded-[24px] p-6 border border-orange-200">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-[#EF6B00] p-2 rounded-xl">
+                        <MessageSquare className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-[#0A0A0A] text-[30px]">
+                          调整建议已收到
+                        </h4>
+                        <p className="text-[12px] text-[#6B7280] mt-1 font-medium">
+                          提交时间：{new Date().toLocaleString("zh-CN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[16px] text-[#6B7280]">
+                      感谢您的宝贵意见！我们的客户经理会在1个工作日内联系您，沟通调整方案。
+                    </p>
+                  </div>
+                  {feedbackText && (
+                    <div className="flex-shrink-0 max-w-md">
+                      <div className="text-[12px] text-[#6B7280] mb-2 font-medium">
+                        您的反馈
+                      </div>
+                      <div className="border-2 border-orange-300 rounded-xl bg-white p-3 text-[16px] text-[#0A0A0A] max-h-24 overflow-y-auto">
+                        {feedbackText}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
 
         {/* 页脚说明 */}
         <div className="bg-white rounded-[24px] shadow-card p-8 mt-24 border border-[#E5E7EB]">

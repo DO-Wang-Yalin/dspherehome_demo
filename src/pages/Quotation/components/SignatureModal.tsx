@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { X, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 interface SignatureModalProps {
