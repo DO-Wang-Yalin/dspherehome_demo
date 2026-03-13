@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FileText,
   User,
@@ -6,6 +7,7 @@ import {
   DollarSign,
   CheckCircle2,
   MessageSquare,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DesignDetails } from "../../components/DesignDetails";
@@ -140,6 +142,13 @@ const settlementData = {
 };
 
 export default function QuotationPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { orderNumber, orderTitle } = location.state || { 
+    orderNumber: settlementData.orderNumber, 
+    orderTitle: "EPC 项目结算单" 
+  };
+
   const [showSignature, setShowSignature] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
@@ -163,7 +172,16 @@ export default function QuotationPage() {
 
   return (
     <div className="min-h-screen bg-white pb-20">
-      <div className="max-w-screen-2xl mx-auto p-6">  
+      <div className="max-w-screen-2xl mx-auto p-6">
+        {/* Back Button */}
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-[#6B7280] hover:text-[#0A0A0A] transition-colors mb-6 font-bold text-[14px]"
+        >
+          <ArrowLeft size={20} />
+          返回订单详情
+        </button>
+
         {/* Header */}
         <div className="bg-white rounded-[24px] shadow-card p-8 mb-8 border border-[#E5E7EB]">
           <div className="flex items-center justify-between mb-6">
@@ -173,6 +191,7 @@ export default function QuotationPage() {
               </div>
               <div>
                 <h1 className="text-[48px] font-black text-[#0A0A0A]">EPC结算单</h1>
+                <div className="text-[18px] font-bold text-[#6B7280] mt-1">{orderTitle}</div>
                 {isConfirmed && (
                   <div className="flex items-center gap-2 mt-2">
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -183,7 +202,7 @@ export default function QuotationPage() {
             </div>
             <div className="text-right bg-gray-50 px-6 py-4 rounded-xl">
               <div className="text-[12px] text-[#6B7280] uppercase tracking-wide font-medium">销售订单</div>
-              <div className="text-[16px] font-bold text-[#0A0A0A] mt-1">{settlementData.orderNumber}</div>
+              <div className="text-[16px] font-bold text-[#0A0A0A] mt-1">{orderNumber}</div>
             </div>
           </div>
 

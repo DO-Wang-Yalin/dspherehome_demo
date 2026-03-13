@@ -305,7 +305,12 @@ export default function OrderDetailPage() {
 
           {activeIndex >= 6 ? (
             <div 
-              onClick={() => navigate(`/settlement/${id}`)}
+              onClick={() => navigate(`/settlement/${id}`, {
+                state: {
+                  orderNumber: orderData.id,
+                  orderTitle: orderData.title
+                }
+              })}
               className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-orange-50 bg-orange-50/10 hover:border-orange-200 hover:bg-orange-50/30 transition-all cursor-pointer"
             >
               <div className="w-14 h-14 rounded-2xl bg-[#EF6B00] text-white flex flex-col items-center justify-center shrink-0 shadow-lg shadow-orange-200">
