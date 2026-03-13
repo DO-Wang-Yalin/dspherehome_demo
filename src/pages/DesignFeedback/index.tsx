@@ -6,6 +6,6 @@ export default function DesignFeedbackPage() {
   const navigate = useNavigate();
 
   return (
-    <DesignFeedbackApp onGoHome={() => navigate('/home')} />
+    <DesignFeedbackApp onGoHome={() => navigate(-1)} />
   );
 }

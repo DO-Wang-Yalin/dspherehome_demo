@@ -20,7 +20,6 @@ export default function UserHomePage() {
       onExit={() => navigate('/')}
       onGoToFirstPage={() => navigate('/style-eval')}
       onBackToProjects={() => navigate('/projects')}
-      onGoToDesignFeedback={() => navigate('/feedback')}
       onViewOrderDetail={(id) => navigate(`/order/${id}`)}
     />
   );

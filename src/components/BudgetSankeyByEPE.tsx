@@ -335,7 +335,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
               <span className="text-gray-500" style={{ fontSize: 12 }}>{EPE_LABELS[k]}</span>
             </div>
           ))}
-          <span className="text-gray-400 text-xs">已成交（彩色） · 未成交（灰色） · 连线呈现 E/P/C 到灰色的渐变</span>
+          <span className="text-gray-400 text-xs">已成交（彩色） · 未成交（灰色）</span>
         </div>
       </div>
 
@@ -383,7 +383,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
                     <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.6" />
                   </linearGradient>
                   <linearGradient id={`bep-epe-deal-${epe}-open`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.4" />
+                    <stop offset="0%" stopColor={UNWON_GRAY} stopOpacity="0.3" />
                     <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.5" />
                   </linearGradient>
                 </React.Fragment>

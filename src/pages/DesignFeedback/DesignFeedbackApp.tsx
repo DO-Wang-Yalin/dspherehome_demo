@@ -12,6 +12,7 @@ import {
   LayoutGrid,
   ChevronRight,
   History,
+  ArrowLeftRight,
 } from 'lucide-react';
 
 // 简单版 cn：支持字符串和对象写法，避免额外依赖
@@ -1434,15 +1435,26 @@ function PageViewer({
 function DesignOverview({
   order,
   onStartView,
+  onGoHome,
 }: {
   order: DesignOrder;
   onStartView: (versionId: string) => void;
+  onGoHome?: () => void;
 }) {
   const activeVersion = order.versions.find((v) => v.id === order.currentVersionId) || order.versions[0];
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-8">
       <div className="w-full max-w-4xl mb-6">
+        {onGoHome && (
+          <button
+            onClick={onGoHome}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeftRight size={14} className="rotate-180" />
+            返回订单详情
+          </button>
+        )}
         <div className="text-sm font-medium text-slate-600 mb-1">订单总览</div>
         <h1 className="text-xl font-bold text-slate-800 tracking-tight">
           {order.orderNumber}
@@ -1616,6 +1628,7 @@ export function DesignFeedbackApp({ onGoHome }: { onGoHome?: () => void }) {
         <DesignOverview
           order={DESIGN_FEEDBACK_ORDER}
           onStartView={(versionId) => handleSelectVersion(versionId, false)}
+          onGoHome={onGoHome}
         />
       )}
 
