@@ -87,6 +87,8 @@ const X = {
   dealLabelLeft: 732,
 }
 
+const UNWON_GRAY = '#94A3B8'
+
 function rgba(hex: string, a: number): string {
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
@@ -325,7 +327,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
               <span className="text-gray-500" style={{ fontSize: 12 }}>{EPE_LABELS[k]}</span>
             </div>
           ))}
-          <span className="text-gray-400 text-xs">已成交 深色 · 未成交 浅色（继承 E/P/C 颜色）</span>
+          <span className="text-gray-400 text-xs">已成交（彩色） · 未成交（灰色） · 连线呈现 E/P/C 到灰色的渐变</span>
         </div>
       </div>
 
@@ -350,20 +352,20 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
                 </linearGradient>
               ))}
               {(['E', 'P', 'C'] as const).map((epe) => (
-                <linearGradient key={`block-${epe}`} id={`bep-epe-block-${epe}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.08" />
-                  <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.24" />
+                <linearGradient key={`block-${epe}`} id={`bep-epe-block-${epe}`} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.15" />
+                  <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.25" />
                 </linearGradient>
               ))}
               {(['E', 'P', 'C'] as const).map((epe) => (
                 <React.Fragment key={epe}>
                   <linearGradient id={`bep-epe-deal-${epe}-closed`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.28" />
-                    <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.5" />
+                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.4" />
+                    <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.6" />
                   </linearGradient>
                   <linearGradient id={`bep-epe-deal-${epe}-open`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.12" />
-                    <stop offset="100%" stopColor={EPE_COLORS[epe]} stopOpacity="0.28" />
+                    <stop offset="0%" stopColor={EPE_COLORS[epe]} stopOpacity="0.4" />
+                    <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.5" />
                   </linearGradient>
                 </React.Fragment>
               ))}
@@ -494,7 +496,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
                 opacity={hovered === null || hovered === `epe-${epe.key}` ? 1 : 0.3}
                 onMouseEnter={() => setHovered(`epe-${epe.key}`)}
               >
-                <rect x={X.epeLeft} y={epe.y} width={X.epeRight - X.epeLeft} height={epe.h} rx={5} fill={`url(#bep-epe-block-${epe.key})`} stroke={rgba(EPE_COLORS[epe.key], 0.35)} strokeWidth={1} />
+                <rect x={X.epeLeft} y={epe.y} width={X.epeRight - X.epeLeft} height={epe.h} rx={5} fill={`url(#bep-epe-block-${epe.key})`} stroke={rgba(UNWON_GRAY, 0.2)} strokeWidth={1} />
                 <rect x={X.epeLeft} y={epe.y} width={4} height={epe.h} rx={2} fill={EPE_COLORS[epe.key]} opacity={0.8} />
                 <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + 4} fill="#1F2937" fontSize={12} fontWeight={600}>{EPE_LABELS[epe.key]}</text>
                 <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + 18} fill="#6B7280" fontSize={11}>已成交 ¥{epe.closed}w / 未成交 ¥{epe.open}w</text>
@@ -502,9 +504,9 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
             ))}
 
             {dealNodes.map((d) => {
-              const baseColor = EPE_COLORS[d.epe]
-              const dealColor = d.closed ? rgba(baseColor, 0.45) : rgba(baseColor, 0.25)
-              const dealFill = d.closed ? rgba(baseColor, 0.18) : rgba(baseColor, 0.1)
+              const baseColor = d.closed ? EPE_COLORS[d.epe] : UNWON_GRAY
+              const dealColor = d.closed ? rgba(baseColor, 0.45) : rgba(baseColor, 0.4)
+              const dealFill = d.closed ? rgba(baseColor, 0.18) : rgba(baseColor, 0.12)
               return (
                 <g
                   key={`deal-${d.id}`}
@@ -516,7 +518,7 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
                   ) : (
                     <>
                       <rect x={X.dealLeft} y={d.y} width={X.dealRight - X.dealLeft} height={d.h} rx={4} fill={dealFill} stroke={dealColor} strokeWidth={1} />
-                      <rect x={X.dealLeft} y={d.y} width={4} height={d.h} rx={2} fill={baseColor} opacity={d.closed ? 0.85 : 0.5} />
+                      <rect x={X.dealLeft} y={d.y} width={4} height={d.h} rx={2} fill={baseColor} opacity={d.closed ? 0.85 : 0.7} />
                       <text x={X.dealLabelLeft} y={d.y + d.h / 2 - 2} fill="#374151" fontSize={11} fontWeight={500}>{d.label}</text>
                       <text x={X.dealLabelLeft} y={d.y + d.h / 2 + 12} fill="#6B7280" fontSize={10}>{EPE_LABELS[d.epe].slice(0, 2)} · ¥{d.amount}w</text>
                     </>

@@ -53,15 +53,15 @@ export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
   const [submitting, setSubmitting] = useState(false);
   const handleSubmit = async () => {
     setError('');
-    if (!phoneValid) {
+    if (!mockLoginEnabled && !phoneValid) {
       setError('请输入正确的 11 位手机号');
       return;
     }
-    if (!codeValid && !mockLoginEnabled) {
+    if (!mockLoginEnabled && !codeValid) {
       setError('请输入 6 位验证码');
       return;
     }
-    if (!codeValid && mockLoginEnabled) {
+    if (mockLoginEnabled && (!phoneValid || !codeValid)) {
       onSuccess();
       return;
     }
@@ -136,11 +136,21 @@ export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!phoneValid || (!mockLoginEnabled && !codeValid) || submitting}
+            disabled={(!mockLoginEnabled && (!phoneValid || !codeValid)) || submitting}
             className="w-full mt-2 flex items-center justify-center rounded-xl bg-[#EF6B00] px-4 py-4 text-sm font-medium text-white hover:bg-[#D85F00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-[0.99]"
           >
             {submitting ? '验证中…' : '登录并进入工作台'}
           </button>
+
+          {mockLoginEnabled && (
+            <button
+              type="button"
+              onClick={onSuccess}
+              className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+            >
+              开发模式：直接登录 (跳过验证)
+            </button>
+          )}
 
           {onBack && (
             <button

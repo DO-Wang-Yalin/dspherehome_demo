@@ -9,6 +9,7 @@ import RegisterPage from './pages/Register';
 import LoginWrapper from './pages/Register/LoginWrapper';
 import ContractsPage from './pages/Contracts';
 import UserHomePage from './pages/UserHome';
+import OrderDetailPage from './pages/UserHome/OrderDetailPage';
 import DeepEvalPage from './pages/DeepEval';
 import ProjectsPage from './pages/Projects';
 import BudgetPage from './pages/Budget';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/login" element={<LoginWrapper />} />
             <Route path="/contracts" element={<ContractsPage />} />
             <Route path="/home" element={<UserHomePage />} />
+            <Route path="/order/:id" element={<OrderDetailPage />} />
             <Route path="/deep-eval" element={<DeepEvalPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/budget" element={<BudgetPage />} />

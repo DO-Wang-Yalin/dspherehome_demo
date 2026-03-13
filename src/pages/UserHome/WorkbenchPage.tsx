@@ -63,6 +63,7 @@ export interface WorkbenchPageProps {
   /** 返回项目列表（从项目页进入工作台时使用） */
   onBackToProjects?: () => void
   onGoToDesignFeedback?: () => void
+  onViewOrderDetail?: (orderId: string) => void
 }
 
 export function WorkbenchPage({
@@ -75,6 +76,7 @@ export function WorkbenchPage({
   onGoToFirstPage,
   onBackToProjects,
   onGoToDesignFeedback,
+  onViewOrderDetail,
 }: WorkbenchPageProps) {
   const [active, setActive] = React.useState<NavKey>('home')
   const SIDEBAR_WIDTH_KEY = 'ai-studio:workbench:sidebarWidth:v1'
@@ -378,7 +380,10 @@ export function WorkbenchPage({
                 onBackHome={() => setActive('home')}
               />
             ) : active === 'orders' ? (
-              <OrderManagementSection onGoToDesignFeedback={() => setActive('designFeedback')} />
+              <OrderManagementSection 
+                onGoToDesignFeedback={() => setActive('designFeedback')} 
+                onSelectOrder={onViewOrderDetail}
+              />
             ) : active === 'budget' ? (
               <BudgetConfirmPanel />
             ) : active === 'contracts' ? (
@@ -446,7 +451,13 @@ const ORDER_MOCK_DATA = [
     },
   ] as const
 
-function OrderManagementSection({ onGoToDesignFeedback }: { onGoToDesignFeedback?: () => void }) {
+function OrderManagementSection({ 
+  onGoToDesignFeedback,
+  onSelectOrder 
+}: { 
+  onGoToDesignFeedback?: () => void,
+  onSelectOrder?: (id: string) => void
+}) {
   const [searchQuery, setSearchQuery] = React.useState('')
 
   const filteredOrders = React.useMemo(() => {
@@ -486,7 +497,8 @@ function OrderManagementSection({ onGoToDesignFeedback }: { onGoToDesignFeedback
         {filteredOrders.map((order) => (
           <div
             key={order.id}
-            className="flex gap-4 py-5 px-4 hover:bg-gray-50/50 transition-colors group"
+            onClick={() => onSelectOrder?.(order.id)}
+            className="flex gap-4 py-5 px-4 hover:bg-gray-50/50 transition-colors group cursor-pointer"
           >
             {/* 左侧状态色条 */}
             <div className={`w-1 rounded-full shrink-0 self-stretch min-h-[60px] ${statusBarColors[order.statusColor]}`} />
