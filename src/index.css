@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  /* 橙色系 - CTA / 关键行动 / 强调 */
+  --color-brand: #FFCE42;
+  --color-brand-hover: #EF6B00;
+  --color-brand-secondary: #FF9C3E;
+  --color-brand-accent: #EF6B00;
+  /* 青蓝色系 - 系统结构 / 科技感 */
+  --color-blue-light: #60DFF6;
+  --color-blue: #4887FF;
+  --color-blue-depth: #EF6B00;
+  /* 背景与基础 */
+  --color-bg: #FFFDF3;
+  /* 灰阶 - 文本层级与禁用态 */
+  --color-dark: #4A453E;
+  --color-sub: #8C857B;
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
