@@ -15,6 +15,7 @@ import ProjectsPage from './pages/Projects';
 import BudgetPage from './pages/Budget';
 import DesignFeedbackPage from './pages/DesignFeedback';
 import QuotationPage from './pages/Quotation';
+import SettlementPage from './pages/Settlement';
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/budget" element={<BudgetPage />} />
             <Route path="/feedback" element={<DesignFeedbackPage />} />
             <Route path="/quotation" element={<QuotationPage />} />
+            <Route path="/settlement/:id" element={<SettlementPage />} />
           </Routes>
         </BrowserRouter>
       </DeepEvalFormProvider>

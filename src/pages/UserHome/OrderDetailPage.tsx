@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftRight, Bot, BarChart3, ChevronRight, LayoutGrid, Hourglass, Layout, Activity, Check } from 'lucide-react';
+import { ArrowLeftRight, Bot, BarChart3, ChevronRight, LayoutGrid, Hourglass, Layout, Activity, Check, FileText } from 'lucide-react';
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
 
 export default function OrderDetailPage() {
@@ -296,26 +296,51 @@ export default function OrderDetailPage() {
 
         {/* 订单结算单 Section */}
         <section className="bg-white rounded-[32px] border border-gray-100 shadow-sm p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-12">
+          <div className="flex items-center gap-3 mb-8">
             <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400">
               <LayoutGrid size={18} />
             </div>
             <h2 className="text-base font-bold text-gray-900">订单结算单</h2>
           </div>
 
-          <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-200">
-              <div className="animate-pulse">
-                <Hourglass size={32} />
+          {activeIndex >= 6 ? (
+            <div 
+              onClick={() => navigate(`/settlement/${id}`)}
+              className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-orange-50 bg-orange-50/10 hover:border-orange-200 hover:bg-orange-50/30 transition-all cursor-pointer"
+            >
+              <div className="w-14 h-14 rounded-2xl bg-[#EF6B00] text-white flex flex-col items-center justify-center shrink-0 shadow-lg shadow-orange-200">
+                <FileText size={24} />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-base font-bold text-gray-900">EPC 项目最终结算单</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-600">
+                    待确认
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 font-medium tracking-tight">
+                  包含设计、货品及施工的所有最终核算数据
+                </p>
+              </div>
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-[#EF6B00] group-hover:bg-[#EF6B00] group-hover:text-white transition-all duration-300">
+                <ChevronRight size={18} />
               </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-base font-bold text-gray-900">结算流程尚未开启</h3>
-              <p className="text-xs text-gray-400 font-medium">
-                结算单将在进入验收阶段（S07）后基于实际完成量生成。
-              </p>
+          ) : (
+            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center text-gray-200">
+                <div className="animate-pulse">
+                  <Hourglass size={32} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900">结算流程尚未开启</h3>
+                <p className="text-xs text-gray-400 font-medium">
+                  结算单将在进入验收阶段（S07）后基于实际完成量生成。
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </section>
 
         {/* Footer Info */}
