@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
 import { useGlobal } from '../../context/GlobalContext';
@@ -51,42 +52,54 @@ export default function OrderDetailPage() {
   const dynamicQuotations = useMemo(() => {
     const list = [];
     
+    const isViewed = foundOrder?.viewed || false;
+    const isFeedback = foundOrder?.feedbackSubmitted || false;
+
+    const getUnifiedStatus = (viewed: boolean, signed: boolean, feedback: boolean) => {
+      if (signed) return { text: '已查看已签字', color: 'bg-green-50 text-green-600' };
+      if (feedback) return { text: '已查看已反馈', color: 'bg-blue-50 text-blue-600' };
+      if (viewed) return { text: '已查看未签字', color: 'bg-orange-50 text-orange-600' };
+      return { text: '未查看未签字', color: 'bg-red-50 text-red-600' };
+    };
+
     // 1. 交付报价单: 交付期及以后可见
     if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
-      list.push({ ver: 'V3', title: '交付报价单', status: '已查看已签字', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
+      const statusInfo = getUnifiedStatus(isViewed, true, false);
+      list.push({ ver: 'V3', title: '交付报价单', status: statusInfo.text, statusColor: statusInfo.color, time: '2023-11-28 14:00' });
     }
 
     // 2. 订购报价单: 订购期及以后可见
     if (!['意向期'].includes(currentPhase)) {
       const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
+      
+      const statusInfoV2 = getUnifiedStatus(isViewed, isSigned, isFeedback);
       list.push({ 
         ver: 'V2', 
         title: '订购报价单', 
-        status: isSigned ? '已查看已签字' : '已查看未签字', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '未签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        status: statusInfoV2.text, 
+        statusColor: statusInfoV2.color, 
         time: '2023-11-24 15:00' 
       });
-      list.push({ ver: 'V1', title: '订购报价单', status: '已查看已反馈', statusColor: 'bg-blue-50 text-blue-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
+      
+      const statusInfoV1 = getUnifiedStatus(true, true, true);
+      list.push({ ver: 'V1', title: '订购报价单', status: statusInfoV1.text, statusColor: statusInfoV1.color, time: '2023-11-10 10:00' });
     }
 
     // 3. 意向报价单: S00 之后可见
     if (currentStatusCode !== 'S00') {
       const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
+      const statusInfo = getUnifiedStatus(isViewed, isSigned, false);
       list.push({ 
         ver: 'V0', 
         title: '意向报价单', 
-        status: isSigned ? '已查看已签字' : '未查看未签字', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '未签字',
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100',
+        status: statusInfo.text, 
+        statusColor: statusInfo.color, 
         time: '2023-10-20 09:00' 
       });
     }
 
     return list;
-  }, [currentPhase, currentStatusCode]);
+  }, [currentPhase, currentStatusCode, foundOrder]);
 
   const orderData = {
     id: foundOrder?.id || id || 'PSO-OD_LHJCF-00584',
@@ -99,6 +112,21 @@ export default function OrderDetailPage() {
 
   const displayAmount = orderData.totalAmount.startsWith('¥') ? orderData.totalAmount.slice(1) : orderData.totalAmount;
   const hasCurrencySymbol = orderData.totalAmount.includes('¥');
+
+  const isViewed = foundOrder?.viewed || false;
+  const isSigned = currentStatusCode === 'S11';
+  const isFeedback = foundOrder?.feedbackSubmitted || false;
+
+  const getUnifiedStatus = (viewed: boolean, signed: boolean, feedback: boolean) => {
+    if (signed) return { text: '已查看已签字', color: 'bg-green-50 text-green-600' };
+    if (feedback) return { text: '已查看已反馈', color: 'bg-blue-50 text-blue-600' };
+    if (viewed) return { text: '已查看未签字', color: 'bg-orange-50 text-orange-600' };
+    return { text: '未查看未签字', color: 'bg-red-50 text-red-600' };
+  };
+
+  const settlementStatusInfo = getUnifiedStatus(isViewed, isSigned, isFeedback);
+  const settlementStatus = settlementStatusInfo.text;
+  const settlementStatusColor = settlementStatusInfo.color;
 
   let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusCode);
   const exceptionCodes = ['S04', 'S05', 'S08', 'S13'];
@@ -130,11 +158,11 @@ export default function OrderDetailPage() {
   }, [windowStartIndex]);
 
   const handlePrev = () => {
-    setWindowStartIndex(prev => Math.max(0, prev - 1));
+    setWindowStartIndex(prev => Math.max(0, prev - 6));
   };
 
   const handleNext = () => {
-    setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 1));
+    setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 6));
   };
 
   // Calculate phases for the visible window
@@ -245,27 +273,25 @@ export default function OrderDetailPage() {
               }`}>
                 当前状态: {orderData.status}
               </span>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={handlePrev}
-                  disabled={windowStartIndex === 0}
-                  className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <button 
-                  onClick={handleNext}
-                  disabled={windowStartIndex + WINDOW_SIZE >= ORDER_STEPS.length}
-                  className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
             </div>
           </div>
 
           <div className="relative z-10 pb-4 px-4">
             <div className="relative mt-16 mb-4">
+            <button 
+              onClick={handlePrev}
+              disabled={windowStartIndex === 0}
+              className="absolute -left-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-20"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button 
+              onClick={handleNext}
+              disabled={windowStartIndex + WINDOW_SIZE >= ORDER_STEPS.length}
+              className="absolute -right-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-20"
+            >
+              <ChevronRight size={16} />
+            </button>
               {/* Phase Brackets for Visible Window */}
               {visiblePhases.map((p, i) => {
                 const isFirst = i === 0;
@@ -308,7 +334,11 @@ export default function OrderDetailPage() {
               {/* Progress Line */}
               <div className="absolute top-5 left-0 w-full h-1 bg-slate-200/30 -z-10 rounded-full"></div>
               
-              <div className="flex justify-between w-full">
+              <motion.div 
+                layout
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="flex justify-between w-full"
+              >
                 {visibleSteps.map((step, idx) => {
                   const globalIdx = windowStartIndex + idx;
                   const isCompleted = globalIdx < activeIndex;
@@ -316,7 +346,12 @@ export default function OrderDetailPage() {
                   const isPending = globalIdx > activeIndex;
 
                   return (
-                    <div key={step.id} className={`flex flex-col items-center relative ${isPending ? 'opacity-40' : ''}`} style={{ width: `${100 / WINDOW_SIZE}%` }}>
+                    <motion.div 
+                      layout
+                      key={step.id} 
+                      className={`flex flex-col items-center relative ${isPending ? 'opacity-40' : ''}`} 
+                      style={{ width: `${100 / WINDOW_SIZE}%` }}
+                    >
                       {/* English Code */}
                       <span className={`absolute -top-6 text-[8px] font-mono font-bold tracking-tighter ${
                         isCurrent ? step.blockText : 'text-slate-400'
@@ -361,10 +396,10 @@ export default function OrderDetailPage() {
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')} animate-bounce`} />
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             </div>
           </div>
           
@@ -466,11 +501,6 @@ export default function OrderDetailPage() {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${q.statusColor}`}>
                         {q.status}
                       </span>
-                      {q.actionTag && (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${q.actionTagColor}`}>
-                          {q.actionTag}
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-gray-400 font-medium tracking-tight">
                       最后更新：{q.time}
@@ -514,8 +544,8 @@ export default function OrderDetailPage() {
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-3">
                   <h3 className="text-base font-bold text-gray-900">EPC 项目最终结算单</h3>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-50 text-green-600">
-                    待确认
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${settlementStatusColor}`}>
+                    {settlementStatus}
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 font-medium tracking-tight">

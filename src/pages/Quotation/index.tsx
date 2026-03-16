@@ -14,6 +14,7 @@ import { ProductDetails } from "./components/ProductDetails";
 import { ConstructionDetails } from "./components/ConstructionDetails";
 import { SignatureModal } from "./components/SignatureModal";
 import { FeedbackModal } from "./components/FeedbackModal";
+import { ThankYouModal } from "./components/ThankYouModal";
 import { toast } from "sonner";
 import { useGlobal } from "../../context/GlobalContext";
 import { handleOrderAction } from "../../utils/orderStateMachine";
@@ -330,6 +331,8 @@ export default function QuotationPage() {
   const { orderNumber, orderTitle } = location.state || {};
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showThankYouModal, setShowThankYouModal] = useState(false);
+  const [thankYouMessage, setThankYouMessage] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -343,9 +346,8 @@ export default function QuotationPage() {
     setSignatureData(signature);
     setIsConfirmed(true);
     setShowSignatureModal(false);
-    toast.success("报价单已确认！感谢您的信任。", {
-      duration: 3000,
-    });
+    setThankYouMessage("您的签名已成功提交。");
+    setShowThankYouModal(true);
     
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E80_SIGN_QUOTATION', data.orders || [], updateData);
@@ -360,17 +362,26 @@ export default function QuotationPage() {
     setFeedbackText(feedback);
     setIsFeedbackSubmitted(true);
     setShowFeedbackModal(false);
-    toast.success("感谢您的反馈！我们会尽快与您联系。", {
-      duration: 3000,
-    });
+    setThankYouMessage("您的反馈已成功提交。我们会尽快与您联系。");
+    setShowThankYouModal(true);
 
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
     }
   };
 
+  const handleThankYouClose = () => {
+    setShowThankYouModal(false);
+    navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-white">
+      <ThankYouModal 
+        isOpen={showThankYouModal} 
+        onClose={handleThankYouClose} 
+        message={thankYouMessage} 
+      />
       <div className="max-w-screen-2xl mx-auto p-6">
         {/* 返回按钮 */}
         <button
@@ -396,7 +407,7 @@ export default function QuotationPage() {
                   <div className="flex items-center gap-2 mt-2">
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                     <span className="text-[12px] text-green-600 font-medium">
-                      已查看已签字
+                      已查看
                     </span>
                   </div>
                 )}
@@ -574,29 +585,7 @@ export default function QuotationPage() {
 
           {/* 确认报价单区域 */}
           <div className="mt-8 pt-6 border-t border-[#E5E7EB]">
-            {!isConfirmed && !isFeedbackSubmitted ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleConfirmClick}
-                    className="flex items-center gap-3 bg-[#EF6B00] hover:bg-[#CC5B00] text-white px-8 py-4 rounded-[16px] shadow-card hover:shadow-xl transition-all duration-300 font-bold text-[16px]"
-                  >
-                    <CheckCircle2 className="w-6 h-6" />
-                    确认报价单
-                  </button>
-                  <button
-                    onClick={handleFeedbackClick}
-                    className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 font-bold text-[16px]"
-                  >
-                    <MessageSquare className="w-6 h-6" />
-                    希望调整方案
-                  </button>
-                </div>
-                <p className="text-[12px] text-[#6B7280] font-medium">
-                  您可以直接确认，或告诉我们您的想法和建议
-                </p>
-              </div>
-            ) : isConfirmed ? (
+            {isConfirmed ? (
               <div className="bg-green-50 rounded-[24px] p-6 border border-green-200">
                 <div className="flex items-start justify-between gap-6">
                   <div className="flex-1">
@@ -606,7 +595,7 @@ export default function QuotationPage() {
                       </div>
                       <div>
                         <h4 className="font-black text-green-900 text-[30px]">
-                          已查看已签字
+                          已查看
                         </h4>
                         <p className="text-[12px] text-green-700 mt-1 font-medium">
                           确认时间：{new Date().toLocaleString("zh-CN")}
@@ -664,7 +653,37 @@ export default function QuotationPage() {
                   )}
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    disabled={isFeedbackSubmitted}
+                    onClick={handleConfirmClick}
+                    className={`flex items-center gap-3 ${isFeedbackSubmitted ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#EF6B00] hover:bg-[#CC5B00]'} text-white px-8 py-4 rounded-[16px] shadow-card hover:shadow-xl transition-all duration-300 font-bold text-[16px]`}
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                    {isFeedbackSubmitted ? '待更新报价单' : '确认报价单'}
+                  </button>
+                  <button
+                    onClick={handleFeedbackClick}
+                    className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 font-bold text-[16px]"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                    希望调整方案
+                  </button>
+                </div>
+                {!isFeedbackSubmitted && (
+                  <p className="text-[12px] text-[#6B7280] font-medium">
+                    您可以直接确认，或告诉我们您的想法和建议
+                  </p>
+                )}
+                {isFeedbackSubmitted && (
+                  <p className="text-[12px] text-blue-600 font-medium">
+                    已提交反馈，请等待设计师更新报价单
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -40,7 +40,11 @@ export function handleOrderAction(
 
   if (nextState) {
     const updatedOrders = [...orders];
-    updatedOrders[orderIndex] = { ...order, status: nextState };
+    updatedOrders[orderIndex] = { 
+      ...order, 
+      status: nextState,
+      feedbackSubmitted: actionCode === 'E86_FEEDBACK' ? true : order.feedbackSubmitted
+    };
     updateData({ orders: updatedOrders });
     return nextState;
   }

@@ -15,6 +15,7 @@ import { ProductDetails } from "../../components/ProductDetails";
 import { ConstructionDetails } from "../../components/ConstructionDetails";
 import { SignatureModal } from "../../components/SignatureModal";
 import { FeedbackModal } from "../../components/FeedbackModal";
+import { ThankYouModal } from "../Quotation/components/ThankYouModal";
 import { useGlobal } from "../../context/GlobalContext";
 import { handleOrderAction } from "../../utils/orderStateMachine";
 
@@ -154,6 +155,8 @@ export default function SettlementPage() {
 
   const [showSignature, setShowSignature] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showThankYouModal, setShowThankYouModal] = useState(false);
+  const [thankYouMessage, setThankYouMessage] = useState("");
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -163,7 +166,8 @@ export default function SettlementPage() {
     setSignatureData(signature);
     setIsConfirmed(true);
     setShowSignature(false);
-    toast.success("结算单已确认！感谢您的支持。");
+    setThankYouMessage("您的签名已成功提交。");
+    setShowThankYouModal(true);
 
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E85_SIGN_SETTLEMENT', data.orders || [], updateData);
@@ -174,15 +178,26 @@ export default function SettlementPage() {
     setFeedbackText(feedback);
     setIsFeedbackSubmitted(true);
     setShowFeedback(false);
-    toast.success("感谢您的反馈！我们会尽快核对结算内容。");
+    setThankYouMessage("您的反馈已成功提交。我们会尽快核对结算内容。");
+    setShowThankYouModal(true);
 
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E83_REQUIRE_REWORK', data.orders || [], updateData);
     }
   };
 
+  const handleThankYouClose = () => {
+    setShowThankYouModal(false);
+    navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-white pb-20">
+      <ThankYouModal 
+        isOpen={showThankYouModal} 
+        onClose={handleThankYouClose} 
+        message={thankYouMessage} 
+      />
       <div className="max-w-screen-2xl mx-auto p-6">
         {/* Back Button */}
         <button 
@@ -206,7 +221,7 @@ export default function SettlementPage() {
                 {isConfirmed && (
                   <div className="flex items-center gap-2 mt-2">
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="text-[12px] text-green-600 font-medium">已查看已签字</span>
+                    <span className="text-[12px] text-green-600 font-medium">已查看</span>
                   </div>
                 )}
               </div>
@@ -297,7 +312,7 @@ export default function SettlementPage() {
             ) : isConfirmed ? (
               <div className="bg-green-50 rounded-[24px] p-6 border border-green-200 flex justify-between items-start">
                 <div>
-                  <h4 className="font-black text-green-900 text-[30px] mb-2">已查看已签字</h4>
+                  <h4 className="font-black text-green-900 text-[30px] mb-2">已查看</h4>
                   <p className="text-[16px] text-[#6B7280]">感谢您的确认！项目结算流程已完成。</p>
                 </div>
                 {signatureData && <img src={signatureData} alt="Signature" className="w-48 h-24 border-2 border-green-300 rounded-xl bg-white object-contain" />}

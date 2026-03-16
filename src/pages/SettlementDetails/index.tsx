@@ -1,8 +1,24 @@
-import React from 'react';
-import { FileText, User, MapPin, CheckCircle2, AlertCircle, Hammer, Palette } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, User, MapPin, CheckCircle2, AlertCircle, Hammer, Palette, MessageSquare } from 'lucide-react';
 import SettlementTable from '../../components/SettlementTable';
+import { toast } from 'sonner';
 
 export default function SettlementDetailsPage() {
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
+
+  const handleConfirmClick = () => {
+    // 模拟确认逻辑
+    setIsConfirmed(true);
+    toast.success("结算单已确认");
+  };
+
+  const handleFeedbackClick = () => {
+    // 模拟反馈逻辑
+    setIsFeedbackSubmitted(true);
+    toast.info("反馈已提交，请等待更新");
+  };
+
   const settlementData = {
     orderNumber: 'EPC-2026-0115-001',
     customerName: '张先生',
@@ -82,13 +98,42 @@ export default function SettlementDetailsPage() {
         ))}
         
         {/* 底部按钮 */}
-        <div className="flex gap-4 mt-8">
-          <button className="flex-1 bg-[#EF6B00] text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-5 h-5" /> 确认结算
-          </button>
-          <button className="flex-1 bg-white border border-gray-300 py-4 rounded-xl font-bold flex items-center justify-center gap-2">
-            <AlertCircle className="w-5 h-5" /> 结算异议
-          </button>
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          {!isConfirmed ? (
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-4">
+                <button
+                  disabled={isFeedbackSubmitted}
+                  onClick={handleConfirmClick}
+                  className={`flex items-center gap-3 ${isFeedbackSubmitted ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#EF6B00] hover:bg-[#CC5B00]'} text-white px-8 py-4 rounded-[16px] shadow-card hover:shadow-xl transition-all duration-300 font-bold text-[16px]`}
+                >
+                  <CheckCircle2 className="w-6 h-6" />
+                  {isFeedbackSubmitted ? '待更新结算单' : '确认结算'}
+                </button>
+                <button
+                  onClick={handleFeedbackClick}
+                  className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 font-bold text-[16px]"
+                >
+                  <MessageSquare className="w-6 h-6" />
+                  结算异议
+                </button>
+              </div>
+              {!isFeedbackSubmitted && (
+                <p className="text-[12px] text-[#6B7280] font-medium">
+                  您可以直接确认，或提出结算异议
+                </p>
+              )}
+              {isFeedbackSubmitted && (
+                <p className="text-[12px] text-blue-600 font-medium">
+                  已提交异议，请等待更新结算单
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center text-green-600 font-bold text-[16px]">
+              已确认结算单
+            </div>
+          )}
         </div>
       </div>
     </div>
