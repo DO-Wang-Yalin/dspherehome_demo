@@ -51,7 +51,41 @@ export default function OrderDetailPage() {
   const dynamicQuotations = useMemo(() => {
     const list = [];
     
-    // 1. 意向报价单: S00 之后可见
+    // 1. 结算单: 验收期及以后可见
+    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
+      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
+      list.push({ 
+        ver: 'V4', 
+        title: '最终结算单', 
+        status: isSigned ? '已结清' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-12-01 10:00' 
+      });
+    }
+
+    // 2. 交付报价单: 交付期及以后可见
+    if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
+      list.push({ ver: 'V3', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
+    }
+
+    // 3. 订购报价单: 订购期及以后可见
+    if (!['意向期'].includes(currentPhase)) {
+      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
+      list.push({ 
+        ver: 'V2', 
+        title: '订购报价单', 
+        status: isSigned ? '已签字' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-11-24 15:00' 
+      });
+      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
+    }
+
+    // 4. 意向报价单: S00 之后可见
     if (currentStatusCode !== 'S00') {
       const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
       list.push({ 
@@ -62,40 +96,6 @@ export default function OrderDetailPage() {
         actionTag: isSigned ? undefined : '待签字',
         actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100',
         time: '2023-10-20 09:00' 
-      });
-    }
-
-    // 2. 订购报价单: 订购期及以后可见
-    if (!['意向期'].includes(currentPhase)) {
-      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
-      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
-      list.push({ 
-        ver: 'V2', 
-        title: '订购报价单', 
-        status: isSigned ? '已签字' : '待确认', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '待签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
-        time: '2023-11-24 15:00' 
-      });
-    }
-
-    // 3. 交付报价单: 交付期及以后可见
-    if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
-      list.push({ ver: 'V1', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
-    }
-
-    // 4. 结算单: 验收期及以后可见
-    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
-      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
-      list.push({ 
-        ver: 'V1', 
-        title: '最终结算单', 
-        status: isSigned ? '已结清' : '待确认', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
-        actionTag: isSigned ? undefined : '待签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
-        time: '2023-12-01 10:00' 
       });
     }
 
