@@ -148,14 +148,22 @@ export default function SettlementPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data, updateData } = useGlobal();
-  const { orderNumber, orderTitle } = location.state || { 
-    orderNumber: settlementData.orderNumber, 
-    orderTitle: "EPC 项目结算单" 
-  };
+  const state = location.state || {};
+  const orderNumber = state.orderNumber || settlementData.orderNumber;
+  const orderTitle = state.orderTitle || "EPC 项目结算单";
+  const settlementTitle = state.settlementTitle || "EPC 项目最终结算单";
+  const ver = state.ver || "V1";
 
   const currentOrder = data.orders?.find(o => o.id === orderNumber);
   const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';
-  const isCurrentlySigned = ['S11', 'S10', 'S12'].includes(currentStatusCode);
+  
+  // Determine initial signed state based on status and version
+  let isCurrentlySigned = false;
+  if (ver === 'V1') {
+    isCurrentlySigned = ['S10', 'S11', 'S12'].includes(currentStatusCode);
+  } else {
+    isCurrentlySigned = ['S10', 'S11', 'S12'].includes(currentStatusCode);
+  }
 
   const [showSignature, setShowSignature] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -231,7 +239,7 @@ export default function SettlementPage() {
                 <FileText className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-[48px] font-black text-[#0A0A0A]">EPC结算单</h1>
+                <h1 className="text-[48px] font-black text-[#0A0A0A]">{settlementTitle}</h1>
                 <div className="text-[18px] font-bold text-[#6B7280] mt-1">{orderTitle}</div>
                 {isConfirmed && (
                   <div className="flex items-center gap-2 mt-2">
@@ -313,30 +321,103 @@ export default function SettlementPage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-[#E5E7EB]">
-            {!isConfirmed && !isFeedbackSubmitted ? (
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center gap-4">
-                  <button onClick={() => setShowSignature(true)} className="flex items-center gap-3 bg-[#EF6B00] text-white px-8 py-4 rounded-[16px] font-bold text-[16px]">
-                    <CheckCircle2 className="w-6 h-6" />确认结算单
-                  </button>
-                  <button onClick={() => setShowFeedback(true)} className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] font-bold text-[16px]">
-                    <MessageSquare className="w-6 h-6" />结算内容异议
-                  </button>
+            {isConfirmed ? (
+              <div className="bg-green-50 rounded-[24px] p-6 border border-green-200">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-green-600 p-2 rounded-xl">
+                        <CheckCircle2 className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-green-900 text-[30px]">
+                          已查看
+                        </h4>
+                        <p className="text-[12px] text-green-700 mt-1 font-medium">
+                          确认时间：{new Date().toLocaleString("zh-CN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[16px] text-[#6B7280]">
+                      感谢您的确认！项目结算流程已完成。
+                    </p>
+                  </div>
+                  {signatureData && (
+                    <div className="flex-shrink-0">
+                      <div className="text-[12px] text-[#6B7280] mb-2 text-center font-medium">
+                        客户签名
+                      </div>
+                      <img
+                        src={signatureData}
+                        alt="客户签名"
+                        className="w-48 h-24 border-2 border-green-300 rounded-xl bg-white object-contain"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-            ) : isConfirmed ? (
-              <div className="bg-green-50 rounded-[24px] p-6 border border-green-200 flex justify-between items-start">
-                <div>
-                  <h4 className="font-black text-green-900 text-[30px] mb-2">已查看</h4>
-                  <p className="text-[16px] text-[#6B7280]">感谢您的确认！项目结算流程已完成。</p>
+            ) : isFeedbackSubmitted ? (
+              <div className="bg-orange-50 rounded-[24px] p-6 border border-orange-200">
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-[#EF6B00] p-2 rounded-xl">
+                        <MessageSquare className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-[#0A0A0A] text-[30px]">
+                          异议已记录
+                        </h4>
+                        <p className="text-[12px] text-[#6B7280] mt-1 font-medium">
+                          提交时间：{new Date().toLocaleString("zh-CN")}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-[16px] text-[#6B7280]">
+                      我们已收到您的结算异议，核算专员将在1个工作日内联系您复核数据。
+                    </p>
+                  </div>
+                  {feedbackText && (
+                    <div className="flex-shrink-0 max-w-md">
+                      <div className="text-[12px] text-[#6B7280] mb-2 font-medium">
+                        您的异议
+                      </div>
+                      <div className="border-2 border-orange-300 rounded-xl bg-white p-3 text-[16px] text-[#0A0A0A] max-h-24 overflow-y-auto">
+                        {feedbackText}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {signatureData && <img src={signatureData} alt="Signature" className="w-48 h-24 border-2 border-green-300 rounded-xl bg-white object-contain" />}
               </div>
             ) : (
-              <div className="bg-orange-50 rounded-[24px] p-6 border border-orange-200">
-                <h4 className="font-black text-[#0A0A0A] text-[30px] mb-2">异议已记录</h4>
-                <p className="text-[16px] text-[#6B7280]">我们已收到您的结算异议，核算专员将在1个工作日内联系您复核数据。</p>
-                {feedbackText && <div className="mt-4 p-3 bg-white border border-orange-200 rounded-xl text-[14px]">{feedbackText}</div>}
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-4">
+                  <button
+                    disabled={isFeedbackSubmitted}
+                    onClick={() => setShowSignature(true)}
+                    className={`flex items-center gap-3 ${isFeedbackSubmitted ? 'bg-gray-300 cursor-not-allowed' : 'bg-[#EF6B00] hover:bg-[#CC5B00]'} text-white px-8 py-4 rounded-[16px] shadow-card hover:shadow-xl transition-all duration-300 font-bold text-[16px]`}
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                    {isFeedbackSubmitted ? '待更新结算单' : '确认结算单'}
+                  </button>
+                  <button
+                    onClick={() => setShowFeedback(true)}
+                    className="flex items-center gap-3 bg-white text-[#0A0A0A] border border-[#E5E7EB] px-8 py-4 rounded-[16px] shadow-sm hover:shadow-md transition-all duration-300 font-bold text-[16px]"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                    结算内容异议
+                  </button>
+                </div>
+                {!isFeedbackSubmitted && (
+                  <p className="text-[12px] text-[#6B7280] font-medium">
+                    您可以直接确认，或告诉我们您的疑问
+                  </p>
+                )}
+                {isFeedbackSubmitted && (
+                  <p className="text-[12px] text-blue-600 font-medium">
+                    已提交异议，请等待核算专员联系
+                  </p>
+                )}
               </div>
             )}
           </div>

@@ -328,19 +328,41 @@ export default function QuotationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data, updateData } = useGlobal();
-  const { orderNumber, orderTitle } = location.state || {};
+  const { orderNumber, orderTitle, ver, quotationTitle } = location.state || {};
+  
+  const currentOrder = data.orders?.find(o => o.id === orderNumber);
+  const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';
+  
+  // Determine initial signed state based on status and version
+  let isCurrentlySigned = false;
+  if (ver === 'V3' || ver === 'V1') {
+    isCurrentlySigned = true;
+  } else if (ver === 'V2') {
+    isCurrentlySigned = ['S06-01', 'S06-02', 'S06-03', 'S06-04', 'S06-05', 'S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13'].includes(currentStatusCode);
+  } else if (ver === 'V0') {
+    isCurrentlySigned = ['S06-01', 'S06-02', 'S06-03', 'S06-04', 'S06-05', 'S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13', 'S02-01', 'S02-02', 'S03'].includes(currentStatusCode) && currentStatusCode !== 'S01' && currentStatusCode !== 'S05' && currentStatusCode !== 'S00';
+  } else {
+    // Fallback
+    isCurrentlySigned = ['S06-01', 'S06-02', 'S06-03', 'S06-04', 'S06-05', 'S07', 'S08', 'S09', 'S10', 'S11', 'S12', 'S13', 'S02-01', 'S02-02', 'S03'].includes(currentStatusCode) && currentStatusCode !== 'S01' && currentStatusCode !== 'S05' && currentStatusCode !== 'S00';
+  }
+  
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showThankYouModal, setShowThankYouModal] = useState(false);
   const [thankYouMessage, setThankYouMessage] = useState("");
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(isCurrentlySigned);
+  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(currentOrder?.feedbackSubmitted || false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState<string | null>(null);
 
   useEffect(() => {
-    if (orderNumber) {
-      handleOrderAction(orderNumber, 'E79_VIEW_QUOTATION', data.orders || [], updateData);
+    if (orderNumber && data.orders) {
+      const orderIndex = data.orders.findIndex(o => o.id === orderNumber);
+      if (orderIndex !== -1 && !data.orders[orderIndex].viewed) {
+        const updatedOrders = [...data.orders];
+        updatedOrders[orderIndex] = { ...updatedOrders[orderIndex], viewed: true };
+        updateData({ orders: updatedOrders });
+      }
     }
   }, [orderNumber, data.orders, updateData]);
 
@@ -407,7 +429,7 @@ export default function QuotationPage() {
               </div>
               <div>
                 <h1 className="text-[48px] font-black text-[#0A0A0A]">
-                  EPC报价单
+                  {quotationTitle || "EPC报价单"}
                 </h1>
                 {isConfirmed && (
                   <div className="flex items-center gap-2 mt-2">

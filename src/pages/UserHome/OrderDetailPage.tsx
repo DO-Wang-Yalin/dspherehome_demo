@@ -482,7 +482,9 @@ export default function OrderDetailPage() {
                   onClick={() => navigate('/quotation', { 
                     state: { 
                       orderNumber: orderData.id, 
-                      orderTitle: orderData.title 
+                      orderTitle: orderData.title,
+                      ver: q.ver,
+                      quotationTitle: q.title
                     } 
                   })}
                   className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-gray-50 hover:border-gray-200 hover:bg-gray-50/30 transition-all cursor-pointer"
@@ -533,7 +535,9 @@ export default function OrderDetailPage() {
               onClick={() => navigate(`/settlement/${id}`, {
                 state: {
                   orderNumber: orderData.id,
-                  orderTitle: orderData.title
+                  orderTitle: orderData.title,
+                  settlementTitle: 'EPC 项目最终结算单',
+                  ver: 'V1'
                 }
               })}
               className="group relative flex items-center gap-6 p-5 rounded-[24px] border border-orange-50 bg-orange-50/10 hover:border-orange-200 hover:bg-orange-50/30 transition-all cursor-pointer"
