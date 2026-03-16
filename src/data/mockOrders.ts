@@ -1,7 +1,7 @@
 export const INITIAL_ORDERS = [
   // --- 8 Interactive Orders for Testing State Transitions ---
   {
-    id: 'PSO-OD_LHJCF-T01',
+    id: 'PSO-OD_LHJCF-00584',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-意向转提案 (S01->S02-01)',
     status: 'S01-意向沟通中',
@@ -11,7 +11,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T02',
+    id: 'PSO-OD_LHJCF-00585',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-订购转交付 (S03->S06)',
     status: 'S03-订购确认中',
@@ -21,7 +21,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T03',
+    id: 'PSO-OD_LHJCF-00586',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-订购打回提案 (S03->S02-01)',
     status: 'S03-订购确认中',
@@ -31,7 +31,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T04',
+    id: 'PSO-OD_LHJCF-00587',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-方案打回设计 (S06-02->S06-01)',
     status: 'S06-02 方案汇报中',
@@ -41,7 +41,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T05',
+    id: 'PSO-OD_LHJCF-00588',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-交付中终止 (S06->S08)',
     status: 'S06-04 交付施工中',
@@ -51,7 +51,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T06',
+    id: 'PSO-OD_LHJCF-00589',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-验收不合格整改 (S07->S09)',
     status: 'S07-订单验收中',
@@ -61,7 +61,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T07',
+    id: 'PSO-OD_LHJCF-00590',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-验收通过交付 (S07->S11)',
     status: 'S07-订单验收中',
@@ -71,7 +71,7 @@ export const INITIAL_ORDERS = [
     isInteractive: true,
   },
   {
-    id: 'PSO-OD_LHJCF-T08',
+    id: 'PSO-OD_LHJCF-00591',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-发起售后维保 (S11->S10)',
     status: 'S11-订单已交付',
@@ -83,7 +83,7 @@ export const INITIAL_ORDERS = [
 
   // --- 10 Read-Only Orders for Viewing ---
   {
-    id: 'PSO-OD_LHJCF-V01',
+    id: 'PSO-OD_LHJCF-00592',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '全屋-石材安装',
     status: 'S00-意向报价中',
@@ -93,7 +93,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V02',
+    id: 'PSO-OD_LHJCF-00593',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '主卧-定制衣柜深化',
     status: 'S02-01 提案设计中',
@@ -103,7 +103,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V03',
+    id: 'PSO-OD_LHJCF-00594',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '一层-智能家居系统',
     status: 'S04-客户已婉拒',
@@ -113,17 +113,17 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V04',
+    id: 'PSO-OD_LHJCF-00595',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '橱柜柜体定制',
     status: 'S05-客户决策中',
-    contains: '工程进场筹备、材料下单',
+    contains: '意向方案、初步估价单',
     date: '2026-03-12',
-    amount: '¥32,800',
+    amount: '待定',
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V05',
+    id: 'PSO-OD_LHJCF-00596',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '一层、负一层-天花吊顶',
     status: 'S06-04 交付施工中',
@@ -133,7 +133,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V06',
+    id: 'PSO-OD_LHJCF-00597',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '次卫-防水及闭水试验',
     status: 'S09-订单整改中',
@@ -143,7 +143,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V07',
+    id: 'PSO-OD_LHJCF-00598',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '全屋-新风系统维保',
     status: 'S10-订单维保中',
@@ -153,7 +153,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V08',
+    id: 'PSO-OD_LHJCF-00599',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '瓷砖铺贴-公卫、次卫、厨房',
     status: 'S12-订单已结束',
@@ -163,7 +163,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V09',
+    id: 'PSO-OD_LHJCF-00600',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '地下室-影音室隔音工程',
     status: 'S13-订单休眠中',
@@ -173,7 +173,7 @@ export const INITIAL_ORDERS = [
     isInteractive: false,
   },
   {
-    id: 'PSO-OD_LHJCF-V10',
+    id: 'PSO-OD_LHJCF-00601',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '全屋-中央空调安装',
     status: 'S08-订单终止中',

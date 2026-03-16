@@ -1,34 +1,50 @@
-export type OrderStatusColor = 'emerald' | 'blue' | 'orange' | 'red' | 'gray';
+export type OrderStatusColor = 'intention' | 'ordering' | 'delivery' | 'acceptance' | 'maintenance' | 'red' | 'gray';
 
 export function getOrderStatusColor(status: string): OrderStatusColor {
-  if (status.startsWith('S11') || status.startsWith('S12')) {
-    return 'emerald';
+  // 维保期
+  if (status.startsWith('S11') || status.startsWith('S10')) {
+    return 'maintenance';
   }
-  if (status.startsWith('S06') || status.startsWith('S07') || status.startsWith('S09') || status.startsWith('S10')) {
-    return 'blue';
+  // 验收期
+  if (status.startsWith('S07') || status.startsWith('S09') || status.startsWith('S08')) {
+    return 'acceptance';
   }
-  if (status.startsWith('S02') || status.startsWith('S03') || status.startsWith('S05')) {
-    return 'orange';
+  // 交付期
+  if (status.startsWith('S06') || status.startsWith('S13')) {
+    return 'delivery';
   }
-  if (status.startsWith('S04') || status.startsWith('S08')) {
+  // 订购期
+  if (status.startsWith('S02') || status.startsWith('S03')) {
+    return 'ordering';
+  }
+  // 意向期
+  if (status.startsWith('S00') || status.startsWith('S01') || status.startsWith('S05')) {
+    return 'intention';
+  }
+  // 异常/终止
+  if (status.startsWith('S04') || status.startsWith('S12')) {
     return 'red';
   }
-  // S00, S01, S13 and default
+  
   return 'gray';
 }
 
 export const STATUS_BAR_COLORS: Record<OrderStatusColor, string> = {
-  emerald: 'bg-emerald-500',
-  blue: 'bg-blue-500',
-  orange: 'bg-orange-500',
+  intention: 'bg-phase-intention',
+  ordering: 'bg-phase-ordering',
+  delivery: 'bg-phase-delivery',
+  acceptance: 'bg-phase-acceptance',
+  maintenance: 'bg-phase-maintenance',
   red: 'bg-red-500',
   gray: 'bg-gray-400',
 };
 
 export const STATUS_BADGE_COLORS: Record<OrderStatusColor, string> = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-  blue: 'bg-blue-50 text-blue-700 border-blue-100',
-  orange: 'bg-orange-50 text-orange-700 border-orange-100',
+  intention: 'bg-phase-intention/10 text-phase-intention border-phase-intention/20',
+  ordering: 'bg-phase-ordering/10 text-phase-ordering border-phase-ordering/20',
+  delivery: 'bg-phase-delivery/10 text-phase-delivery border-phase-delivery/20',
+  acceptance: 'bg-phase-acceptance/10 text-phase-acceptance border-phase-acceptance/20',
+  maintenance: 'bg-phase-maintenance/10 text-phase-maintenance border-phase-maintenance/20',
   red: 'bg-red-50 text-red-700 border-red-100',
   gray: 'bg-gray-100 text-gray-700 border-gray-200',
 };

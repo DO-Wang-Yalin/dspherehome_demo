@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftRight, Bot, BarChart3, ChevronRight, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
+import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
 import { useGlobal } from '../../context/GlobalContext';
 import { INITIAL_ORDERS } from '../../data/mockOrders';
@@ -16,47 +16,162 @@ export default function OrderDetailPage() {
   const orders = data.orders && data.orders.length > 0 ? data.orders : INITIAL_ORDERS;
   const foundOrder = orders.find((o: any) => o.id === id);
 
+  const currentStatusCode = foundOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || 'S06-01';
+  
+  const ORDER_STEPS = [
+    // 意向期
+    { id: 'S00', label: '意向报价', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
+    { id: 'S01', label: '意向沟通', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
+    { id: 'S05', label: '客户决策', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
+    // 订购期
+    { id: 'S02-01', label: '提案设计', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
+    { id: 'S02-02', label: '订购报价', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
+    { id: 'S03', label: '订购确认', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
+    // 交付期
+    { id: 'S06-01', label: '交付设计', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S06-02', label: '方案汇报', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S06-03', label: '交付备货', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S06-04', label: '交付施工', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S06-05', label: '交付内审', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S13', label: '订单休眠', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    // 验收期
+    { id: 'S07', label: '订单验收', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
+    { id: 'S09', label: '订单整改', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
+    { id: 'S08', label: '订单终止', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
+    // 维保期
+    { id: 'S11', label: '订单已交付', phase: '维保期', blockBg: 'bg-emerald-100/50', blockText: 'text-emerald-600' },
+    { id: 'S10', label: '订单维保', phase: '维保期', blockBg: 'bg-emerald-100/50', blockText: 'text-emerald-600' },
+    // 结束
+    { id: 'S12', label: '订单已结束', phase: '结束', blockBg: 'bg-gray-100/50', blockText: 'text-gray-500' },
+  ];
+
+  const currentStep = ORDER_STEPS.find(s => s.id === currentStatusCode);
+  const currentPhase = currentStep?.phase || '';
+
+  const dynamicQuotations = useMemo(() => {
+    const list = [];
+    
+    // 1. 结算单: 验收期及以后可见
+    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
+      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
+      list.push({ 
+        ver: 'V1', 
+        title: '最终结算单', 
+        status: isSigned ? '已结清' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-12-01 10:00' 
+      });
+    }
+
+    // 2. 交付报价单: 交付期及以后可见
+    if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
+      list.push({ ver: 'V1', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
+    }
+
+    // 3. 订购报价单: 订购期及以后可见
+    if (!['意向期'].includes(currentPhase)) {
+      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
+      list.push({ 
+        ver: 'V2', 
+        title: '订购报价单', 
+        status: isSigned ? '已签字' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-11-24 15:00' 
+      });
+      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
+    }
+
+    // 4. 意向报价单: S00 之后可见
+    if (currentStatusCode !== 'S00') {
+      const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
+      list.push({ 
+        ver: 'V0', 
+        title: '意向报价单', 
+        status: isSigned ? '已查看已签字' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
+        actionTag: isSigned ? undefined : '待签字',
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100',
+        time: '2023-10-20 09:00' 
+      });
+    }
+
+    return list;
+  }, [currentPhase, currentStatusCode]);
+
   const orderData = {
-    id: foundOrder?.id || id || 'PSO-OD_SZYWZD-00007',
+    id: foundOrder?.id || id || 'PSO-OD_LHJCF-00584',
     title: foundOrder?.title || '铝合金智能化幕墙采购与施工订单',
     status: foundOrder?.status || 'S06-01 交付设计中',
     statusColor: getOrderStatusColor(foundOrder?.status || 'S06-01 交付设计中'),
-    totalAmount: foundOrder?.amount || '250,000',
-    quotations: [
-      { ver: 'V2', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '待反馈', actionTagColor: 'bg-red-50 text-red-600 border border-red-100', time: '2023-11-24 15:00' },
-      { ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' },
-      { ver: 'V0', title: '意向报价单', status: '已查看已签字', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-10-20 09:00' },
-    ]
+    totalAmount: foundOrder?.amount || (currentPhase === '意向期' ? '待定' : '250,000'),
+    quotations: dynamicQuotations
   }
 
-  const currentStatusPrefix = orderData.status.substring(0, 3);
-  
-  const ORDER_STEPS = [
-    { id: 'S00', label: '意向报价' },
-    { id: 'S01', label: '意向沟通' },
-    { id: 'S02', label: '订单深化' },
-    { id: 'S03', label: '订购确认' },
-    { id: 'S06', label: '订单交付' },
-    { id: 'S07', label: '订单验收' },
-    { id: 'S09', label: '订单整改' },
-    { id: 'S10', label: '订单维保' },
-    { id: 'S11', label: '订单已交付' },
-    { id: 'S12', label: '订单已结束' },
-  ];
-
-  let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusPrefix);
-  let isExceptionState = false;
+  let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusCode);
+  const exceptionCodes = ['S04', 'S05', 'S08', 'S13'];
+  let isExceptionState = exceptionCodes.includes(currentStatusCode);
 
   if (activeIndex === -1) {
-    isExceptionState = true;
-    if (currentStatusPrefix === 'S04') activeIndex = 1; // 婉拒 (after 意向沟通)
-    else if (currentStatusPrefix === 'S05') activeIndex = 1; // 决策中 (after 意向沟通)
-    else if (currentStatusPrefix === 'S08') activeIndex = 5; // 终止 (after 订单交付)
-    else if (currentStatusPrefix === 'S13') activeIndex = 0; // 休眠
+    if (currentStatusCode === 'S04') activeIndex = 1; // 婉拒映射到意向沟通
     else activeIndex = 0;
   }
 
   const progressPercentage = ORDER_STEPS.length > 1 ? (activeIndex / (ORDER_STEPS.length - 1)) * 100 : 0;
+
+  // Sliding window state
+  const WINDOW_SIZE = 6;
+  const [windowStartIndex, setWindowStartIndex] = useState(0);
+
+  useEffect(() => {
+    // Center the window around activeIndex
+    let start = Math.max(0, activeIndex - Math.floor(WINDOW_SIZE / 2));
+    // Ensure we don't go out of bounds at the end
+    if (start + WINDOW_SIZE > ORDER_STEPS.length) {
+      start = Math.max(0, ORDER_STEPS.length - WINDOW_SIZE);
+    }
+    setWindowStartIndex(start);
+  }, [activeIndex]);
+
+  const visibleSteps = useMemo(() => {
+    return ORDER_STEPS.slice(windowStartIndex, windowStartIndex + WINDOW_SIZE);
+  }, [windowStartIndex]);
+
+  const handlePrev = () => {
+    setWindowStartIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNext = () => {
+    setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 1));
+  };
+
+  // Calculate phases for the visible window
+  const visiblePhases = useMemo(() => {
+    const result = [];
+    let currentP = null;
+
+    visibleSteps.forEach((step, index) => {
+      if (!currentP || currentP.name !== step.phase) {
+        if (currentP) {
+          currentP.endIndex = index - 1;
+        }
+        currentP = {
+          name: step.phase,
+          startIndex: index,
+          endIndex: index,
+          color: step.blockText,
+          bgColor: step.blockBg
+        };
+        result.push(currentP);
+      } else {
+        currentP.endIndex = index;
+      }
+    });
+    return result;
+  }, [visibleSteps]);
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] p-6 md:p-12">
@@ -91,7 +206,7 @@ export default function OrderDetailPage() {
             {/* Action Buttons */}
             {foundOrder?.isInteractive && (
               <div className="mt-4 flex justify-end gap-2">
-                {currentStatusPrefix === 'S06' && (
+                {currentStatusCode.startsWith('S06') && (
                   <button
                     onClick={() => {
                       if (id) {
@@ -105,7 +220,7 @@ export default function OrderDetailPage() {
                     终止订单
                   </button>
                 )}
-                {currentStatusPrefix === 'S11' && (
+                {currentStatusCode === 'S11' && (
                   <button
                     onClick={() => {
                       if (id) {
@@ -133,68 +248,128 @@ export default function OrderDetailPage() {
               <Activity size={18} />
               订单颗粒度进程
             </h3>
-            <span className={`text-xs font-bold px-3 py-1.5 rounded-full backdrop-blur-sm border ${
-              isExceptionState 
-                ? 'text-red-600 bg-red-50/50 border-red-200' 
-                : 'text-[#17a1cf] bg-[#17a1cf]/10 border-[#17a1cf]/20'
-            }`}>
-              当前状态: {orderData.status}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-sm border ${
+                isExceptionState 
+                  ? 'text-red-600 bg-red-50/50 border-red-200' 
+                  : 'text-[#17a1cf] bg-[#17a1cf]/10 border-[#17a1cf]/20'
+              }`}>
+                当前状态: {orderData.status}
+              </span>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={handlePrev}
+                  disabled={windowStartIndex === 0}
+                  className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button 
+                  onClick={handleNext}
+                  disabled={windowStartIndex + WINDOW_SIZE >= ORDER_STEPS.length}
+                  className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="relative z-10 overflow-x-auto pb-6 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
-            <div className="min-w-[800px] relative mt-2">
-              <div className="absolute top-5 left-0 w-full h-1 bg-slate-200/50 -z-10 rounded-full"></div>
-              <div 
-                className={`absolute top-5 left-0 h-1 -z-10 rounded-full transition-all duration-1000 ${
-                  isExceptionState ? 'bg-gradient-to-r from-red-300 to-red-500 shadow-[0_0_15px_rgba(239,68,68,0.6)]' : 'bg-gradient-to-r from-emerald-300 to-emerald-500 shadow-[0_0_15px_rgba(52,211,153,0.6)]'
-                }`}
-                style={{ width: `${progressPercentage}%` }}
-              ></div>
+          <div className="relative z-10 pb-4 px-4">
+            <div className="relative mt-16 mb-4">
+              {/* Phase Brackets for Visible Window */}
+              {visiblePhases.map((p, i) => {
+                const isFirst = i === 0;
+                const isLast = i === visiblePhases.length - 1;
+                
+                // Adjust start and end to close gaps between phases
+                const adjustedStart = isFirst ? p.startIndex : p.startIndex - 0.5;
+                const adjustedEnd = isLast ? p.endIndex : p.endIndex + 0.5;
+                
+                const left = (adjustedStart / (WINDOW_SIZE - 1)) * 100;
+                const width = ((adjustedEnd - adjustedStart) / (WINDOW_SIZE - 1)) * 100;
+
+                return (
+                  <div 
+                    key={`${p.name}-${p.startIndex}`}
+                    className={`absolute -top-10 flex items-center ${p.color} transition-all duration-500`}
+                    style={{
+                      left: `${left}%`,
+                      width: `${width}%`
+                    }}
+                  >
+                    <div className="absolute left-0 top-1/2 h-[2px] bg-current -translate-y-1/2 opacity-20 w-full"></div>
+                    
+                    {/* Vertical Divider at the start of the phase or midpoint */}
+                    <div className="absolute left-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
+                    
+                    {isLast && (
+                      <div className="absolute right-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
+                    )}
+                    
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="relative z-10 px-2 py-0.5 text-[9px] font-black tracking-[0.2em] bg-[#FFFDF3] rounded-full uppercase whitespace-nowrap shadow-sm border border-current/10">
+                        {p.name}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Progress Line */}
+              <div className="absolute top-5 left-0 w-full h-1 bg-slate-200/30 -z-10 rounded-full"></div>
               
               <div className="flex justify-between w-full">
-                {ORDER_STEPS.map((step, index) => {
-                  const isCompleted = index < activeIndex;
-                  const isCurrent = index === activeIndex;
-                  const isPending = index > activeIndex;
+                {visibleSteps.map((step, idx) => {
+                  const globalIdx = windowStartIndex + idx;
+                  const isCompleted = globalIdx < activeIndex;
+                  const isCurrent = globalIdx === activeIndex;
+                  const isPending = globalIdx > activeIndex;
 
                   return (
-                    <div key={step.id} className={`flex flex-col items-center gap-3 ${isPending ? 'opacity-50' : ''} ${isCurrent ? 'relative z-10 transform -translate-y-1' : ''}`}>
-                      {isCurrent ? (
-                        <div className="relative">
-                          <div className={`absolute inset-0 rounded-full animate-ping opacity-30 ${isExceptionState ? 'bg-red-500' : 'bg-[#17a1cf]'}`}></div>
-                          <div className={`w-12 h-12 rounded-full text-white flex items-center justify-center shadow-lg ring-4 ring-white/40 backdrop-blur-md ${
-                            isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-[#17a1cf] to-blue-500'
-                          }`}>
-                            <span className="text-sm font-bold tracking-tight">{step.id}</span>
-                          </div>
-                        </div>
-                      ) : isCompleted ? (
-                        <div className={`w-10 h-10 rounded-full bg-white/20 backdrop-blur-[4px] border border-white/50 flex items-center justify-center shadow-sm ring-2 ring-white/60 ${
-                          isExceptionState ? 'text-red-500' : 'text-emerald-600'
-                        }`}>
-                          <Check size={18} strokeWidth={3} />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-[4px] border border-white/50 text-slate-400 flex items-center justify-center ring-1 ring-white/40">
-                          <span className="text-[10px] font-bold">{step.id}</span>
-                        </div>
-                      )}
+                    <div key={step.id} className={`flex flex-col items-center relative ${isPending ? 'opacity-40' : ''}`} style={{ width: `${100 / WINDOW_SIZE}%` }}>
+                      {/* English Code */}
+                      <span className={`absolute -top-6 text-[8px] font-mono font-bold tracking-tighter ${
+                        isCurrent ? step.blockText : 'text-slate-400'
+                      }`}>
+                        {step.id}
+                      </span>
 
-                      <div className="flex flex-col items-center">
-                        <span className={`text-xs font-bold ${
-                          isCurrent ? (isExceptionState ? 'text-red-600' : 'text-[#17a1cf]') :
+                      {/* Node Circle */}
+                      <div className="mt-4">
+                        {isCurrent ? (
+                          <div className="relative">
+                            <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : 'bg-[#17a1cf]'}`}></div>
+                            <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md ring-2 ring-white/60 backdrop-blur-md ${
+                              isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-[#17a1cf] to-blue-500'
+                            }`}>
+                              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            </div>
+                          </div>
+                        ) : isCompleted ? (
+                          <div className={`w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center shadow-sm ${
+                            isExceptionState ? 'border-red-200 text-red-500' : 'border-emerald-100 text-emerald-600'
+                          }`}>
+                            <Check size={12} strokeWidth={4} />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Label */}
+                      <div className="mt-3 flex flex-col items-center">
+                        <span className={`text-[10px] font-bold text-center leading-tight transition-all ${
+                          isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : 'text-[#17a1cf] scale-110') :
                           isCompleted ? (isExceptionState ? 'text-red-500' : 'text-emerald-600') :
-                          'text-slate-500'
+                          'text-slate-400'
                         }`}>
                           {isCurrent ? (isExceptionState ? '异常中断' : step.label) : step.label}
                         </span>
                         {isCurrent && (
-                          <span className={`text-[9px] text-white font-bold mt-1 px-2 py-0.5 rounded-full shadow-sm ${
-                            isExceptionState ? 'bg-gradient-to-r from-red-500 to-red-400' : 'bg-gradient-to-r from-[#17a1cf] to-blue-400'
-                          }`}>
-                            Current
-                          </span>
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : 'bg-[#17a1cf]'} animate-bounce`} />
                         )}
                       </div>
                     </div>
@@ -202,6 +377,19 @@ export default function OrderDetailPage() {
                 })}
               </div>
             </div>
+          </div>
+          
+          {/* Progress Indicator */}
+          <div className="mt-6 flex justify-center gap-1.5">
+            {Array.from({ length: Math.ceil(ORDER_STEPS.length / 2) }).map((_, i) => {
+              const isActive = Math.floor(windowStartIndex / 2) === i;
+              return (
+                <div 
+                  key={i} 
+                  className={`h-1 rounded-full transition-all duration-300 ${isActive ? 'w-4 bg-[#17a1cf]' : 'w-1 bg-gray-200'}`}
+                />
+              );
+            })}
           </div>
         </section>
 
@@ -214,7 +402,7 @@ export default function OrderDetailPage() {
               </div>
               <h2 className="text-base font-bold text-gray-900">设计方案与图纸</h2>
             </div>
-            {currentStatusPrefix !== 'S00' && (
+            {currentStatusCode !== 'S00' && (
               <button 
                 onClick={() => navigate('/feedback', { state: { orderNumber: orderData.id } })}
                 className="inline-flex items-center gap-2 bg-[#FF9C3E] text-white px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-[#F58B2B] transition-all active:scale-95"
@@ -224,7 +412,7 @@ export default function OrderDetailPage() {
               </button>
             )}
           </div>
-          {currentStatusPrefix === 'S00' ? (
+          {currentStatusCode === 'S00' ? (
             <div className="p-10 bg-gray-50/50 rounded-[24px] border border-gray-100 border-dashed flex flex-col items-center justify-center text-center">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm mb-4">
                 <Layout size={20} />
@@ -254,7 +442,7 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {currentStatusPrefix === 'S00' ? (
+          {currentStatusCode === 'S00' ? (
             <div className="p-10 bg-gray-50/50 rounded-[24px] border border-gray-100 border-dashed flex flex-col items-center justify-center text-center">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-300 shadow-sm mb-4">
                 <BarChart3 size={20} />

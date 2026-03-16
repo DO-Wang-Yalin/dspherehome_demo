@@ -15,6 +15,13 @@
   /* 灰阶 - 文本层级与禁用态 */
   --color-dark: #4A453E;
   --color-sub: #8C857B;
+
+  /* 订单阶段颜色规范 */
+  --color-phase-intention: #d0d7d6;
+  --color-phase-ordering: #4887ff;
+  --color-phase-delivery: #B300FA;
+  --color-phase-acceptance: #ff9c3e;
+  --color-phase-maintenance: #7BC80E;
 }
 
 @layer utilities {

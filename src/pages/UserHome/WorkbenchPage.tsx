@@ -340,9 +340,9 @@ export function WorkbenchPage({
                               待确认
                             </span>
                           </div>
-                          <div className="text-base font-semibold truncate">00589#家具订单设计待确认</div>
+                          <div className="text-base font-semibold truncate">00590#订单竣工验收待确认</div>
                           <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                            您的家具定制方案已出具，请尽快核对设计图纸及物料清单并确认。
+                            您的工程已完工并通过内审，最终结算单及验收报告已出具，请尽快核对并确认。
                           </p>
                         </div>
                       </div>
