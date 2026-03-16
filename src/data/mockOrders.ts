@@ -7,7 +7,7 @@ export const INITIAL_ORDERS = [
     status: 'S01-意向沟通中',
     contains: '初步意向方案、沟通记录',
     date: '2026-03-15',
-    amount: '待定',
+    amount: '¥30,000 ~ ¥50,000',
     isInteractive: true,
   },
   {
@@ -89,7 +89,7 @@ export const INITIAL_ORDERS = [
     status: 'S00-意向报价中',
     contains: '意向利岩板、大金空调选型',
     date: '2026-03-10',
-    amount: '待定',
+    amount: '¥15,000 ~ ¥25,000',
     isInteractive: false,
   },
   {
@@ -119,7 +119,7 @@ export const INITIAL_ORDERS = [
     status: 'S05-客户决策中',
     contains: '意向方案、初步估价单',
     date: '2026-03-12',
-    amount: '待定',
+    amount: '¥12,000 ~ ¥18,000',
     isInteractive: false,
   },
   {

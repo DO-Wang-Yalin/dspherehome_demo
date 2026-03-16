@@ -435,31 +435,89 @@ function OrderManagementSection({
   onSelectOrder?: (id: string) => void
 }) {
   const [searchQuery, setSearchQuery] = React.useState('')
+  const [selectedPhases, setSelectedPhases] = React.useState<string[]>([])
+
+  const PHASES = [
+    { id: 'intention', label: '意向期' },
+    { id: 'ordering', label: '订购期' },
+    { id: 'delivery', label: '交付期' },
+    { id: 'acceptance', label: '验收期' },
+    { id: 'maintenance', label: '维保期' },
+  ];
+
+  const togglePhase = (phaseId: string) => {
+    setSelectedPhases(prev => 
+      prev.includes(phaseId) 
+        ? prev.filter(id => id !== phaseId)
+        : [...prev, phaseId]
+    );
+  };
 
   const filteredOrders = React.useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return [...orders]
-    return orders.filter(
-      (o) =>
-        o.title.toLowerCase().includes(q) || o.id.toLowerCase().includes(q)
-    )
-  }, [searchQuery, orders])
+    let result = [...orders];
+    
+    // Search query filter
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter(
+        (o) =>
+          o.title.toLowerCase().includes(q) || o.id.toLowerCase().includes(q)
+      );
+    }
+
+    // Phase filter
+    if (selectedPhases.length > 0) {
+      result = result.filter(o => {
+        const phase = getOrderStatusColor(o.status);
+        return selectedPhases.includes(phase);
+      });
+    }
+
+    return result;
+  }, [searchQuery, selectedPhases, orders])
 
   return (
     <div className="space-y-6">
       {/* 顶部：标题 */}
       <h1 className="text-xl font-semibold text-gray-900">订单管理</h1>
 
-      {/* 搜索 */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="搜索订单标题、订单编号"
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-        />
+      {/* 搜索与筛选 */}
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索订单标题、订单编号"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF9C3E]/20 focus:border-[#FF9C3E]"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-2">阶段筛选:</span>
+          {PHASES.map(phase => (
+            <button
+              key={phase.id}
+              onClick={() => togglePhase(phase.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                selectedPhases.includes(phase.id)
+                  ? `${STATUS_BADGE_COLORS[phase.id as any]} border-current`
+                  : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              {phase.label}
+            </button>
+          ))}
+          {selectedPhases.length > 0 && (
+            <button
+              onClick={() => setSelectedPhases([])}
+              className="text-xs font-bold text-gray-400 hover:text-gray-600 ml-2"
+            >
+              清除全部
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 订单列表 */}

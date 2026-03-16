@@ -20,27 +20,27 @@ export default function OrderDetailPage() {
   
   const ORDER_STEPS = [
     // 意向期
-    { id: 'S00', label: '意向报价', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
-    { id: 'S01', label: '意向沟通', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
-    { id: 'S05', label: '客户决策', phase: '意向期', blockBg: 'bg-slate-100/50', blockText: 'text-slate-500' },
+    { id: 'S00', label: '意向报价', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S01', label: '意向沟通', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S05', label: '客户决策', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
     // 订购期
-    { id: 'S02-01', label: '提案设计', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
-    { id: 'S02-02', label: '订购报价', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
-    { id: 'S03', label: '订购确认', phase: '订购期', blockBg: 'bg-amber-100/50', blockText: 'text-amber-600' },
+    { id: 'S02-01', label: '提案设计', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    { id: 'S02-02', label: '订购报价', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    { id: 'S03', label: '订购确认', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     // 交付期
-    { id: 'S06-01', label: '交付设计', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
-    { id: 'S06-02', label: '方案汇报', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
-    { id: 'S06-03', label: '交付备货', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
-    { id: 'S06-04', label: '交付施工', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
-    { id: 'S06-05', label: '交付内审', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
-    { id: 'S13', label: '订单休眠', phase: '交付期', blockBg: 'bg-blue-100/50', blockText: 'text-blue-600' },
+    { id: 'S06-01', label: '交付设计', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-02', label: '方案汇报', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-03', label: '交付备货', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-04', label: '交付施工', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-05', label: '交付内审', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S13', label: '订单休眠', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     // 验收期
-    { id: 'S07', label: '订单验收', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
-    { id: 'S09', label: '订单整改', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
-    { id: 'S08', label: '订单终止', phase: '验收期', blockBg: 'bg-rose-100/50', blockText: 'text-rose-600' },
+    { id: 'S07', label: '订单验收', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    { id: 'S09', label: '订单整改', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    { id: 'S08', label: '订单终止', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
     // 维保期
-    { id: 'S11', label: '订单已交付', phase: '维保期', blockBg: 'bg-emerald-100/50', blockText: 'text-emerald-600' },
-    { id: 'S10', label: '订单维保', phase: '维保期', blockBg: 'bg-emerald-100/50', blockText: 'text-emerald-600' },
+    { id: 'S11', label: '订单已交付', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
+    { id: 'S10', label: '订单维保', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
     // 结束
     { id: 'S12', label: '订单已结束', phase: '结束', blockBg: 'bg-gray-100/50', blockText: 'text-gray-500' },
   ];
@@ -51,41 +51,7 @@ export default function OrderDetailPage() {
   const dynamicQuotations = useMemo(() => {
     const list = [];
     
-    // 1. 结算单: 验收期及以后可见
-    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
-      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
-      list.push({ 
-        ver: 'V1', 
-        title: '最终结算单', 
-        status: isSigned ? '已结清' : '待确认', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
-        actionTag: isSigned ? undefined : '待签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
-        time: '2023-12-01 10:00' 
-      });
-    }
-
-    // 2. 交付报价单: 交付期及以后可见
-    if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
-      list.push({ ver: 'V1', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
-    }
-
-    // 3. 订购报价单: 订购期及以后可见
-    if (!['意向期'].includes(currentPhase)) {
-      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
-      list.push({ 
-        ver: 'V2', 
-        title: '订购报价单', 
-        status: isSigned ? '已签字' : '待确认', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '待签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
-        time: '2023-11-24 15:00' 
-      });
-      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
-    }
-
-    // 4. 意向报价单: S00 之后可见
+    // 1. 意向报价单: S00 之后可见
     if (currentStatusCode !== 'S00') {
       const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
       list.push({ 
@@ -99,6 +65,40 @@ export default function OrderDetailPage() {
       });
     }
 
+    // 2. 订购报价单: 订购期及以后可见
+    if (!['意向期'].includes(currentPhase)) {
+      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
+      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
+      list.push({ 
+        ver: 'V2', 
+        title: '订购报价单', 
+        status: isSigned ? '已签字' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-11-24 15:00' 
+      });
+    }
+
+    // 3. 交付报价单: 交付期及以后可见
+    if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
+      list.push({ ver: 'V1', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
+    }
+
+    // 4. 结算单: 验收期及以后可见
+    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
+      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
+      list.push({ 
+        ver: 'V1', 
+        title: '最终结算单', 
+        status: isSigned ? '已结清' : '待确认', 
+        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
+        actionTag: isSigned ? undefined : '待签字', 
+        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
+        time: '2023-12-01 10:00' 
+      });
+    }
+
     return list;
   }, [currentPhase, currentStatusCode]);
 
@@ -107,9 +107,12 @@ export default function OrderDetailPage() {
     title: foundOrder?.title || '铝合金智能化幕墙采购与施工订单',
     status: foundOrder?.status || 'S06-01 交付设计中',
     statusColor: getOrderStatusColor(foundOrder?.status || 'S06-01 交付设计中'),
-    totalAmount: foundOrder?.amount || (currentPhase === '意向期' ? '待定' : '250,000'),
+    totalAmount: foundOrder?.amount || (currentPhase === '意向期' ? '¥20,000 ~ ¥40,000' : '¥250,000'),
     quotations: dynamicQuotations
   }
+
+  const displayAmount = orderData.totalAmount.startsWith('¥') ? orderData.totalAmount.slice(1) : orderData.totalAmount;
+  const hasCurrencySymbol = orderData.totalAmount.includes('¥');
 
   let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusCode);
   const exceptionCodes = ['S04', 'S05', 'S08', 'S13'];
@@ -199,8 +202,8 @@ export default function OrderDetailPage() {
           <div className="text-right">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">订单概算总额</div>
             <div className="flex items-baseline justify-end gap-1">
-              {orderData.totalAmount !== '待定' && <span className="text-xs font-bold text-gray-900">¥</span>}
-              <span className="text-4xl font-bold text-gray-900 tabular-nums">{orderData.totalAmount}</span>
+              {hasCurrencySymbol && <span className="text-xs font-bold text-gray-900">¥</span>}
+              <span className="text-4xl font-bold text-gray-900 tabular-nums">{displayAmount}</span>
             </div>
             
             {/* Action Buttons */}
@@ -241,7 +244,7 @@ export default function OrderDetailPage() {
 
         {/* 订单颗粒度进程 Section */}
         <section className="bg-white/45 backdrop-blur-[25px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-6 sm:p-8 relative overflow-hidden group">
-          <div className="absolute -top-10 -right-10 w-64 h-64 bg-[#17a1cf]/20 rounded-full blur-3xl pointer-events-none transition-colors"></div>
+          <div className={`absolute -top-10 -right-10 w-64 h-64 ${currentStep?.blockBg.replace('/10', '/20') || 'bg-phase-delivery/20'} rounded-full blur-3xl pointer-events-none transition-colors`}></div>
           
           <div className="flex items-center justify-between mb-10 relative z-10">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
@@ -252,7 +255,7 @@ export default function OrderDetailPage() {
               <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-sm border ${
                 isExceptionState 
                   ? 'text-red-600 bg-red-50/50 border-red-200' 
-                  : 'text-[#17a1cf] bg-[#17a1cf]/10 border-[#17a1cf]/20'
+                  : `${currentStep?.blockText || 'text-phase-delivery'} ${currentStep?.blockBg || 'bg-phase-delivery/10'} border-current/20`
               }`}>
                 当前状态: {orderData.status}
               </span>
@@ -339,16 +342,16 @@ export default function OrderDetailPage() {
                       <div className="mt-4">
                         {isCurrent ? (
                           <div className="relative">
-                            <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : 'bg-[#17a1cf]'}`}></div>
+                            <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')}`}></div>
                             <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md ring-2 ring-white/60 backdrop-blur-md ${
-                              isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : 'bg-gradient-to-br from-[#17a1cf] to-blue-500'
+                              isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')
                             }`}>
                               <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
                             </div>
                           </div>
                         ) : isCompleted ? (
                           <div className={`w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center shadow-sm ${
-                            isExceptionState ? 'border-red-200 text-red-500' : 'border-emerald-100 text-emerald-600'
+                            isExceptionState ? 'border-red-200 text-red-500' : `${step.blockText.replace('text-', 'border-')}/30 ${step.blockText}`
                           }`}>
                             <Check size={12} strokeWidth={4} />
                           </div>
@@ -362,14 +365,14 @@ export default function OrderDetailPage() {
                       {/* Label */}
                       <div className="mt-3 flex flex-col items-center">
                         <span className={`text-[10px] font-bold text-center leading-tight transition-all ${
-                          isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : 'text-[#17a1cf] scale-110') :
-                          isCompleted ? (isExceptionState ? 'text-red-500' : 'text-emerald-600') :
+                          isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : `${step.blockText} scale-110`) :
+                          isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
                           'text-slate-400'
                         }`}>
                           {isCurrent ? (isExceptionState ? '异常中断' : step.label) : step.label}
                         </span>
                         {isCurrent && (
-                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : 'bg-[#17a1cf]'} animate-bounce`} />
+                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')} animate-bounce`} />
                         )}
                       </div>
                     </div>
@@ -386,7 +389,7 @@ export default function OrderDetailPage() {
               return (
                 <div 
                   key={i} 
-                  className={`h-1 rounded-full transition-all duration-300 ${isActive ? 'w-4 bg-[#17a1cf]' : 'w-1 bg-gray-200'}`}
+                  className={`h-1 rounded-full transition-all duration-300 ${isActive ? `w-4 ${currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery'}` : 'w-1 bg-gray-200'}`}
                 />
               );
             })}
