@@ -1,48 +1,32 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftRight, Bot, BarChart3, ChevronRight, LayoutGrid, Hourglass, Layout, Activity, Check, FileText } from 'lucide-react';
+import { ArrowLeftRight, Bot, BarChart3, ChevronRight, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
+import { useGlobal } from '../../context/GlobalContext';
+import { INITIAL_ORDERS } from '../../data/mockOrders';
+import { handleOrderAction } from '../../utils/orderStateMachine';
+import { toast } from 'sonner';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { data, updateData } = useGlobal();
 
-  // Find the order data from the mock data, or use a default if not found
+  // Find the order data from the global state
+  const orders = data.orders && data.orders.length > 0 ? data.orders : INITIAL_ORDERS;
+  const foundOrder = orders.find((o: any) => o.id === id);
+
   const orderData = {
-    id: id || 'PSO-OD_SZYWZD-00007',
-    title: '铝合金智能化幕墙采购与施工订单',
-    status: 'S06-01 交付设计中',
-    statusColor: 'blue',
-    totalAmount: '250,000',
+    id: foundOrder?.id || id || 'PSO-OD_SZYWZD-00007',
+    title: foundOrder?.title || '铝合金智能化幕墙采购与施工订单',
+    status: foundOrder?.status || 'S06-01 交付设计中',
+    statusColor: getOrderStatusColor(foundOrder?.status || 'S06-01 交付设计中'),
+    totalAmount: foundOrder?.amount || '250,000',
     quotations: [
       { ver: 'V2', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '待反馈', actionTagColor: 'bg-red-50 text-red-600 border border-red-100', time: '2023-11-24 15:00' },
       { ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' },
       { ver: 'V0', title: '意向报价单', status: '已查看已签字', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-10-20 09:00' },
     ]
-  }
-
-  // We need to fetch the real order data based on the ID to match the list
-  // For now, we'll try to extract info from the ID if it matches our mock data format
-  if (id === 'PSO-OD_LHJCF-00471') {
-    orderData.title = '瓷砖铺贴-公卫、次卫、厨房墙地铺贴'
-    orderData.status = 'S11-订单已交付'
-    orderData.statusColor = 'emerald'
-    orderData.totalAmount = '57,500'
-  } else if (id === 'PSO-OD_LHJCF-00567') {
-    orderData.title = '全屋-石材安装'
-    orderData.status = 'S00-意向报价中'
-    orderData.statusColor = 'gray'
-    orderData.totalAmount = '待定'
-  } else if (id === 'PSO-OD_LHJCF-00612') {
-    orderData.title = '橱柜柜体定制'
-    orderData.status = 'S05-客户决策中'
-    orderData.statusColor = 'gray'
-    orderData.totalAmount = '32,800'
-  } else if (id === 'PSO-OD_LHJCF-00623') {
-    orderData.title = '一层、负一层-天花吊顶'
-    orderData.status = 'S06-04 交付施工中'
-    orderData.statusColor = 'blue'
-    orderData.totalAmount = '12,000'
   }
 
   const currentStatusPrefix = orderData.status.substring(0, 3);
@@ -52,7 +36,6 @@ export default function OrderDetailPage() {
     { id: 'S01', label: '意向沟通' },
     { id: 'S02', label: '订单深化' },
     { id: 'S03', label: '订购确认' },
-    { id: 'S05', label: '客户决策' },
     { id: 'S06', label: '订单交付' },
     { id: 'S07', label: '订单验收' },
     { id: 'S09', label: '订单整改' },
@@ -66,8 +49,9 @@ export default function OrderDetailPage() {
 
   if (activeIndex === -1) {
     isExceptionState = true;
-    if (currentStatusPrefix === 'S04') activeIndex = 3; // 婉拒 (after 订购确认)
-    else if (currentStatusPrefix === 'S08') activeIndex = 6; // 终止 (after 订单验收)
+    if (currentStatusPrefix === 'S04') activeIndex = 1; // 婉拒 (after 意向沟通)
+    else if (currentStatusPrefix === 'S05') activeIndex = 1; // 决策中 (after 意向沟通)
+    else if (currentStatusPrefix === 'S08') activeIndex = 5; // 终止 (after 订单交付)
     else if (currentStatusPrefix === 'S13') activeIndex = 0; // 休眠
     else activeIndex = 0;
   }
@@ -81,7 +65,7 @@ export default function OrderDetailPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-2">
             <button 
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/home', { state: { activeTab: 'orders' } })}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900 transition-colors mb-2"
             >
               <ArrowLeftRight size={14} className="rotate-180" />
@@ -103,6 +87,40 @@ export default function OrderDetailPage() {
               {orderData.totalAmount !== '待定' && <span className="text-xs font-bold text-gray-900">¥</span>}
               <span className="text-4xl font-bold text-gray-900 tabular-nums">{orderData.totalAmount}</span>
             </div>
+            
+            {/* Action Buttons */}
+            {foundOrder?.isInteractive && (
+              <div className="mt-4 flex justify-end gap-2">
+                {currentStatusPrefix === 'S06' && (
+                  <button
+                    onClick={() => {
+                      if (id) {
+                        handleOrderAction(id, 'E82_TERMINATE', data.orders || [], updateData);
+                        toast.success('订单已终止');
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                  >
+                    <AlertTriangle size={14} />
+                    终止订单
+                  </button>
+                )}
+                {currentStatusPrefix === 'S11' && (
+                  <button
+                    onClick={() => {
+                      if (id) {
+                        handleOrderAction(id, 'E84_REQUEST_MAINTENANCE', data.orders || [], updateData);
+                        toast.success('已申请维保');
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+                  >
+                    <Wrench size={14} />
+                    申请维保
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -198,7 +216,7 @@ export default function OrderDetailPage() {
             </div>
             {currentStatusPrefix !== 'S00' && (
               <button 
-                onClick={() => navigate('/feedback')}
+                onClick={() => navigate('/feedback', { state: { orderNumber: orderData.id } })}
                 className="inline-flex items-center gap-2 bg-[#FF9C3E] text-white px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-[#F58B2B] transition-all active:scale-95"
               >
                 查看并反馈

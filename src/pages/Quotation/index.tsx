@@ -15,6 +15,8 @@ import { ConstructionDetails } from "./components/ConstructionDetails";
 import { SignatureModal } from "./components/SignatureModal";
 import { FeedbackModal } from "./components/FeedbackModal";
 import { toast } from "sonner";
+import { useGlobal } from "../../context/GlobalContext";
+import { handleOrderAction } from "../../utils/orderStateMachine";
 
 // 模拟数据 (保持不变)
 const quotationData = {
@@ -324,6 +326,7 @@ const quotationData = {
 export default function QuotationPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { data, updateData } = useGlobal();
   const { orderNumber, orderTitle } = location.state || {};
   const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -343,6 +346,10 @@ export default function QuotationPage() {
     toast.success("报价单已确认！感谢您的信任。", {
       duration: 3000,
     });
+    
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E80_SIGN_QUOTATION', data.orders || [], updateData);
+    }
   };
 
   const handleFeedbackClick = () => {
@@ -356,6 +363,10 @@ export default function QuotationPage() {
     toast.success("感谢您的反馈！我们会尽快与您联系。", {
       duration: 3000,
     });
+
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+    }
   };
 
   return (

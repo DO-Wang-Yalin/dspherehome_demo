@@ -15,6 +15,8 @@ import { ProductDetails } from "../../components/ProductDetails";
 import { ConstructionDetails } from "../../components/ConstructionDetails";
 import { SignatureModal } from "../../components/SignatureModal";
 import { FeedbackModal } from "../../components/FeedbackModal";
+import { useGlobal } from "../../context/GlobalContext";
+import { handleOrderAction } from "../../utils/orderStateMachine";
 
 // --- Mock Data ---
 const settlementData = {
@@ -141,9 +143,10 @@ const settlementData = {
   ],
 };
 
-export default function QuotationPage() {
+export default function SettlementPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { data, updateData } = useGlobal();
   const { orderNumber, orderTitle } = location.state || { 
     orderNumber: settlementData.orderNumber, 
     orderTitle: "EPC 项目结算单" 
@@ -161,6 +164,10 @@ export default function QuotationPage() {
     setIsConfirmed(true);
     setShowSignature(false);
     toast.success("结算单已确认！感谢您的支持。");
+
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E85_SIGN_SETTLEMENT', data.orders || [], updateData);
+    }
   };
 
   const handleFeedbackSubmit = (feedback: string) => {
@@ -168,6 +175,10 @@ export default function QuotationPage() {
     setIsFeedbackSubmitted(true);
     setShowFeedback(false);
     toast.success("感谢您的反馈！我们会尽快核对结算内容。");
+
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E83_REQUIRE_REWORK', data.orders || [], updateData);
+    }
   };
 
   return (

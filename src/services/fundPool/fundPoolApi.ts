@@ -26,12 +26,12 @@ export interface FundPool {
   pendingAllocation: number;
 }
 
-const STORAGE_KEY = 'ai-studio:fund-pool:v2';
+const STORAGE_KEY = 'ai-studio:fund-pool:v3';
 
 const DEFAULT_FUND_POOL: FundPool = {
   totalAmount: 580000,
   projectAllocations: [
-    { projectId: '1', projectName: '静安·云境公寓（示例项目）', totalBudget: 450000, amount: 185000 },
+    { projectId: '1', projectName: '龙湖璟宸府（示例项目）', totalBudget: 450000, amount: 185000 },
     { projectId: '2', projectName: '滨江翠苑 120 ㎡', totalBudget: 180000, amount: 95000 },
     { projectId: '3', projectName: '万科翡翠公园复式', totalBudget: 120000, amount: 40000 },
   ],

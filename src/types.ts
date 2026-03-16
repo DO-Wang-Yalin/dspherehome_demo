@@ -1,3 +1,5 @@
+import { INITIAL_ORDERS } from './data/mockOrders';
+
 export interface FormData {
   // Q2-0
   userName: string;
@@ -78,6 +80,7 @@ export interface FormData {
   contractAccepted?: boolean;
   contractSignatureData?: string;
   contractCustomText?: string;
+  orders?: any[];
 }
 
 export const initialFormData: FormData = {
@@ -137,4 +140,5 @@ export const initialFormData: FormData = {
   contractAccepted: false,
   contractSignatureData: '',
   contractCustomText: '',
+  orders: INITIAL_ORDERS,
 };

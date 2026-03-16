@@ -60,6 +60,7 @@ export interface WorkbenchPageProps {
   contractAccepted?: boolean
   contractSignatureData?: string
   contractCustomText?: string
+  initialTab?: NavKey
   onExit?: () => void
   onGoToFirstPage?: () => void
   /** 返回项目列表（从项目页进入工作台时使用） */
@@ -67,19 +68,35 @@ export interface WorkbenchPageProps {
   onViewOrderDetail?: (orderId: string) => void
 }
 
+import { getOrderStatusColor, STATUS_BAR_COLORS, STATUS_BADGE_COLORS } from '../../utils/orderStatus'
+import { INITIAL_ORDERS } from '../../data/mockOrders'
+import { useGlobal } from '../../context/GlobalContext'
+
 export function WorkbenchPage({
   userDisplayName,
   projectName,
   contractAccepted,
   contractSignatureData,
   contractCustomText,
+  initialTab,
   onExit,
   onGoToFirstPage,
   onBackToProjects,
   onViewOrderDetail,
 }: WorkbenchPageProps) {
+  const { data, updateData } = useGlobal();
+  
+  // Initialize orders in global state if not present
+  React.useEffect(() => {
+    if (!data.orders || data.orders.length === 0) {
+      updateData({ orders: INITIAL_ORDERS });
+    }
+  }, []);
+
+  const ordersToDisplay = data.orders && data.orders.length > 0 ? data.orders : INITIAL_ORDERS;
+
   const navigate = useNavigate()
-  const [active, setActive] = React.useState<NavKey>('home')
+  const [active, setActive] = React.useState<NavKey>(initialTab || 'home')
   const SIDEBAR_WIDTH_KEY = 'ai-studio:workbench:sidebarWidth:v1'
   const SIDEBAR_COLLAPSED_KEY = 'ai-studio:workbench:sidebarCollapsed:v1'
   const MIN_SIDEBAR_WIDTH = 220
@@ -121,7 +138,7 @@ export function WorkbenchPage({
   }, [sidebarCollapsed])
 
   const displayName = userDisplayName?.trim() || '张雅雯'
-  const currentProjectName = projectName?.trim() || '静安·云境公寓（示例项目）'
+  const currentProjectName = projectName?.trim() || '龙湖璟宸府'
   const hasSignedContract = !!contractAccepted && !!contractSignatureData
 
   const navItems: Array<{ key: NavKey; label: string; icon: React.ElementType }> = [
@@ -382,6 +399,7 @@ export function WorkbenchPage({
               />
             ) : active === 'orders' ? (
               <OrderManagementSection 
+                orders={ordersToDisplay}
                 onSelectOrder={(id) => navigate(`/order/${id}`)}
               />
             ) : active === 'budget' ? (
@@ -408,62 +426,24 @@ export function WorkbenchPage({
   )
 }
 
-import { getOrderStatusColor, STATUS_BAR_COLORS, STATUS_BADGE_COLORS } from '../../utils/orderStatus'
-
-const ORDER_MOCK_DATA = [
-    {
-      id: 'PSO-OD_LHJCF-00471',
-      projectId: 'PRJ7_X-B49-T4-LHJCF',
-      title: '瓷砖铺贴-公卫、次卫、厨房墙地铺贴',
-      status: 'S11-订单已交付',
-      contains: '详细报价单、施工方案',
-      date: '2025-10-24',
-      amount: '¥57,500',
-    },
-    {
-      id: 'PSO-OD_LHJCF-00567',
-      projectId: 'PRJ7_X-B49-T4-LHJCF',
-      title: '全屋-石材安装',
-      status: 'S00-意向报价中',
-      contains: '意向利岩板、大金空调选型',
-      date: '2025-10-26',
-      amount: '待定',
-    },
-    {
-      id: 'PSO-OD_LHJCF-00612',
-      projectId: 'PRJ7_X-B49-T4-LHJCF',
-      title: '橱柜柜体定制',
-      status: 'S05-客户决策中',
-      contains: '工程进场筹备、材料下单',
-      date: '2025-10-28',
-      amount: '¥32,800',
-    },
-    {
-      id: 'PSO-OD_LHJCF-00623',
-      projectId: 'PRJ7_X-B49-T4-LHJCF',
-      title: '一层、负一层-天花吊顶',
-      status: 'S06-04 交付施工中',
-      contains: '单层泥水工程、基层处理',
-      date: '2025-10-30',
-      amount: '¥18,900',
-    },
-  ] as const
 
 function OrderManagementSection({ 
+  orders,
   onSelectOrder 
 }: { 
+  orders: any[],
   onSelectOrder?: (id: string) => void
 }) {
   const [searchQuery, setSearchQuery] = React.useState('')
 
   const filteredOrders = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return [...ORDER_MOCK_DATA]
-    return ORDER_MOCK_DATA.filter(
+    if (!q) return [...orders]
+    return orders.filter(
       (o) =>
         o.title.toLowerCase().includes(q) || o.id.toLowerCase().includes(q)
     )
-  }, [searchQuery])
+  }, [searchQuery, orders])
 
   return (
     <div className="space-y-6">

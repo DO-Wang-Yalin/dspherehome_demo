@@ -14,6 +14,8 @@ import {
   History,
   ArrowLeftRight,
 } from 'lucide-react';
+import { useGlobal } from '../../context/GlobalContext';
+import { handleOrderAction } from '../../utils/orderStateMachine';
 
 // 简单版 cn：支持字符串和对象写法，避免额外依赖
 function cn(...classes: Array<string | Record<string, boolean> | undefined | null | false>): string {
@@ -551,6 +553,9 @@ function PageViewer({
   onUpdateComments,
   onUpdateProgress,
   initialMaxReachedIndex,
+  orderNumber,
+  data,
+  updateData,
 }: {
   order: DesignOrder;
   version: OrderVersion;
@@ -561,6 +566,9 @@ function PageViewer({
   onUpdateComments: (pageId: string, comments: Comment[]) => void;
   onUpdateProgress: (index: number) => void;
   initialMaxReachedIndex: number;
+  orderNumber?: string;
+  data?: any;
+  updateData?: (data: any) => void;
 }) {
   const [currentPageIndex, setCurrentPageIndex] = useState(initialPageIndex);
   const [maxReachedPageIndex, setMaxReachedPageIndex] = useState(
@@ -717,6 +725,10 @@ function PageViewer({
       setCurrentPageIndex(nextIndex);
       setShowConfirmDialog(false);
       setIsAddingCommentToImage(false);
+
+      if (nextIndex === version.pages.length && orderNumber && data && updateData) {
+        handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+      }
     }
   };
 
@@ -1579,10 +1591,11 @@ function DesignOverview({
 }
 
 // 4. 对外暴露的主组件：供 Step 中直接使用（完整沿用原项目 App 逻辑）
-export function DesignFeedbackApp({ onGoHome }: { onGoHome?: () => void }) {
+export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => void, orderNumber?: string }) {
   const [currentView, setCurrentView] = useState<'overview' | 'viewer'>('overview');
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [isViewerReadOnly, setIsViewerReadOnly] = useState(false);
+  const { data, updateData } = useGlobal();
 
   // 全局评论状态：Record<versionId, Record<pageId, Comment[]>>
   const [allComments, setAllComments] = useState<Record<string, Record<string, Comment[]>>>({});
@@ -1643,6 +1656,9 @@ export function DesignFeedbackApp({ onGoHome }: { onGoHome?: () => void }) {
           onUpdateComments={(pageId, comments) => handleUpdateComments(activeVersionId, pageId, comments)}
           onUpdateProgress={(index) => handleUpdateProgress(activeVersionId, index)}
           initialMaxReachedIndex={progressMap[activeVersionId] || 0}
+          orderNumber={orderNumber}
+          data={data}
+          updateData={updateData}
         />
       )}
     </div>

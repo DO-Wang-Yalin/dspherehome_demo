@@ -15,10 +15,10 @@ export interface Project {
   createdAt?: string;
 }
 
-const STORAGE_KEY = 'ai-studio:user-projects:v1';
+const STORAGE_KEY = 'ai-studio:user-projects:v2';
 
 const MOCK_PROJECTS: Project[] = [
-  { id: '1', name: '静安·云境公寓（示例项目）', location: '上海市静安区' },
+  { id: '1', name: '龙湖璟宸府（示例项目）', location: '上海市' },
   { id: '2', name: '滨江翠苑 120 ㎡', location: '上海市浦东新区' },
   { id: '3', name: '万科翡翠公园复式', location: '杭州市余杭区' },
 ];
