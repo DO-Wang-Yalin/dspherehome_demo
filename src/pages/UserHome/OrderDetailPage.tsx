@@ -20,27 +20,27 @@ export default function OrderDetailPage() {
   
   const ORDER_STEPS = [
     // 意向期
-    { id: 'S00', label: '意向报价', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
-    { id: 'S01', label: '意向沟通', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
-    { id: 'S05', label: '客户决策', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S00', label: '意向报价中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S01', label: '意向沟通中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S05', label: '客户决策中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
     // 订购期
-    { id: 'S02-01', label: '提案设计', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
-    { id: 'S02-02', label: '订购报价', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
-    { id: 'S03', label: '订购确认', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    { id: 'S02-01', label: '提案设计中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    { id: 'S02-02', label: '订购报价中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    { id: 'S03', label: '订购确认中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     // 交付期
-    { id: 'S06-01', label: '交付设计', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S06-02', label: '方案汇报', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S06-03', label: '交付备货', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S06-04', label: '交付施工', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S06-05', label: '交付内审', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S13', label: '订单休眠', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-01', label: '交付设计中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-02', label: '方案汇报中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-03', label: '交付备货中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-04', label: '交付施工中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S06-05', label: '交付内审中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    { id: 'S13', label: '订单休眠中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     // 验收期
-    { id: 'S07', label: '订单验收', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
-    { id: 'S09', label: '订单整改', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
-    { id: 'S08', label: '订单终止', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    { id: 'S07', label: '订单验收中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    { id: 'S09', label: '订单整改中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    { id: 'S08', label: '订单终止中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
     // 维保期
     { id: 'S11', label: '订单已交付', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
-    { id: 'S10', label: '订单维保', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
+    { id: 'S10', label: '订单维保中', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
     // 结束
     { id: 'S12', label: '订单已结束', phase: '结束', blockBg: 'bg-gray-100/50', blockText: 'text-gray-500' },
   ];
@@ -51,49 +51,35 @@ export default function OrderDetailPage() {
   const dynamicQuotations = useMemo(() => {
     const list = [];
     
-    // 1. 结算单: 验收期及以后可见
-    if (['验收期', '维保期', '结束'].includes(currentPhase)) {
-      const isSigned = !['验收期'].includes(currentPhase) || currentStatusCode !== 'S07';
-      list.push({ 
-        ver: 'V4', 
-        title: '最终结算单', 
-        status: isSigned ? '已结清' : '待确认', 
-        statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600', 
-        actionTag: isSigned ? undefined : '待签字', 
-        actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
-        time: '2023-12-01 10:00' 
-      });
-    }
-
-    // 2. 交付报价单: 交付期及以后可见
+    // 1. 交付报价单: 交付期及以后可见
     if (['交付期', '验收期', '维保期', '结束'].includes(currentPhase)) {
-      list.push({ ver: 'V3', title: '交付报价单', status: '已确认', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
+      list.push({ ver: 'V3', title: '交付报价单', status: '已查看已签字', statusColor: 'bg-emerald-50 text-emerald-600', time: '2023-11-28 14:00' });
     }
 
-    // 3. 订购报价单: 订购期及以后可见
+    // 2. 订购报价单: 订购期及以后可见
     if (!['意向期'].includes(currentPhase)) {
       const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
       list.push({ 
         ver: 'V2', 
         title: '订购报价单', 
-        status: isSigned ? '已签字' : '待确认', 
+        status: isSigned ? '已查看已签字' : '已查看未签字', 
         statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '待签字', 
+        actionTag: isSigned ? undefined : '未签字', 
         actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100', 
         time: '2023-11-24 15:00' 
       });
-      list.push({ ver: 'V1', title: '订购报价单', status: '已查看未签字', statusColor: 'bg-orange-50 text-orange-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
+      list.push({ ver: 'V1', title: '订购报价单', status: '已查看已反馈', statusColor: 'bg-blue-50 text-blue-600', actionTag: '已反馈', actionTagColor: 'bg-blue-50 text-blue-600 border border-blue-100', time: '2023-11-10 10:00' });
     }
 
-    // 4. 意向报价单: S00 之后可见
+    // 3. 意向报价单: S00 之后可见
     if (currentStatusCode !== 'S00') {
       const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
       list.push({ 
         ver: 'V0', 
         title: '意向报价单', 
-        status: isSigned ? '已查看已签字' : '待确认', 
+        status: isSigned ? '已查看已签字' : '未查看未签字', 
         statusColor: isSigned ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600', 
-        actionTag: isSigned ? undefined : '待签字',
+        actionTag: isSigned ? undefined : '未签字',
         actionTagColor: isSigned ? undefined : 'bg-red-50 text-red-600 border border-red-100',
         time: '2023-10-20 09:00' 
       });
@@ -369,7 +355,7 @@ export default function OrderDetailPage() {
                           isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
                           'text-slate-400'
                         }`}>
-                          {isCurrent ? (isExceptionState ? '异常中断' : step.label) : step.label}
+                          {isCurrent ? (isExceptionState ? '异常中断中' : step.label) : step.label}
                         </span>
                         {isCurrent && (
                           <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')} animate-bounce`} />

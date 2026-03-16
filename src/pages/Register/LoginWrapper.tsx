@@ -12,7 +12,7 @@ export default function LoginWrapper() {
       <main className="flex-1">
         <LoginPage
           onSuccess={() => navigate('/projects')}
-          onBack={() => navigate('/register')}
+          onBack={() => navigate('/style-eval')}
         />
       </main>
     </div>

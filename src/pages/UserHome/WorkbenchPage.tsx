@@ -183,7 +183,7 @@ export function WorkbenchPage({
         <div className="px-5">
           <button
             type="button"
-            onClick={onBackToProjects ?? onGoToFirstPage}
+            onClick={onGoToFirstPage}
             className="flex items-center gap-3 px-2 text-left rounded-2xl hover:bg-black/5 transition-colors py-2 -my-2"
           >
             <img src={logoImg} alt="DSPHR Workspace" className="h-10 w-auto object-contain" />
@@ -337,10 +337,10 @@ export function WorkbenchPage({
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-[#C87800] bg-[#FF9C3E]/10 px-2 py-0.5 rounded-full">
-                              待确认
+                              未查看未签字
                             </span>
                           </div>
-                          <div className="text-base font-semibold truncate">00590#订单竣工验收待确认</div>
+                          <div className="text-base font-semibold truncate">00590#订单竣工验收未查看未签字</div>
                           <p className="text-sm text-gray-600 mt-1 leading-relaxed">
                             您的工程已完工并通过内审，最终结算单及验收报告已出具，请尽快核对并确认。
                           </p>

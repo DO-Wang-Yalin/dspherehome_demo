@@ -25,7 +25,7 @@ export const INITIAL_ORDERS = [
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '测试-订购打回提案 (S03->S02-01)',
     status: 'S03-订购确认中',
-    contains: 'EPC订购报价单(待确认)',
+    contains: 'EPC订购报价单(未查看未签字)',
     date: '2026-03-15',
     amount: '¥85,000',
     isInteractive: true,

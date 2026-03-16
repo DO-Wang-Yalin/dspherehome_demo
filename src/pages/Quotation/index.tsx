@@ -396,7 +396,7 @@ export default function QuotationPage() {
                   <div className="flex items-center gap-2 mt-2">
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                     <span className="text-[12px] text-green-600 font-medium">
-                      客户已确认
+                      已查看已签字
                     </span>
                   </div>
                 )}
@@ -606,7 +606,7 @@ export default function QuotationPage() {
                       </div>
                       <div>
                         <h4 className="font-black text-green-900 text-[30px]">
-                          报价单已确认
+                          已查看已签字
                         </h4>
                         <p className="text-[12px] text-green-700 mt-1 font-medium">
                           确认时间：{new Date().toLocaleString("zh-CN")}

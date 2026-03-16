@@ -206,7 +206,7 @@ export default function SettlementPage() {
                 {isConfirmed && (
                   <div className="flex items-center gap-2 mt-2">
                     <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <span className="text-[12px] text-green-600 font-medium">客户已确认</span>
+                    <span className="text-[12px] text-green-600 font-medium">已查看已签字</span>
                   </div>
                 )}
               </div>
@@ -297,7 +297,7 @@ export default function SettlementPage() {
             ) : isConfirmed ? (
               <div className="bg-green-50 rounded-[24px] p-6 border border-green-200 flex justify-between items-start">
                 <div>
-                  <h4 className="font-black text-green-900 text-[30px] mb-2">结算单已确认</h4>
+                  <h4 className="font-black text-green-900 text-[30px] mb-2">已查看已签字</h4>
                   <p className="text-[16px] text-[#6B7280]">感谢您的确认！项目结算流程已完成。</p>
                 </div>
                 {signatureData && <img src={signatureData} alt="Signature" className="w-48 h-24 border-2 border-green-300 rounded-xl bg-white object-contain" />}
