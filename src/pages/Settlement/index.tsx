@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -153,14 +153,29 @@ export default function SettlementPage() {
     orderTitle: "EPC 项目结算单" 
   };
 
+  const currentOrder = data.orders?.find(o => o.id === orderNumber);
+  const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';
+  const isCurrentlySigned = ['S11', 'S10', 'S12'].includes(currentStatusCode);
+
   const [showSignature, setShowSignature] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showThankYouModal, setShowThankYouModal] = useState(false);
   const [thankYouMessage, setThankYouMessage] = useState("");
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(isCurrentlySigned);
+  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(currentOrder?.feedbackSubmitted || false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (orderNumber && data.orders) {
+      const orderIndex = data.orders.findIndex(o => o.id === orderNumber);
+      if (orderIndex !== -1 && !data.orders[orderIndex].viewed) {
+        const updatedOrders = [...data.orders];
+        updatedOrders[orderIndex] = { ...updatedOrders[orderIndex], viewed: true };
+        updateData({ orders: updatedOrders });
+      }
+    }
+  }, [orderNumber, data.orders, updateData]);
 
   const handleSignatureConfirm = (signature: string) => {
     setSignatureData(signature);
@@ -182,7 +197,7 @@ export default function SettlementPage() {
     setShowThankYouModal(true);
 
     if (orderNumber) {
-      handleOrderAction(orderNumber, 'E83_REQUIRE_REWORK', data.orders || [], updateData);
+      handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
     }
   };
 

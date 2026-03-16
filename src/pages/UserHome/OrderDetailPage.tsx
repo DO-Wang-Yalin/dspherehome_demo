@@ -70,7 +70,7 @@ export default function OrderDetailPage() {
 
     // 2. 订购报价单: 订购期及以后可见
     if (!['意向期'].includes(currentPhase)) {
-      const isSigned = !['订购期'].includes(currentPhase) || currentStatusCode !== 'S03';
+      const isSigned = ['交付期', '验收期', '维保期', '结束'].includes(currentPhase);
       
       const statusInfoV2 = getUnifiedStatus(isViewed, isSigned, isFeedback);
       list.push({ 
@@ -114,7 +114,7 @@ export default function OrderDetailPage() {
   const hasCurrencySymbol = orderData.totalAmount.includes('¥');
 
   const isViewed = foundOrder?.viewed || false;
-  const isSigned = currentStatusCode === 'S11';
+  const isSigned = ['维保期', '结束'].includes(currentPhase);
   const isFeedback = foundOrder?.feedbackSubmitted || false;
 
   const getUnifiedStatus = (viewed: boolean, signed: boolean, feedback: boolean) => {

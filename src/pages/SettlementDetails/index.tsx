@@ -1,22 +1,49 @@
-import React, { useState } from 'react';
-import { FileText, User, MapPin, CheckCircle2, AlertCircle, Hammer, Palette, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { FileText, User, MapPin, CheckCircle2, AlertCircle, Hammer, Palette, MessageSquare, ArrowLeft } from 'lucide-react';
 import SettlementTable from '../../components/SettlementTable';
 import { toast } from 'sonner';
+import { useGlobal } from '../../context/GlobalContext';
+import { handleOrderAction } from '../../utils/orderStateMachine';
 
 export default function SettlementDetailsPage() {
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { data, updateData } = useGlobal();
+  const { orderNumber } = location.state || {};
+
+  const currentOrder = data.orders?.find(o => o.id === orderNumber);
+  const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';
+  const isCurrentlySigned = ['S11', 'S10', 'S12'].includes(currentStatusCode);
+
+  const [isConfirmed, setIsConfirmed] = useState(isCurrentlySigned);
+  const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(currentOrder?.feedbackSubmitted || false);
+
+  useEffect(() => {
+    if (orderNumber && data.orders) {
+      const orderIndex = data.orders.findIndex(o => o.id === orderNumber);
+      if (orderIndex !== -1 && !data.orders[orderIndex].viewed) {
+        const updatedOrders = [...data.orders];
+        updatedOrders[orderIndex] = { ...updatedOrders[orderIndex], viewed: true };
+        updateData({ orders: updatedOrders });
+      }
+    }
+  }, [orderNumber, data.orders, updateData]);
 
   const handleConfirmClick = () => {
-    // 模拟确认逻辑
     setIsConfirmed(true);
     toast.success("结算单已确认");
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E85_SIGN_SETTLEMENT', data.orders || [], updateData);
+    }
   };
 
   const handleFeedbackClick = () => {
-    // 模拟反馈逻辑
     setIsFeedbackSubmitted(true);
     toast.info("反馈已提交，请等待更新");
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+    }
   };
 
   const settlementData = {
@@ -56,6 +83,15 @@ export default function SettlementDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto">
+        {/* 返回按钮 */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-[#6B7280] hover:text-[#0A0A0A] mb-6 transition-colors font-medium"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          返回订单详情
+        </button>
+
         {/* 头部 */}
         <div className="bg-white rounded-[24px] shadow-sm border border-gray-200 p-8 mb-8">
           <div className="flex justify-between items-start mb-8">

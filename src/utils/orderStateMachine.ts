@@ -36,6 +36,20 @@ export function handleOrderAction(
   if (orderIndex === -1) return false;
 
   const order = orders[orderIndex];
+  
+  if (actionCode === 'E79_VIEW_QUOTATION') {
+    if (!order.viewed) {
+      const updatedOrders = [...orders];
+      updatedOrders[orderIndex] = {
+        ...order,
+        viewed: true
+      };
+      updateData({ orders: updatedOrders });
+      return order.status;
+    }
+    return false;
+  }
+
   const nextState = ORDER_TRANSITIONS[actionCode]?.[order.status];
 
   if (nextState) {

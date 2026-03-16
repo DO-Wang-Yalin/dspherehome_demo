@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -337,6 +337,12 @@ export default function QuotationPage() {
   const [isFeedbackSubmitted, setIsFeedbackSubmitted] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (orderNumber) {
+      handleOrderAction(orderNumber, 'E79_VIEW_QUOTATION', data.orders || [], updateData);
+    }
+  }, [orderNumber, data.orders, updateData]);
 
   const handleConfirmClick = () => {
     setShowSignatureModal(true);

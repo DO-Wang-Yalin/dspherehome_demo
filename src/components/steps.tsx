@@ -619,24 +619,32 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
   const ctx = useDeepEvalForm()
   const { formData, budgetDisplayLabel, submit, isSubmitting, submitError, setSubmitError } = ctx
-  const areaNum = Math.max(0, parseFloat(formData.area) || 0)
+  const areaNum = Math.ceil(Math.max(0, parseFloat(formData.area) || 0))
   const yuanPerSqm = parseBudgetRangeToYuanPerSqm(formData.budget)
-  const totalYuan = areaNum * yuanPerSqm
+  const totalYuanLower = areaNum * yuanPerSqm
+  const totalYuanUpper = totalYuanLower * 1.05
 
   const segments = (() => {
-    const E = totalYuan * BUDGET_EPC_RATIOS.E
-    const P = totalYuan * BUDGET_EPC_RATIOS.P
-    const C = totalYuan * BUDGET_EPC_RATIOS.C
+    const ELower = totalYuanLower * BUDGET_EPC_RATIOS.E
+    const EUpper = totalYuanUpper * BUDGET_EPC_RATIOS.E
+    const PLower = totalYuanLower * BUDGET_EPC_RATIOS.P
+    const PUpper = totalYuanUpper * BUDGET_EPC_RATIOS.P
+    const CLower = totalYuanLower * BUDGET_EPC_RATIOS.C
+    const CUpper = totalYuanUpper * BUDGET_EPC_RATIOS.C
     return [
-      { id: 'E' as const, amount: E, ratio: BUDGET_EPC_RATIOS.E, ...EPC_THEME.E },
-      { id: 'P' as const, amount: P, ratio: BUDGET_EPC_RATIOS.P, ...EPC_THEME.P },
-      { id: 'C' as const, amount: C, ratio: BUDGET_EPC_RATIOS.C, ...EPC_THEME.C },
+      { id: 'E' as const, amountLower: ELower, amountUpper: EUpper, ratio: BUDGET_EPC_RATIOS.E, ...EPC_THEME.E },
+      { id: 'P' as const, amountLower: PLower, amountUpper: PUpper, ratio: BUDGET_EPC_RATIOS.P, ...EPC_THEME.P },
+      { id: 'C' as const, amountLower: CLower, amountUpper: CUpper, ratio: BUDGET_EPC_RATIOS.C, ...EPC_THEME.C },
     ]
   })()
 
   /** 设计参考：金额展示为 ¥xxx,xxx.00 */
   const formatYuan = (yuan: number) =>
     `¥${(Math.round(yuan * 100) / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const formatWan = (yuan: number) =>
+    `${(yuan / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}万`
+  const formatWanRange = (lower: number, upper: number) =>
+    `${formatWan(lower)} ~ ${formatWan(upper)}`
   const formatPerSqmYuan = (yuan: number) =>
     areaNum > 0 ? formatYuan(yuan / areaNum) : '—'
 
@@ -780,9 +788,9 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
                           <p className="text-sm text-gray-500 mt-1">{s.desc}</p>
                           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-600">
                             {s.id !== 'P' && (
-                              <span>单平方米造价：{formatPerSqmYuan(s.amount)}</span>
+                              <span>单平方米造价：{formatPerSqmYuan(s.amountLower)}</span>
                             )}
-                            <span>总价：{formatYuan(s.amount)}</span>
+                            <span>总价：{formatYuan(s.amountLower)}</span>
                           </div>
                         </div>
                       </div>
@@ -794,7 +802,7 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
                 <div className="rounded-xl bg-[#F7F5F0] border border-[#EAE5DE] px-4 py-4 flex items-center justify-between">
                   <p className="text-base font-semibold text-gray-900">项目总预算</p>
                   <p className="text-xl sm:text-2xl font-semibold text-gray-900 tabular-nums">
-                    {formatYuan(totalYuan)}
+                    {formatWanRange(totalYuanLower, totalYuanUpper)}
                   </p>
                 </div>
 
