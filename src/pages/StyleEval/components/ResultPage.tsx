@@ -9,7 +9,6 @@ import Hammer from 'lucide-react/dist/esm/icons/hammer';
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
 import X from 'lucide-react/dist/esm/icons/x';
 
-import dreamOneLogo from '../../../assets/img/logo.png';
 import { getVisitorId } from '../../../utils/visitorId';
 import { saveVoyageCard } from '../../../services/designVoyage/VoyageCardService';
 
@@ -239,7 +238,7 @@ export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval, onSt
             </div>
             <div className="pt-4 flex justify-between items-end border-t border-black/5">
               <div className="flex flex-col gap-0.5">
-                <img src={dreamOneLogo} alt="DREAM.ONE" className="h-5 w-auto object-contain object-left" />
+                <img src="/img/logo.png" alt="DREAM.ONE" className="h-5 w-auto object-contain object-left" />
               </div>
               <span className="text-[9px] font-mono text-sub/40">NO.{cardId}</span>
             </div>

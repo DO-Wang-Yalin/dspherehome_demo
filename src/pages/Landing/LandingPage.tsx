@@ -43,7 +43,7 @@ export default function LandingPage() {
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-100 mb-8">
             <Sparkles size={16} className="text-[#EF6B00]" />
-            <span className="text-sm font-medium text-gray-600">Design Voyage Platform</span>
+            <span className="text-sm font-medium text-gray-600">Dsphr Home</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 tracking-tight mb-6">
@@ -89,7 +89,7 @@ export default function LandingPage() {
       {/* Footer Info */}
       <div className="absolute bottom-8 right-8 text-right hidden md:block">
         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Version 1.0.4</div>
-        <div className="text-xs text-gray-500 font-medium">© 2026 Design Voyage Platform</div>
+        <div className="text-xs text-gray-500 font-medium">© 2026 Dsphr Home</div>
       </div>
     </div>
   );

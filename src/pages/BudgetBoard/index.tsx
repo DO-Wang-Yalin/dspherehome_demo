@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel';
-import logoImg from '../../assets/img/logo.png';
 
 export default function BudgetBoardPage() {
   const navigate = useNavigate();
@@ -19,7 +18,7 @@ export default function BudgetBoardPage() {
             <span className="text-sm font-medium">返回项目中心</span>
           </button>
           <div className="flex items-center gap-3">
-            <img src={logoImg} alt="Logo" className="h-8 w-auto" />
+            <img src="/img/logo.png" alt="Logo" className="h-8 w-auto" />
             <h1 className="text-lg font-semibold text-gray-900">预算看板</h1>
           </div>
           <div className="w-28" />

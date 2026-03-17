@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { useGlobal } from '../../context/GlobalContext';
 import { handleOrderAction } from '../../utils/orderStateMachine';
+import img主卫 from '../../assets/img/主卫.png';
+import img公卫 from '../../assets/img/公卫.jpg';
+import img儿童卫 from '../../assets/img/儿童卫.JPEG';
 
 // 简单版 cn：支持字符串和对象写法，避免额外依赖
 function cn(...classes: Array<string | Record<string, boolean> | undefined | null | false>): string {
@@ -262,6 +265,113 @@ export const DESIGN_FEEDBACK_ORDER: DesignOrder = {
   ],
 };
 
+// 订单 PSO-OD_LHJCF-00584 专用：仅一个「进行中」版本，卫生间瓷砖设计方案，含 EPC 标注
+export const DESIGN_FEEDBACK_ORDER_00584: DesignOrder = {
+  id: 'order-00584',
+  orderNumber: 'PSO-OD_LHJCF-00584',
+  orderName: '测试-意向转提案 (S01->S02-01)',
+  clientName: '张先生',
+  currentVersionId: 'v1',
+  versions: [
+    {
+      id: 'v1',
+      versionNumber: 'V1',
+      name: 'V1.0 卫生间瓷砖设计方案',
+      status: 'draft',
+      createdAt: '2026-03-15T10:00:00Z',
+      pages: [
+        {
+          snapshotId: 's00584-p1',
+          versionId: 'v1',
+          pageId: 'p1',
+          order: 1,
+          title: '主卫墙地砖铺贴方案',
+          text: '主卫墙地砖采用同一系列瓷砖，墙砖 300×600mm，地砖 300×300mm 防滑款。铺贴方式为墙压地，留缝 2mm，美缝选用与砖色接近的环氧彩砂。',
+          imageUrl: img主卫,
+          annotations: [
+            {
+              id: 'epc-a1',
+              targetType: 'image_point',
+              point: { x: 35, y: 45 },
+              content: '墙砖铺贴高度至吊顶下 20mm，阴角处做 45° 倒角对缝。',
+              createdAt: '2026-03-15T10:00:00Z',
+            },
+          ],
+          comments: [],
+          lock: { isLocked: false },
+        },
+        {
+          snapshotId: 's00584-p2',
+          versionId: 'v1',
+          pageId: 'p2',
+          order: 2,
+          title: '公卫墙地砖铺贴方案',
+          text: '公卫墙地砖规格与主卫一致，墙压地铺贴，地漏处做八字切割保证排水坡度。',
+          imageUrl: img公卫,
+          annotations: [
+            {
+              id: 'epc-b1',
+              targetType: 'image_point',
+              point: { x: 50, y: 40 },
+              content: '地砖从门口向内侧铺贴，地漏处做八字切割，保证排水坡度。',
+              createdAt: '2026-03-15T10:15:00Z',
+            },
+          ],
+          comments: [],
+          lock: { isLocked: false },
+        },
+        {
+          snapshotId: 's00584-p3',
+          versionId: 'v1',
+          pageId: 'p3',
+          order: 3,
+          title: '儿童卫墙地砖铺贴方案',
+          text: '儿童卫采用防滑地砖与易清洁墙砖，铺贴方式与主卫、公卫一致，墙压地、留缝 2mm。',
+          imageUrl: img儿童卫,
+          annotations: [
+            {
+              id: 'epc-c1',
+              targetType: 'image_point',
+              point: { x: 50, y: 50 },
+              content: '儿童卫墙地砖铺贴，E 类选型、C 类施工，防滑地砖与易清洁墙砖。',
+              createdAt: '2026-03-15T10:25:00Z',
+            },
+          ],
+          comments: [],
+          lock: { isLocked: false },
+        },
+      ],
+    },
+  ],
+};
+
+/** 根据订单号获取设计反馈中「当前版本」的展示信息，供订单详情页与设计方案与图纸一致 */
+export function getDesignVersionInfo(orderNumber: string | undefined): {
+  versionName: string;
+  statusLabel: string;
+  description: string;
+  updatedAt: string;
+} | null {
+  const order = orderNumber === 'PSO-OD_LHJCF-00584' ? DESIGN_FEEDBACK_ORDER_00584 : DESIGN_FEEDBACK_ORDER;
+  const currentId = order.currentVersionId;
+  const version = order.versions.find((v) => v.id === currentId) || order.versions[0];
+  if (!version) return null;
+  const statusLabel =
+    version.status === 'draft' || version.status === 'published' ? '进行中' : version.status === 'completed' ? '已完成' : '已归档';
+  const updatedAt = version.publishedAt || version.createdAt;
+  const dateStr = updatedAt ? new Date(updatedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-') : '';
+  const description =
+    orderNumber === 'PSO-OD_LHJCF-00584'
+      ? '卫生间墙地砖铺贴方案，含 EPC 标注，等待您的确认与反馈。'
+      : '包含平面布置图、效果图及施工节点大样图，等待您的最终确认。';
+  return {
+    versionName: version.name,
+    statusLabel,
+    description,
+    updatedAt: dateStr,
+  };
+}
+
 const ORDER_VERSIONS = DESIGN_FEEDBACK_ORDER.versions;
 
 // --- History Snapshot Viewer Component (simplified from original) ---
@@ -379,11 +489,7 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
     return lines;
   }, [snapshot, redrawTrigger, hoveredId]);
 
-  const sortedAnnotations = [...snapshot.annotations].sort((a, b) => {
-    if (a.targetType === 'text_description' && b.targetType === 'image_point') return -1;
-    if (a.targetType === 'image_point' && b.targetType === 'text_description') return 1;
-    return 0;
-  });
+  const sortedAnnotations = snapshot.annotations.filter((a) => a.targetType === 'image_point');
 
   const sortedComments = [...snapshot.comments].sort((a, b) => {
     if (a.targetType === 'text_description' && b.targetType === 'image_point') return -1;
@@ -419,19 +525,15 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
               )}
             >
               <div className="absolute -left-2 -top-2 w-5 h-5 bg-[#4887FF] text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow-md border border-white z-50">
-                {anno.targetType === 'text_description' ? (
-                  <TextQuote className="w-2.5 h-2.5" />
-                ) : (
-                  getEpcImageIndex(anno.id)
-                )}
+                {getEpcImageIndex(anno.id)}
               </div>
               <div className="text-[10px] font-medium text-slate-400 mb-1 uppercase tracking-wider">
-                {anno.targetType === 'image_point' ? '图纸位置' : '文字描述'}
+                图纸位置
               </div>
               <p className="text-xs text-slate-700 leading-relaxed">{anno.content}</p>
             </div>
           ))}
-          {snapshot.annotations.length === 0 && (
+          {sortedAnnotations.length === 0 && (
             <div className="text-center text-slate-400 text-xs py-8">无设计注释</div>
           )}
         </div>
@@ -452,13 +554,13 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
 
         <div
           ref={imageContainerRef}
-          className="flex-1 min-h-0 relative flex items-center justify中心 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-2 z-20"
+          className="flex-1 min-h-0 relative flex items-center justify-center bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-2 z-20"
         >
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div className="relative w-full aspect-video max-h-full flex items-center justify-center overflow-hidden rounded-xl">
             <img
               src={snapshot.imageUrl}
               alt="Snapshot"
-              className="w-full h-full object-contain relative z-10"
+              className="w-full h-full object-cover relative z-10"
               referrerPolicy="no-referrer"
             />
 
@@ -619,11 +721,8 @@ function PageViewer({
     onUpdateComments(pageSnapshot.pageId, newComments);
   };
 
-  const sortedAnnotations = [...pageSnapshot.annotations].sort((a, b) => {
-    if (a.targetType === 'text_description' && b.targetType === 'image_point') return -1;
-    if (a.targetType === 'image_point' && b.targetType === 'text_description') return 1;
-    return 0;
-  });
+  // EPC 标注只展示图纸上的标注，不展示对说明文字的标注
+  const sortedAnnotations = pageSnapshot.annotations.filter((a) => a.targetType === 'image_point');
 
   const sortedComments = [...comments].sort((a, b) => {
     if (a.targetType === 'text_description' && b.targetType === 'image_point') return -1;
@@ -949,19 +1048,15 @@ function PageViewer({
                     )}
                   >
                     <div className="absolute -left-3 -top-3 w-7 h-7 bg-[#4887FF] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md border-2 border-white">
-                      {anno.targetType === 'text_description' ? (
-                        <TextQuote className="w-3.5 h-3.5" />
-                      ) : (
-                        getEpcImageIndex(anno.id)
-                      )}
+                      {getEpcImageIndex(anno.id)}
                     </div>
                     <div className="text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">
-                      {anno.targetType === 'image_point' ? '图纸位置' : '文字描述'}
+                      图纸位置
                     </div>
                     <p className="text-sm text-slate-700 leading-relaxed">{anno.content}</p>
                   </div>
                 ))}
-                {pageSnapshot.annotations.length === 0 && (
+                {sortedAnnotations.length === 0 && (
                   <div className="text-center text-slate-400 text-sm py-10">暂无设计注释</div>
                 )}
               </div>
@@ -995,7 +1090,6 @@ function PageViewer({
             </div>
 
             <div
-              ref={imageContainerRef}
               onClick={handleImageClick}
               className="flex-1 min-h-0 relative flex items-center justify-center p-3 group"
             >
@@ -1012,12 +1106,15 @@ function PageViewer({
                 </div>
               )}
 
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div
+                ref={imageContainerRef}
+                className="relative w-full aspect-video max-h-full flex items-center justify-center overflow-hidden rounded-2xl bg-white/50"
+              >
                 <img
                   src={pageSnapshot.imageUrl}
                   alt="CAD Floor Plan"
                   className={cn(
-                    'w-full h-full object-contain rounded-2xl bg-white/50 relative z-10 transition-transform duration-300',
+                    'w-full h-full object-cover relative z-10 transition-transform duration-300',
                     !isAddingCommentToImage && 'cursor-zoom-in group-hover:scale-[1.01]',
                   )}
                   referrerPolicy="no-referrer"
@@ -1028,26 +1125,25 @@ function PageViewer({
                     <ZoomIn className="w-3.5 h-3.5" /> 点击查看大图
                   </div>
                 )}
-              </div>
 
-              {pageSnapshot.annotations
-                .filter((a) => a.targetType === 'image_point')
-                .map((anno) => (
-                  <div
-                    key={`dot-${anno.id}`}
-                    onMouseEnter={() => setHoveredId(anno.id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                    className={cn(
-                      'marker-dot absolute w-5 h-5 rounded-full border-[2.5px] border-white shadow-md -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-transform cursor-pointer',
-                      hoveredId === anno.id ? 'bg-[#4887FF] scale-125 z-[60]' : 'bg-[#4887FF]/80 z-50',
-                    )}
-                    style={{ left: `${anno.point?.x}%`, top: `${anno.point?.y}%` }}
-                  >
-                    <span className="text-[9px] text-white font-bold">{getEpcImageIndex(anno.id)}</span>
-                  </div>
-                ))}
+                {pageSnapshot.annotations
+                  .filter((a) => a.targetType === 'image_point')
+                  .map((anno) => (
+                    <div
+                      key={`dot-${anno.id}`}
+                      onMouseEnter={() => setHoveredId(anno.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      className={cn(
+                        'marker-dot absolute w-5 h-5 rounded-full border-[2.5px] border-white shadow-md -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-transform cursor-pointer',
+                        hoveredId === anno.id ? 'bg-[#4887FF] scale-125 z-[60]' : 'bg-[#4887FF]/80 z-50',
+                      )}
+                      style={{ left: `${anno.point?.x}%`, top: `${anno.point?.y}%` }}
+                    >
+                      <span className="text-[9px] text-white font-bold">{getEpcImageIndex(anno.id)}</span>
+                    </div>
+                  ))}
 
-              {comments
+                {comments
                 .filter((c) => c.targetType === 'image_point')
                 .map((comment) => (
                   <div
@@ -1066,6 +1162,7 @@ function PageViewer({
                   </div>
                 ))}
             </div>
+          </div>
           </div>
 
           {/* 右侧客户反馈 */}
@@ -1507,7 +1604,7 @@ function DesignOverview({
           {activeVersion.pages.map((page, idx) => (
             <div
               key={page.snapshotId}
-              className="aspect-square bg-slate-50 rounded-xl border border-slate-100 overflow-hidden relative group"
+              className="aspect-video bg-slate-50 rounded-xl border border-slate-100 overflow-hidden relative group"
             >
               <img
                 src={page.imageUrl}
@@ -1524,7 +1621,7 @@ function DesignOverview({
           {Array.from({ length: Math.max(0, 6 - activeVersion.pages.length) }).map((_, i) => (
             <div
               key={`empty-${i}`}
-              className="aspect-square bg-slate-50/50 rounded-xl border border-dashed border-slate-200"
+              className="aspect-video bg-slate-50/50 rounded-xl border border-dashed border-slate-200"
             />
           ))}
         </div>
@@ -1635,11 +1732,14 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
     });
   }, []);
 
+  const designOrder = orderNumber === 'PSO-OD_LHJCF-00584' ? DESIGN_FEEDBACK_ORDER_00584 : DESIGN_FEEDBACK_ORDER;
+  const orderVersions = designOrder.versions;
+
   return (
     <div className="w-full flex flex-col items-center">
       {currentView === 'overview' && (
         <DesignOverview
-          order={DESIGN_FEEDBACK_ORDER}
+          order={designOrder}
           onStartView={(versionId) => handleSelectVersion(versionId, false)}
           onGoHome={onGoHome}
         />
@@ -1647,8 +1747,8 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
 
       {currentView === 'viewer' && activeVersionId && (
         <PageViewer
-          order={DESIGN_FEEDBACK_ORDER}
-          version={ORDER_VERSIONS.find((v) => v.id === activeVersionId)!}
+          order={designOrder}
+          version={orderVersions.find((v) => v.id === activeVersionId)!}
           initialPageIndex={0}
           onBack={handleBackToOverview}
           readOnly={isViewerReadOnly}

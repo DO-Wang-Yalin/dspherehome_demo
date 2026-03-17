@@ -1,5 +1,20 @@
 import { INITIAL_ORDERS } from './data/mockOrders';
 
+/** 成员下的单个空间项，可带描述 */
+export interface MemberSpaceItem {
+  name: string;
+  description?: string;
+}
+
+/** 需求书成员画像：可添加/编辑成员，每个成员下可添加/编辑空间及描述 */
+export interface RequirementsMember {
+  id: string;
+  name: string;
+  age?: string;
+  profession?: string;
+  spaces: MemberSpaceItem[];
+}
+
 export interface FormData {
   // Q2-0
   userName: string;
@@ -36,6 +51,8 @@ export interface FormData {
   sonSpaces: string[];
   catSpaces: string[];
   dogSpaces: string[];
+  /** 需求书成员列表：有值时以本列表展示与编辑，支持成员/空间增删改及空间描述 */
+  requirementsMembers?: RequirementsMember[];
   // Q2-7
   collaboration: string;
   involvement: string;
@@ -77,6 +94,8 @@ export interface FormData {
   oldFurniture: string;
   otherNeeds: string;
   otherNeedsOptions: string[];
+  /** 空间需求区块内「其他说明」编辑内容 */
+  spaceOtherNote?: string;
   // 家居风格测评
   styleId: string;
   styleName: string;
@@ -144,6 +163,7 @@ export const initialFormData: FormData = {
   oldFurniture: '',
   otherNeeds: '',
   otherNeedsOptions: [],
+  spaceOtherNote: '',
   styleId: '',
   styleName: '',
   colorGene: '',

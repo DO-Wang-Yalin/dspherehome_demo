@@ -1,6 +1,6 @@
 # Development Instructions & Operating Principles
 
-This document serves as the mandatory operating guideline for the AI assistant when modifying the **Design Voyage Platform** codebase.
+This document serves as the mandatory operating guideline for the AI assistant when modifying the **Dsphr Home** codebase.
 
 ## 1. Single Page Modification Principle (隔离修改原则)
 - **Rule**: The assistant MUST only modify one page or one specific component at a time.
@@ -22,7 +22,7 @@ This document serves as the mandatory operating guideline for the AI assistant w
 
 ## 4. Visual Consistency (视觉一致性)
 - Use the established Tailwind theme variables defined in `src/index.css` (e.g., `--color-brand`, `--color-dark`).
-- Maintain the "Design Voyage" aesthetic: Professional, clean, and user-centric.
+- Maintain the "Dsphr Home" aesthetic: Professional, clean, and user-centric.
 
 ---
 *This file is a binding contract for AI-driven development on this project.*

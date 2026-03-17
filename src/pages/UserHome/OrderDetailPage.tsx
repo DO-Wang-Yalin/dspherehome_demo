@@ -5,6 +5,7 @@ import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, 
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
 import { useGlobal } from '../../context/GlobalContext';
 import { INITIAL_ORDERS } from '../../data/mockOrders';
+import { getDesignVersionInfo } from '../../pages/DesignFeedback/DesignFeedbackApp';
 import { handleOrderAction } from '../../utils/orderStateMachine';
 import { toast } from 'sonner';
 
@@ -453,15 +454,27 @@ export default function OrderDetailPage() {
               <h3 className="text-sm font-bold text-gray-900 mb-2">暂无设计方案</h3>
               <p className="text-xs text-gray-500 max-w-[240px]">设计师正在为您进行前期规划与意向沟通，请耐心等待。</p>
             </div>
-          ) : (
-            <div className="p-6 bg-gray-50 rounded-[24px] border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-bold text-gray-900 mb-1">当前版本：V3 终稿设计方案</h3>
-                <p className="text-xs text-gray-500">包含平面布置图、效果图及施工节点大样图，等待您的最终确认。</p>
+          ) : (() => {
+            const designInfo = getDesignVersionInfo(orderData.id);
+            const versionName = designInfo?.versionName ?? '当前设计方案';
+            const description = designInfo?.description ?? '包含平面布置图、效果图及施工节点大样图，等待您的最终确认。';
+            const updatedAt = designInfo?.updatedAt ?? '2023-11-25';
+            const statusLabel = designInfo?.statusLabel;
+            return (
+              <div className="p-6 bg-gray-50 rounded-[24px] border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 mb-1">
+                    当前版本：{versionName}
+                    {statusLabel && (
+                      <span className="ml-2 text-xs font-medium text-slate-500">{statusLabel}</span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-gray-500">{description}</p>
+                </div>
+                <div className="text-xs font-medium text-gray-400 shrink-0">更新于 {updatedAt}</div>
               </div>
-              <div className="text-xs font-medium text-gray-400 shrink-0">更新于 2023-11-25</div>
-            </div>
-          )}
+            );
+          })()}
         </section>
 
         {/* 订单报价单 Section */}

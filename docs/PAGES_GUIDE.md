@@ -1,4 +1,4 @@
-# Design Voyage Platform 页面架构与跳转指南
+# Dsphr Home 页面架构与跳转指南
  
 本文档详细说明了平台的所有页面、功能描述以及页面间的跳转逻辑。
  
