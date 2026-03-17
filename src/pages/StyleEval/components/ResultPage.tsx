@@ -18,6 +18,8 @@ interface ResultPageProps {
   textAnswers: Record<string, string>;
   onRestart: () => void;
   onGoDeepEval?: () => void;
+  /** 风格测评结果就绪时回调，用于写入 FormData */
+  onStyleResult?: (result: { styleId: string; styleName: string; colorGene: string; styleSuggestions: string }) => void;
 }
 
 type StyleProfile = {
@@ -85,7 +87,7 @@ function parseHardSoft(suggestions: string): { hardDecor: string; softDecor: str
   return { hardDecor, softDecor };
 }
 
-export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval }: ResultPageProps) {
+export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval, onStyleResult }: ResultPageProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -132,7 +134,13 @@ export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval }: Re
       voyageCardSavedRef.current = false;
       console.warn('Voyage card save failed:', err);
     });
-  }, [bestMatch, cardId]);
+    onStyleResult?.({
+      styleId: bestMatch.id,
+      styleName: bestMatch.name ?? '',
+      colorGene: bestMatch.colorGene ?? '',
+      styleSuggestions: bestMatch.suggestions ?? '',
+    });
+  }, [bestMatch, cardId, onStyleResult]);
 
   const handleSaveCard = useCallback(async () => {
     if (!cardRef.current) return;

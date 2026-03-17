@@ -22,6 +22,7 @@ export interface FormData {
   budgetSubStandard: string;
   // Q2-4
   floorPlanUploaded: boolean;
+  houseUsage: string;
   // Q2-5
   lighting: string;
   ceilingHeight: string;
@@ -76,6 +77,11 @@ export interface FormData {
   oldFurniture: string;
   otherNeeds: string;
   otherNeedsOptions: string[];
+  // 家居风格测评
+  styleId: string;
+  styleName: string;
+  colorGene: string;
+  styleSuggestions: string;
   // Contract
   contractAccepted?: boolean;
   contractSignatureData?: string;
@@ -100,6 +106,7 @@ export const initialFormData: FormData = {
   budgetStandard: '',
   budgetSubStandard: '',
   floorPlanUploaded: false,
+  houseUsage: '',
   lighting: '',
   ceilingHeight: '',
   ventilation: '',
@@ -137,6 +144,10 @@ export const initialFormData: FormData = {
   oldFurniture: '',
   otherNeeds: '',
   otherNeedsOptions: [],
+  styleId: '',
+  styleName: '',
+  colorGene: '',
+  styleSuggestions: '',
   contractAccepted: false,
   contractSignatureData: '',
   contractCustomText: '',

@@ -11,25 +11,39 @@ export default function ContractsPage() {
   const [step, setStep] = useState(initialStep);
   const navigate = useNavigate();
   const { data, updateData } = useGlobal();
+  const fromHome = searchParams.get('from') === 'home';
 
   React.useEffect(() => {
     const s = Number(searchParams.get('step')) || 1;
     setStep(s);
   }, [searchParams]);
 
+  // 已签署的合同不再要求重新签署，直接进入付款信息步骤
+  const hasSigned = !!(data.contractAccepted && data.contractSignatureData);
+  React.useEffect(() => {
+    if (step === 1 && hasSigned) {
+      navigate(fromHome ? '/contracts?step=2&from=home' : '/contracts?step=2', { replace: true });
+    }
+  }, [step, hasSigned, fromHome, navigate]);
+
   const nextStep = () => {
     if (step === 1) {
-      navigate('/contracts?step=2');
+      navigate(fromHome ? '/contracts?step=2&from=home' : '/contracts?step=2');
     } else {
-      navigate('/home');
+      navigate(fromHome ? '/home' : '/deep-eval');
     }
   };
 
   const prevStep = () => {
     if (step === 2) {
-      navigate('/contracts?step=1');
+      // 从项目中心进入且已签署时，返回直接回项目中心（无需再进步骤1）
+      if (fromHome && hasSigned) {
+        navigate('/home');
+      } else {
+        navigate(fromHome ? '/contracts?step=1&from=home' : '/contracts?step=1');
+      }
     } else {
-      navigate('/register');
+      navigate(fromHome ? '/home' : '/register');
     }
   };
 
@@ -50,7 +64,7 @@ export default function ContractsPage() {
 
       <main className="flex-1 relative overflow-x-hidden">
         {step === 1 && <StepContract data={data} updateData={updateData} nextStep={nextStep} prevStep={prevStep} />}
-        {step === 2 && <StepPayment data={data} updateData={updateData} nextStep={nextStep} prevStep={prevStep} />}
+        {step === 2 && <StepPayment data={data} updateData={updateData} nextStep={nextStep} prevStep={prevStep} onBackToHome={() => navigate(fromHome ? '/home' : '/')} primaryActionLabel={fromHome ? '进入我的项目' : '完成支付进入深度测评'} />}
       </main>
     </div>
   );

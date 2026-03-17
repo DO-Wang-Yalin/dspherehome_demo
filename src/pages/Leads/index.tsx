@@ -22,7 +22,7 @@ export default function LeadsPage() {
     if (step === 1) {
       navigate('/leads?step=2');
     } else {
-      navigate('/register');
+      navigate('/budget-breakdown');
     }
   };
 

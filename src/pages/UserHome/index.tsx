@@ -10,7 +10,7 @@ export default function UserHomePage() {
 
   const userDisplayName = `${data.userName || '用户'}${data.userTitle || ''}`.trim();
   const projectName = data.projectName || data.projectLocation || '';
-  const initialTab = location.state?.activeTab as any;
+  const initialTab = (location.state?.activeTab ?? (location.pathname === '/budget' ? 'budget' : undefined)) as string | undefined;
 
   return (
     <WorkbenchPage
@@ -21,7 +21,7 @@ export default function UserHomePage() {
       contractCustomText={data.contractCustomText}
       initialTab={initialTab}
       onExit={() => navigate('/')}
-      onGoToContract={() => navigate('/contracts')}
+      onGoToContract={() => navigate('/contracts?from=home')}
       onBackToProjects={() => navigate('/projects')}
       onViewOrderDetail={(id) => navigate(`/order/${id}`)}
     />

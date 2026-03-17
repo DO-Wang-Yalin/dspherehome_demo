@@ -35,10 +35,16 @@ export default function StyleEvalPage() {
       return;
     }
 
+    // 第一页返回欢迎页，后面每一页返回上一题（与 PAGES_GUIDE 一致）
     if (currentIndex === 0) {
-      setShowWelcome(true);
+      // 从 /admin 进入时先回到后台管理；从 /style-eval 进入时返回欢迎页 /
+      if (location.pathname === '/admin') {
+        setShowWelcome(true);
+      } else {
+        navigate('/');
+      }
     } else {
-      setCurrentIndex(prev => prev - 1);
+      setCurrentIndex((prev) => prev - 1);
     }
   };
 
@@ -95,6 +101,7 @@ export default function StyleEvalPage() {
         <HomeStyleEval
           onGoDeepEval={() => navigate('/leads')}
           onGoHome={() => setShowWelcome(true)}
+          onStyleResult={(r) => updateData({ styleId: r.styleId, styleName: r.styleName, colorGene: r.colorGene, styleSuggestions: r.styleSuggestions })}
           controlledPageIndex={showResult ? 10 : currentIndex}
           onPageChange={(idx) => {
             if (idx === 10) setShowResult(true);

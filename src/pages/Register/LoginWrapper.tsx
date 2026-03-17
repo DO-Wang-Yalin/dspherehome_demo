@@ -28,7 +28,7 @@ export default function LoginWrapper() {
       <main className="flex-1">
         <LoginPage
           onSuccess={handleLoginSuccess}
-          onBack={() => navigate('/style-eval')}
+          onBack={() => navigate('/')}
         />
       </main>
     </div>

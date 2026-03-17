@@ -11,7 +11,7 @@ export const NAVIGATION_STEPS: NavStep[] = [
   { id: 'style-eval', title: '家居风格测评', path: '/style-eval' },
   { id: 'leads-1', title: '项目概况', path: '/leads', search: '?step=1', qId: 'DE-1' },
   { id: 'leads-2', title: '您的信息', path: '/leads', search: '?step=2', qId: 'DE-2' },
-  { id: 'budget', title: '项目预算拆解', path: '/budget' },
+  { id: 'budget', title: '项目预算拆解', path: '/budget-breakdown' },
   { id: 'register', title: '注册', path: '/register' },
   { id: 'contract-1', title: '意向金合同', path: '/contracts', search: '?step=1' },
   { id: 'contract-2', title: '支付账号', path: '/contracts', search: '?step=2' },

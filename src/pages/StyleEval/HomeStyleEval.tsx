@@ -12,9 +12,11 @@ type HomeStyleEvalProps = {
   /** 受控子页：0..questions.length-1 为题目，questions.length 为结果页；与 onPageChange 一起由目录跳转使用 */
   controlledPageIndex?: number;
   onPageChange?: (nextPageIndex: number) => void;
+  /** 风格测评结果就绪时写入 FormData */
+  onStyleResult?: (result: { styleId: string; styleName: string; colorGene: string; styleSuggestions: string }) => void;
 };
 
-export function HomeStyleEval({ onGoDeepEval, onGoHome, controlledPageIndex, onPageChange }: HomeStyleEvalProps) {
+export function HomeStyleEval({ onGoDeepEval, onGoHome, controlledPageIndex, onPageChange, onStyleResult }: HomeStyleEvalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [quantities, setQuantities] = useState<Record<string, Record<string, number>>>({});
@@ -124,6 +126,7 @@ export function HomeStyleEval({ onGoDeepEval, onGoHome, controlledPageIndex, onP
                 textAnswers={textAnswers}
                 onRestart={handleRestart}
                 onGoDeepEval={onGoDeepEval}
+                onStyleResult={onStyleResult}
               />
             </div>
           ) : currentQuestion ? (

@@ -76,7 +76,7 @@ export default function DeepEvalPage() {
       navigate(`/deep-eval?step=${currentIndex - 1}`);
       window.scrollTo(0, 0);
     } else {
-      navigate('/home');
+      navigate('/');
     }
   };
 
@@ -108,7 +108,7 @@ export default function DeepEvalPage() {
             nextStep={nextStep}
             prevStep={prevStep}
             goToWorkbench={() => navigate('/home')}
-            goToLogin={() => navigate('/register')}
+            goToLogin={() => navigate('/home')}
           />
         </AnimatePresence>
       </main>

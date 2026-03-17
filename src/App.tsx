@@ -17,6 +17,7 @@ import BudgetPage from './pages/Budget';
 import DesignFeedbackPage from './pages/DesignFeedback';
 import QuotationPage from './pages/Quotation';
 import SettlementPage from './pages/Settlement';
+import RequirementsShowcasePage from './pages/UserHome/RequirementsShowcasePage';
 
 export default function App() {
   return (
@@ -35,10 +36,12 @@ export default function App() {
             <Route path="/order/:id" element={<OrderDetailPage />} />
             <Route path="/deep-eval" element={<DeepEvalPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
-            <Route path="/budget" element={<BudgetPage />} />
+            <Route path="/budget" element={<UserHomePage />} />
+            <Route path="/budget-breakdown" element={<BudgetPage />} />
             <Route path="/feedback" element={<DesignFeedbackPage />} />
             <Route path="/quotation" element={<QuotationPage />} />
             <Route path="/settlement/:id" element={<SettlementPage />} />
+            <Route path="/requirement-showcase" element={<RequirementsShowcasePage />} />
           </Routes>
         </BrowserRouter>
       </DeepEvalFormProvider>

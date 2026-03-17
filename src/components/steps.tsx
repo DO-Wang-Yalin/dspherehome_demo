@@ -16,6 +16,10 @@ import {
 // @ts-ignore: static image asset import
 import contractFlowImg from '../assets/contract-flow.png';
 import { HomeStyleEval } from '../pages/StyleEval/HomeStyleEval';
+import { CONTRACT_TEXT } from '../constants/contract';
+
+// Re-export for backwards compatibility
+export { CONTRACT_TEXT };
 
 interface StepProps {
   key?: string | number;
@@ -465,12 +469,25 @@ export const StepDeepEval1 = ({ data, updateData, nextStep, prevStep }: StepProp
 };
 
 /** 深度测评-2：您的信息（独立步骤，目录显示「深度测评-2 您的信息」）— 页面设计对齐 Q2-0 */
-export const StepDeepEval2 = ({ nextStep, prevStep }: StepProps & { prevStep?: () => void }) => {
+export const StepDeepEval2 = ({ data, updateData, nextStep, prevStep }: StepProps & { prevStep?: () => void }) => {
   const ctx = useDeepEvalForm();
-  const { formData, handleChange, errors, validateStep2, titleOptions, ageOptions, industryOptions, isLocating, handleGetCityLocation } = ctx;
+  const { formData, handleChange, errors, validateStep2, titleOptions, ageOptions, industryOptions, isLocating, handleGetCityLocation, budgetDisplayLabel } = ctx;
 
   const handleNext = () => {
     if (!validateStep2()) return;
+    // 同步线索收集 DeepEvalForm → GlobalContext FormData
+    updateData({
+      projectLocation: (formData.projectPosition || data?.projectLocation) ?? '',
+      projectType: (formData.projectType || data?.projectType) ?? '',
+      houseCondition: (formData.handoverStatus || data?.houseCondition) ?? '',
+      projectArea: (formData.area || data?.projectArea) ?? '',
+      budgetStandard: formData.budget ? budgetDisplayLabel(formData.budget) : (data?.budgetStandard ?? ''),
+      userName: (formData.name || data?.userName) ?? '',
+      userTitle: (formData.salutation || data?.userTitle) ?? '',
+      userCity: (formData.city || data?.userCity) ?? '',
+      userAgeRange: (formData.ageGroup || data?.userAgeRange) ?? '',
+      userIndustry: (formData.industry || data?.userIndustry) ?? '',
+    });
     nextStep();
   };
 
@@ -972,20 +989,13 @@ export const Step4 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="房型资料同步" subtitle="房屋类型与现状 · 开启深度分析">
+    <StepWrapper title="房型资料同步" subtitle="房屋用途与户型资料 · 开启深度分析">
       <div className="space-y-6">
-        {/* Q2-2：房屋类型与现状 */}
         <SegmentedRadio
-          label="房屋类型"
-          value={data.houseType}
-          onChange={(v: string) => updateHouseTypeWithConditionGuard(updateData, v, data.houseCondition)}
-          options={['新房', '二手房', '老房翻新']}
-        />
-        <SegmentedRadio
-          label="房屋现状"
-          value={data.houseCondition}
-          onChange={(v: string) => updateData({ houseCondition: v })}
-          options={getHouseConditionOptions(data.houseType)}
+          label="房屋用途"
+          value={data.houseUsage}
+          onChange={(v: string) => updateData({ houseUsage: v })}
+          options={['改善房', '刚需房', '投资房', '度假房/第二居所']}
         />
 
         <div className="space-y-3">
@@ -2382,18 +2392,20 @@ export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
             <div className="px-5 py-4 border-t border-gray-100 space-y-3">
               <button
                 type="button"
-                disabled={!canSign}
-                onClick={handleOpenSignature}
+                disabled={!canSign && !data.contractSignatureData}
+                onClick={data.contractSignatureData ? nextStep : handleOpenSignature}
                 className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors active:scale-[0.99] ${
-                  canSign ? 'bg-[#FF9C3E] hover:bg-[#EF6B00]' : 'bg-gray-300 cursor-not-allowed'
+                  canSign || data.contractSignatureData ? 'bg-[#FF9C3E] hover:bg-[#EF6B00]' : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
-                {data.contractSignatureData ? '重新签署并继续' : '已阅读至底部，前往签署'}
+                {data.contractSignatureData ? '已签署，查看付款信息' : '已阅读至底部，前往签署'}
               </button>
               <p className="text-[11px] text-gray-500 text-center">
-                {!canSign
-                  ? '请先滚动阅读至合同最底部后，再进行签署。'
-                  : '您已阅读至合同底部，可点击上方按钮完成签署。'}
+                {data.contractSignatureData
+                  ? '您已完成签署，可点击上方按钮查看付款信息。'
+                  : !canSign
+                    ? '请先滚动阅读至合同最底部后，再进行签署。'
+                    : '您已阅读至合同底部，可点击上方按钮完成签署。'}
               </p>
             </div>
           </div>
@@ -2460,7 +2472,7 @@ export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
   );
 };
 
-export const StepPayment = () => {
+export const StepPayment = ({ nextStep, onBackToHome, primaryActionLabel = '完成支付进入深度测评' }: StepProps & { onBackToHome?: () => void; primaryActionLabel?: string }) => {
   const [copied, setCopied] = React.useState(false);
   const accountName = '上海某某空间设计有限公司';
   const bankName = '中国工商银行 上海某某支行';
@@ -2505,6 +2517,28 @@ export const StepPayment = () => {
           请您在备注中标注：项目城市 + 项目名称 + 姓名，方便我们快速匹配您的项目档案。
           转账完成后，顾问将尽快与您确认到账情况并安排后续服务。
         </p>
+
+        {copied && (
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              type="button"
+              onClick={nextStep}
+              className="w-full rounded-xl bg-[#EF6B00] px-4 py-3.5 text-sm font-semibold text-white hover:bg-[#D85F00] transition-colors active:scale-[0.99] flex items-center justify-center gap-2"
+            >
+              {primaryActionLabel}
+              <ChevronRight size={18} />
+            </button>
+            {onBackToHome && (
+              <button
+                type="button"
+                onClick={onBackToHome}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors active:scale-[0.99]"
+              >
+                返回主页
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </StepWrapper>
   );

@@ -46,10 +46,12 @@ import {
   ArrowLeftRight,
   Search,
   Hourglass,
+  Copy,
 } from 'lucide-react'
 import { DesignFeedbackApp } from '../DesignFeedback/DesignFeedbackApp'
-import BudgetSankey from '../../components/BudgetSankey'
-import BudgetSankeyByEPE from '../../components/BudgetSankeyByEPE'
+import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel'
+import { ContractDetailModal } from '../../components/ContractDetailModal'
+import { getPaymentAccountCopyText } from '../../constants/contract'
 import logoImg from '../../assets/img/logo.png'
 
 type NavKey = 'home' | 'requirements' | 'budget' | 'orders' | 'contracts' | 'designFeedback'
@@ -393,9 +395,12 @@ export function WorkbenchPage({
               </div>
             ) : active === 'requirements' ? (
               <RequirementsDoc
+                data={data}
                 projectName={currentProjectName}
                 ownerDisplayName={displayName}
                 onBackHome={() => setActive('home')}
+                onShowShowcase={() => navigate('/requirement-showcase')}
+                onGoToStyleEval={() => navigate('/style-eval')}
               />
             ) : active === 'orders' ? (
               <OrderManagementSection 
@@ -403,7 +408,9 @@ export function WorkbenchPage({
                 onSelectOrder={(id) => navigate(`/order/${id}`)}
               />
             ) : active === 'budget' ? (
-              <BudgetConfirmPanel />
+              <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-4 md:p-6">
+                <BudgetConfirmPanel />
+              </div>
             ) : active === 'contracts' ? (
               <ContractsSection
                 projectName={currentProjectName}
@@ -557,207 +564,6 @@ function OrderManagementSection({
   )
 }
 
-type BudgetSankeyTab = 'flow' | 'epe'
-
-function BudgetConfirmPanel() {
-  const mockVersion = '3'
-  const mockBumMin = 45
-  const mockBumMax = 50
-  const [sankeyTab, setSankeyTab] = React.useState<BudgetSankeyTab>('flow')
-
-  const summary = {
-    totalBudget: 50.0,
-    won: 15.5,
-    notWon: 34.5,
-    totalIncome: 26.0,
-    get remainingIncome() { return this.totalIncome - this.won }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* 1. 财务概览卡片 */}
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
-          <div className="space-y-1.5">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">项目总预算</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-gray-900">{summary.totalBudget.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 font-medium">万</span>
-            </div>
-          </div>
-          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">已成交金额</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-[#4887FF]">{summary.won.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 font-medium">万</span>
-            </div>
-          </div>
-          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">未成交金额</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-gray-400">{summary.notWon.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 font-medium">万</span>
-            </div>
-          </div>
-          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">项目总入金</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-[#FBBF24]">{summary.totalIncome.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 font-medium">万</span>
-            </div>
-          </div>
-          <div className="space-y-1.5 sm:border-l border-gray-100 sm:pl-6">
-            <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">入金剩余金额</div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-[#F97316]">{summary.remainingIncome.toFixed(1)}</span>
-              <span className="text-xs text-gray-500 font-medium">万</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. 预算流动可视化 (Sankey) - 挪到顶部 */}
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <div className="text-sm font-semibold text-gray-900">预算流动可视化</div>
-          <div className="text-xs text-gray-400">示意图 · 与 dsphr 桑基图布局对齐</div>
-        </div>
-        <div className="mb-3">
-          <div className="flex rounded-xl border border-gray-200 p-0.5 bg-gray-50 w-fit">
-            <button
-              type="button"
-              onClick={() => setSankeyTab('flow')}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'flow' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              订单预算拆解
-            </button>
-            <button
-              type="button"
-              onClick={() => setSankeyTab('epe')}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${sankeyTab === 'epe' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-              EPC预算拆解
-            </button>
-          </div>
-        </div>
-        {sankeyTab === 'flow' ? <BudgetSankey /> : <BudgetSankeyByEPE />}
-      </section>
-
-      {/* 3. 其他卡片内容 - 挪到底部 */}
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-5 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-gray-900">预算方案确认</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            对预算区间与分配方案进行复核，确认无误后作为本项目当前生效的预算基线；如需调整可先提交反馈。
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-gray-500 mb-1">当前版本</div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 rounded-full bg-blue-50 text-blue-600 px-3 py-1 text-xs font-medium border border-blue-100"
-          >
-            <span>v{mockVersion}</span>
-          </button>
-        </div>
-      </section>
-
-      <section className="bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-5">
-        <div className="text-sm font-semibold text-gray-900 mb-3">预算池状态</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-          <div className="rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
-            <div className="text-xs text-gray-500 mb-1">最近确认时间</div>
-            <div className="text-sm text-gray-900">—</div>
-          </div>
-          <div className="rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
-            <div className="text-xs text-gray-500 mb-1">本期已确认金额</div>
-            <div className="text-sm text-gray-900">—</div>
-          </div>
-          <div className="rounded-2xl bg-gray-50 border border-gray-100 px-4 py-3">
-            <div className="text-xs text-gray-500 mb-1">剩余可调预算</div>
-            <div className="text-sm text-gray-900">—</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-xs font-semibold text-[#EF6B00] mb-1">预算区间</div>
-                <p className="text-sm text-gray-500">
-                  结合同类项目经验与当前配置，为你估算的合理预算区间；区间内可灵活调优子项配置。
-                </p>
-              </div>
-              <div className="text-xs text-gray-400">单位：万元</div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-blue-50 px-4 py-3">
-                <div className="text-xs text-blue-700 mb-1">在区间内（BUM_min）</div>
-                <div className="flex items-end gap-1">
-                  <span className="text-2xl font-semibold text-blue-700">{mockBumMin}</span>
-                  <span className="text-xs text-blue-700 mb-1">万元</span>
-                </div>
-              </div>
-              <div className="rounded-2xl bg-emerald-50 px-4 py-3">
-                <div className="text-xs text-emerald-700 mb-1">区间上限（BUM_max）</div>
-                <div className="flex items-end gap-1">
-                  <span className="text-2xl font-semibold text-emerald-700">{mockBumMax}</span>
-                  <span className="text-xs text-emerald-700 mb-1">万元</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-600 leading-relaxed">
-              BUM 区间用于平衡体验、耐用性与预算可控；若你希望进一步优化成本，我们也可以在不破坏整体体验的前提下，对部分配置进行微调。
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-            <div className="text-sm font-semibold text-gray-900 mb-2">分配方案说明</div>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              预算会在「前期设计 / 主材设备 / 施工安装 / 软装家私」等多个节点之间进行分配。右侧的预算流向图会展示从总包预算到各子类目的流动结构，帮助你理解每一笔费用的大致去向。
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-            <div className="text-sm font-semibold text-gray-900 mb-2">当前操作</div>
-            <p className="text-xs text-gray-600 mb-4">
-              这是一个静态演示界面，用于在「项目预算」分页中体验预算确认页的布局与信息层级，不会写入真实订单或预算数据。
-            </p>
-            <button
-              type="button"
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-[#EF6B00] text-white text-sm font-medium px-4 py-3 hover:bg-[#D85F00] transition-colors"
-            >
-              确认当前预算方案（示意）
-            </button>
-            <button
-              type="button"
-              className="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-2xl bg-white text-sm font-medium px-4 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              提交反馈，调整预算结构（示意）
-            </button>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
-            <div className="text-sm font-semibold text-gray-900 mb-2">版本历史</div>
-            <p className="text-xs text-gray-600 leading-relaxed">
-              正式环境下，这里会展示每次预算调整后的版本记录（例如 v1 / v2 / v3），包含创建时间与操作说明，方便对比与追溯。
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-emerald-50 border border-emerald-100 rounded-3xl px-6 py-3 text-xs text-emerald-800 flex items-center justify-between">
-        <span>正式环境下，这里会显示「已生效预算方案」与最近一次确认时间。</span>
-        <span className="font-medium">演示版本 · 不写入任何真实数据</span>
-      </section>
-    </div>
-  )
-}
-
 function FeatureCard({
   icon,
   title,
@@ -825,6 +631,17 @@ function ContractsSection({
   customText?: string
   onGoToContractStep?: () => void
 }) {
+  const [showDetailModal, setShowDetailModal] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
+  const handleCopyAccount = async () => {
+    try {
+      await navigator.clipboard.writeText(getPaymentAccountCopyText())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
+    }
+  }
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -832,6 +649,14 @@ function ContractsSection({
           <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
           <h2 className="text-lg font-semibold">项目合同</h2>
         </div>
+        <button
+          type="button"
+          onClick={handleCopyAccount}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Copy size={16} />
+          {copied ? '已复制' : '一键复制账户信息'}
+        </button>
       </div>
 
       <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 md:p-7 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
@@ -883,7 +708,7 @@ function ContractsSection({
 
           <button
             type="button"
-            onClick={onGoToContractStep}
+            onClick={() => setShowDetailModal(true)}
             className="md:w-[180px] w-full inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
           >
             查看合同详情
@@ -891,19 +716,42 @@ function ContractsSection({
           </button>
         </div>
       </div>
+      <ContractDetailModal
+        open={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        signatureData={signatureData}
+        hasSigned={hasSigned}
+        onGoToSign={onGoToContractStep}
+      />
     </div>
   )
 }
 
-function RequirementsDoc({
+export function RequirementsDoc({
   projectName,
   ownerDisplayName,
+  houseUsage,
+  data,
+  isShowcase,
   onBackHome,
+  onShowShowcase,
+  onGoToStyleEval,
 }: {
   projectName: string
   ownerDisplayName: string
+  houseUsage?: string
+  data?: import('../types').FormData
+  isShowcase?: boolean
   onBackHome: () => void
+  onShowShowcase?: () => void
+  /** 需求书为空时，引导用户从风格测评开始（风格测评→线索收集→转为项目→项目中心） */
+  onGoToStyleEval?: () => void
 }) {
+  const useMock = isShowcase === true
+  const d = useMock ? null : data
+  const empty = (v: string) => !v || !String(v).trim()
+  const val = (v: string, fallback = '未填写') => (empty(v) ? fallback : String(v).trim())
+
   const [isEditing, setIsEditing] = React.useState(false)
   const [editHint, setEditHint] = React.useState<string | null>(null)
   const [hasSubmitted, setHasSubmitted] = React.useState(false)
@@ -914,22 +762,32 @@ function RequirementsDoc({
   const [planImages, setPlanImages] = React.useState<Array<{ name: string; url: string }>>([])
   const [mediaFiles, setMediaFiles] = React.useState<Array<{ name: string; url: string; kind: 'image' | 'video' }>>([])
 
-  const houseUsage = '改善房'
+  const displayHouseUsage = useMock ? (houseUsage?.trim() || '改善房') : val(d?.houseUsage ?? houseUsage ?? '')
 
-  const infoRows: Array<{ label: string; value: string }> = [
-    { label: '项目城市', value: '上海' },
-    { label: '项目类型', value: '平层公寓' },
-    { label: '实际面积', value: '100.0 ㎡' },
-    { label: '预算范围', value: '10.1 万/㎡' },
-    { label: '入住周期', value: '3-6个月' },
-  ]
+  const infoRows: Array<{ label: string; value: string }> = useMock
+    ? [
+        { label: '项目城市', value: '上海' },
+        { label: '项目类型', value: '平层公寓' },
+        { label: '实际面积', value: '100.0 ㎡' },
+        { label: '预算范围', value: '10.1 万/㎡' },
+        { label: '入住周期', value: '3-6个月' },
+      ]
+    : [
+        { label: '项目城市', value: val(d?.projectLocation ?? d?.userCity ?? '') },
+        { label: '项目类型', value: val(d?.projectType ?? '') },
+        { label: '实际面积', value: d?.projectArea ? `${d.projectArea} ㎡` : '未填写' },
+        { label: '预算范围', value: val(d?.budgetStandard ?? d?.budgetSubStandard ?? '') },
+        { label: '入住周期', value: val(d?.timeline ?? '') },
+      ]
 
-  const projectStatus = {
-    lighting: '良好，半天有阳光',
-    ventilation: '南北通透',
-    ceilingHeight: '2.6-2.8米 (标准)',
-    noise: '偶有噪音',
-  }
+  const projectStatus = useMock
+    ? { lighting: '良好，半天有阳光', ventilation: '南北通透', ceilingHeight: '2.6-2.8米 (标准)', noise: '偶有噪音' }
+    : {
+        lighting: val(d?.lighting ?? ''),
+        ventilation: val(d?.ventilation ?? ''),
+        ceilingHeight: val(d?.ceilingHeight ?? ''),
+        noise: val(d?.noise ?? ''),
+      }
 
   const statusCards: Array<{ icon: React.ElementType; title: string; value: string }> = [
     { icon: Sun, title: '采光', value: projectStatus.lighting },
@@ -940,56 +798,34 @@ function RequirementsDoc({
 
   const structureCards: Array<{ icon: React.ElementType; title: string; desc: string }> = [
     { icon: LayoutGrid, title: '信息架构', desc: '围绕“居住场景”组织需求，分层表达、便于决策。' },
-    { icon: Sparkles, title: '设计定位', desc: '温润克制的高级感，材质与光影优先，细节耐看。' },
+    { icon: Sparkles, title: '设计定位', desc: useMock ? '温润克制的高级感，材质与光影优先，细节耐看。' : ((d?.styleName || d?.colorGene) ? [d?.styleName, d?.colorGene].filter(Boolean).join(' · ') : '暂无') },
     { icon: ListChecks, title: '交付目标', desc: '可落地的空间方案 + 软硬装策略，明确优先级与取舍。' },
   ]
 
-  const personas: Array<{
-    name: string
-    age: string
-    profession: string
-    height: string
-    stylePersona?: string | null
-    mainActivitiesAndSpaces: string[]
-    accent: 'amber' | 'slate'
-  }> = [
-    {
-      name: '父亲',
-      age: '42岁',
-      profession: '金融从业',
-      height: '178cm',
-      stylePersona: '理性秩序派',
-      mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'],
-      accent: 'amber',
-    },
-    {
-      name: '母亲',
-      age: '39岁',
-      profession: '品牌市场',
-      height: '165cm',
-      stylePersona: '氛围生活家',
-      mainActivitiesAndSpaces: ['烹饪与备餐（厨房/轻食台）', '社交招待（餐厨/客厅）', '展示收纳（餐边/陈列区）'],
-      accent: 'slate',
-    },
-    {
-      name: '女儿',
-      age: '8岁',
-      profession: '小学生',
-      height: '128cm',
-      stylePersona: null,
-      mainActivitiesAndSpaces: ['学习阅读（书桌/阅读角）', '游戏玩耍（客厅/儿童区）', '收纳整理（玩具/衣物储物）'],
-      accent: 'amber',
-    },
-    {
-      name: 'Mochi',
-      age: '2岁',
-      profession: '猫',
-      height: '约25cm（肩高）',
-      stylePersona: null,
-      mainActivitiesAndSpaces: ['活动动线（猫墙/跑道）', '休息晒太阳（窗边/阳台）', '饮食如厕（喂食区/猫砂区）'],
-      accent: 'slate',
-    },
-  ]
+  const ROLE_LABELS: Record<string, string> = { A: '男主人', B: '女主人', C: '长辈/长住家属' }
+  const displayPersonas = useMock
+    ? [
+        { name: '父亲', age: '42岁', profession: '金融从业', height: '178cm', stylePersona: '理性秩序派' as string | null, mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'], accent: 'amber' as const },
+        { name: '母亲', age: '39岁', profession: '品牌市场', height: '165cm', stylePersona: '氛围生活家' as string | null, mainActivitiesAndSpaces: ['烹饪与备餐（厨房/轻食台）', '社交招待（餐厨/客厅）', '展示收纳（餐边/陈列区）'], accent: 'slate' as const },
+        { name: '女儿', age: '8岁', profession: '小学生', height: '128cm', stylePersona: null, mainActivitiesAndSpaces: ['学习阅读（书桌/阅读角）', '游戏玩耍（客厅/儿童区）', '收纳整理（玩具/衣物储物）'], accent: 'amber' as const },
+        { name: 'Mochi', age: '2岁', profession: '猫', height: '约25cm（肩高）', stylePersona: null, mainActivitiesAndSpaces: ['活动动线（猫墙/跑道）', '休息晒太阳（窗边/阳台）', '饮食如厕（喂食区/猫砂区）'], accent: 'slate' as const },
+      ]
+    : (() => {
+        const list: Array<{ name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; accent: 'amber' | 'slate' }> = []
+        if (d?.role) {
+          const name = ROLE_LABELS[d.role] || d.role
+          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], accent: 'amber' })
+        }
+        ;(d?.additionalMembers ?? []).forEach((m) => list.push({ name: m, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: [], accent: 'slate' }))
+        if ((d?.daughterSpaces ?? []).length) list.push({ name: '女儿', age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d!.daughterSpaces, accent: 'amber' })
+        if ((d?.sonSpaces ?? []).length) list.push({ name: '儿子', age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d!.sonSpaces, accent: 'amber' })
+        if ((d?.catSpaces ?? []).length) list.push({ name: '猫猫', age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d!.catSpaces, accent: 'slate' })
+        if ((d?.dogSpaces ?? []).length) list.push({ name: '狗狗', age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d!.dogSpaces, accent: 'slate' })
+        return list
+      })()
+
+  const personas = displayPersonas
+  const hasMemberData = personas.length > 0
 
   const systemEquipments = [
     { key: 'fresh-air', title: '新风系统', desc: '全屋换气·除味净化', icon: Wind },
@@ -1034,9 +870,16 @@ function RequirementsDoc({
 
   const [customNeedsNote, setCustomNeedsNote] = React.useState('')
   const [spaceOtherNote, setSpaceOtherNote] = React.useState('')
+  const [showInlinePreview, setShowInlinePreview] = React.useState(false)
 
-  const fengshuiResult = '避开大众忌讳就行'
-  const storageFocusResult = ['衣帽间/衣柜系统', '厨房餐储收纳', '展示性收纳（书籍、收藏品）']
+  const fengshuiResult = useMock ? '避开大众忌讳就行' : val(d?.fengshui ?? '')
+  const storageFocusResult = useMock ? ['衣帽间/衣柜系统', '厨房餐储收纳', '展示性收纳（书籍、收藏品）'] : (d?.storageFocus?.length ? d.storageFocus : [])
+
+  const LIVING_LABELS: Record<string, string> = { media: '影音娱乐', kids: '亲子互动', work: '办公学习', social: '社交会客', fitness: '健身运动', relax: '冥想放松' }
+  const livingItems = useMock ? ['影音娱乐', '社交会客', '冥想放松'] : ((d?.livingRoomFeature?.length ? d.livingRoomFeature.map((id) => LIVING_LABELS[id] || id) : []))
+  const diningItems = useMock ? ['平时就餐：3-4人', '节假日最多：7-10人'] : [val(d?.diningCount ?? '', '') ? `平时就餐：${d!.diningCount}` : '', val(d?.festivalDiningCount ?? '', '') ? `节假日最多：${d!.festivalDiningCount}` : ''].filter(Boolean)
+  const kitchenItems = useMock ? ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'] : [val(d?.cookingHabit ?? '', '') ? `烹饪习惯：${d!.cookingHabit}` : '', val(d?.secondKitchen ?? '', '') ? `第二厨房：${d!.secondKitchen}` : ''].filter(Boolean)
+  const bathroomItems = useMock ? ['必须彻底干湿分离（洗手台外置）'] : (val(d?.dryWetSeparation ?? '', '') ? [d!.dryWetSeparation] : [])
 
   const spaceResultMap: Record<
     'living' | 'dining' | 'kitchen' | 'bathroom',
@@ -1056,7 +899,7 @@ function RequirementsDoc({
     },
     kitchen: {
       title: '厨房',
-      q: 'Q2-10',
+      q: 'Q2-11',
       icon: ChefHat,
       items: ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'],
     },
@@ -1069,6 +912,7 @@ function RequirementsDoc({
   }
 
   const activeSpace = spaceResultMap[spaceTab]
+  const activeSpaceItems = spaceTab === 'living' ? livingItems : spaceTab === 'dining' ? diningItems : spaceTab === 'kitchen' ? kitchenItems : bathroomItems
 
   React.useEffect(() => {
     return () => {
@@ -1114,6 +958,116 @@ function RequirementsDoc({
 
   const selectedSmartHome = smartHomeOptions.filter((o) => smartHomeSelected[o.key])
   const selectedSpecialDevices = specialDeviceOptions.filter((o) => specialDeviceSelected[o.key])
+  const displaySmartHomeLabels = useMock ? selectedSmartHome.map((o) => o.label) : (d?.smartHomeOptions ?? [])
+  const displayDeviceLabels = useMock ? selectedSpecialDevices.map((o) => o.label) : (d?.devices ?? [])
+  const displayComfortLabels = useMock ? systemEquipments.map((x) => x.title) : (d?.comfortSystems ?? [])
+  const displaySmartHomeOptions = smartHomeOptions.filter((o) => displaySmartHomeLabels.includes(o.label))
+  const displayDeviceOptions = specialDeviceOptions.filter((o) => displayDeviceLabels.includes(o.label))
+  const displayComfortEquipments = systemEquipments.filter((x) => displayComfortLabels.includes(x.title))
+
+  const isRequirementsEmpty =
+    !useMock &&
+    !hasMemberData &&
+    (d?.comfortSystems ?? []).length === 0 &&
+    (d?.smartHomeOptions ?? []).length === 0 &&
+    !(d?.fengshui ?? '').trim() &&
+    (d?.storageFocus ?? []).length === 0 &&
+    livingItems.length === 0 &&
+    diningItems.length === 0 &&
+    kitchenItems.length === 0 &&
+    bathroomItems.length === 0
+
+  // 空状态时：内嵌预览示例，保留在需求书内而非跳转
+  if (isRequirementsEmpty && showInlinePreview) {
+    return (
+      <div className="space-y-8 pb-24">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs text-gray-500">项目交付 · 需求书</div>
+            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">项目需求书</h1>
+            <div className="mt-2 text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{projectName}</span>
+              <span className="mx-2 text-gray-300">/</span>
+              <span>业主：{ownerDisplayName}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInlinePreview(false)}
+            className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            返回
+          </button>
+        </div>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-2 text-sm text-amber-800">
+          以下为示例效果，完成风格测评与线索收集、转为项目后，您将看到基于真实数据的项目需求书。
+        </div>
+        <RequirementsDoc
+          isShowcase
+          projectName={projectName}
+          ownerDisplayName={ownerDisplayName}
+          onBackHome={() => setShowInlinePreview(false)}
+        />
+      </div>
+    )
+  }
+
+  if (isRequirementsEmpty) {
+    return (
+      <div className="space-y-8 pb-24">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs text-gray-500">项目交付 · 需求书</div>
+            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">项目需求书</h1>
+            <div className="mt-2 text-sm text-gray-600">
+              <span className="font-medium text-gray-900">{projectName}</span>
+              <span className="mx-2 text-gray-300">/</span>
+              <span>业主：{ownerDisplayName}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowInlinePreview(true)}
+            className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            预览示例
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-10 md:p-14">
+          <div className="max-w-md mx-auto text-center">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-[#FF9C3E]/10 text-[#FF9C3E] flex items-center justify-center">
+              <FileText size={28} />
+            </div>
+            <h2 className="mt-6 text-xl font-semibold text-gray-900">暂无需求内容</h2>
+            <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+              项目需求书需基于风格测评与线索收集生成。原则上需先完成家居风格测评、项目线索收集，线索转换为项目后才会进入项目中心。若您已在项目中心但需求书为空，请从风格测评开始补齐流程。
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+              {onGoToStyleEval && (
+                <button
+                  type="button"
+                  onClick={onGoToStyleEval}
+                  className="inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] text-white font-semibold px-6 py-3 hover:brightness-95 active:scale-[0.99] transition"
+                >
+                  从风格测评开始
+                  <ChevronRight size={18} className="ml-1" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onBackHome}
+                className="inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                返回
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 pb-24">
@@ -1141,6 +1095,16 @@ function RequirementsDoc({
             <div className="mt-2 text-xs font-semibold text-[#C87800]">{editHint}</div>
           ) : null}
         </div>
+        {onShowShowcase && !useMock ? (
+          <button
+            type="button"
+            onClick={onShowShowcase}
+            className="shrink-0 inline-flex items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            展示页
+            <ChevronRight size={16} />
+          </button>
+        ) : null}
       </div>
 
       <section className="space-y-4">
@@ -1168,7 +1132,7 @@ function RequirementsDoc({
 
               <div className="flex items-start justify-between gap-4">
                 <div className="text-sm text-gray-600 pt-1">房屋用途</div>
-                <div className="text-sm font-semibold text-gray-900">{houseUsage}</div>
+                <div className="text-sm font-semibold text-gray-900">{displayHouseUsage}</div>
               </div>
             </div>
           </div>
@@ -1199,7 +1163,44 @@ function RequirementsDoc({
       </section>
 
       <section className="space-y-4">
-        <SectionTitle title="项目图纸与视频" />
+        {(useMock || d?.coreSpaces || d?.childGrowth || d?.guestStay || d?.futureChanges) ? (
+          <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
+              <div className="font-semibold">空间规划（Q2-9）</div>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700">
+              <div><span className="font-semibold text-gray-800">核心空间：</span>1客厅1餐厅1主卧室1次卧室1主卫浴室1公卫浴室</div>
+              <div><span className="font-semibold text-gray-800">儿童成长：</span>预留可变空间</div>
+              <div><span className="font-semibold text-gray-800">亲友留宿：</span>偶尔留宿</div>
+            </div>
+          </div>
+        ) : (d?.coreSpaces || d?.childGrowth || d?.guestStay || d?.futureChanges) ? (
+          <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
+              <div className="font-semibold">空间规划（Q2-9）</div>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700">
+              {d?.coreSpaces?.trim() && (
+                <div><span className="font-semibold text-gray-800">核心空间：</span>{d.coreSpaces}</div>
+              )}
+              {d?.childGrowth?.trim() && (
+                <div><span className="font-semibold text-gray-800">儿童成长：</span>{d.childGrowth}</div>
+              )}
+              {d?.guestStay?.trim() && (
+                <div><span className="font-semibold text-gray-800">亲友留宿：</span>{d.guestStay}</div>
+              )}
+              {d?.futureChanges?.trim() && (
+                <div><span className="font-semibold text-gray-800">未来变动：</span>{d.futureChanges}</div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-4">
+        <SectionTitle title="空间规划（Q2-9）" />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
@@ -1337,77 +1338,93 @@ function RequirementsDoc({
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <SectionTitle title="成员画像" />
-          <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
-            <Users size={14} className="text-gray-400" />
-            <span className="font-semibold text-gray-400">Q2-6</span>
-            <span className="text-gray-300">·</span>
-            {personas.length} 位成员
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {personas.map((p) => (
-            <div
-              key={`${p.name}-${p.age}`}
-              className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-gray-100 shadow-sm px-3 py-2 text-xs"
-            >
-              <span className="w-6 h-6 rounded-full bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center font-bold">
-                {p.name.slice(0, 1)}
-              </span>
-              <span className="font-semibold text-gray-800">{p.name}</span>
-              <span className="text-gray-400">·</span>
-              <span className="text-gray-600">{p.age}</span>
+          {hasMemberData ? (
+            <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
+              <Users size={14} className="text-gray-400" />
+              <span className="font-semibold text-gray-400">Q2-6</span>
+              <span className="text-gray-300">·</span>
+              {personas.length} 位成员
             </div>
-          ))}
+          ) : null}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {personas.map((p) => (
-            <div key={`${p.name}-${p.age}`} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="text-base font-semibold truncate">{p.name}</div>
-                    <span className="text-xs text-gray-400">·</span>
-                    <div className="text-sm font-semibold text-gray-700 shrink-0">{p.age}</div>
-                  </div>
-                  <div className="mt-1 text-sm text-gray-600">
-                    {p.profession}
-                    <span className="mx-2 text-gray-300">/</span>
-                    身高 {p.height}
-                  </div>
-
-                  {p.stylePersona ? (
-                    <div className="mt-2">
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          p.accent === 'amber' ? 'bg-[#FF9C3E]/10 text-[#C87800]' : 'bg-[#EF6B00]/5 text-gray-700'
-                        }`}
-                      >
-                        风格人设：{p.stylePersona}
-                      </span>
-                    </div>
-                  ) : null}
+        {hasMemberData ? (
+          <>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {personas.map((p) => (
+                <div
+                  key={`${p.name}-${p.age}`}
+                  className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-gray-100 shadow-sm px-3 py-2 text-xs"
+                >
+                  <span className="w-6 h-6 rounded-full bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center font-bold">
+                    {p.name.slice(0, 1)}
+                  </span>
+                  <span className="font-semibold text-gray-800">{p.name}</span>
+                  <span className="text-gray-400">·</span>
+                  <span className="text-gray-600">{p.age}</span>
                 </div>
-                <span className="w-10 h-10 rounded-2xl bg-[#FFFDF3] border border-gray-100 flex items-center justify-center text-gray-500 font-bold">
-                  {p.name.slice(0, 1)}
-                </span>
-              </div>
-
-              <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
-                <div className="text-xs font-semibold text-gray-700">主要活动及空间</div>
-                <ul className="mt-2 text-sm text-gray-600 leading-relaxed space-y-2">
-                  {p.mainActivitiesAndSpaces.map((b) => (
-                    <li key={b} className="flex items-start gap-2">
-                      <span className="mt-2 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                      <span>{b}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              ))}
             </div>
-          ))}
-        </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {personas.map((p) => (
+                <div key={`${p.name}-${p.age}`} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="text-base font-semibold truncate">{p.name}</div>
+                        <span className="text-xs text-gray-400">·</span>
+                        <div className="text-sm font-semibold text-gray-700 shrink-0">{p.age}</div>
+                      </div>
+                      <div className="mt-1 text-sm text-gray-600">
+                        {p.profession}
+                        <span className="mx-2 text-gray-300">/</span>
+                        身高 {p.height}
+                      </div>
+
+                      {p.stylePersona ? (
+                        <div className="mt-2">
+                          <span
+                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              p.accent === 'amber' ? 'bg-[#FF9C3E]/10 text-[#C87800]' : 'bg-[#EF6B00]/5 text-gray-700'
+                            }`}
+                          >
+                            风格人设：{p.stylePersona}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                    <span className="w-10 h-10 rounded-2xl bg-[#FFFDF3] border border-gray-100 flex items-center justify-center text-gray-500 font-bold">
+                      {p.name.slice(0, 1)}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
+                    <div className="text-xs font-semibold text-gray-700">主要活动及空间</div>
+                    <ul className="mt-2 text-sm text-gray-600 leading-relaxed space-y-2">
+                      {p.mainActivitiesAndSpaces.map((b) => (
+                        <li key={b} className="flex items-start gap-2">
+                          <span className="mt-2 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                          <span>{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-400">
+              <Users size={18} />
+            </div>
+            <div className="mt-3 text-sm font-semibold text-gray-800">暂无成员信息</div>
+            <div className="mt-1 text-sm text-gray-600">
+              请先完成深度测评中的「核心成员」（Q2-6）与「家庭成员」（Q2-6-1）以生成成员画像。
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="space-y-4">
@@ -1428,21 +1445,27 @@ function RequirementsDoc({
               </div>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {systemEquipments.map((x) => (
-                  <div key={x.key} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-5">
-                    <div className="flex items-center gap-3">
-                      <span className="w-10 h-10 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-[#FF9C3E] shrink-0">
-                        <x.icon size={18} />
-                      </span>
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-gray-900">{x.title}</div>
-                        <div className="mt-1 text-xs text-gray-500 truncate">{x.desc}</div>
+              {displayComfortLabels.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {systemEquipments.filter((x) => displayComfortLabels.includes(x.title)).map((x) => (
+                    <div key={x.key} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-5">
+                      <div className="flex items-center gap-3">
+                        <span className="w-10 h-10 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-[#FF9C3E] shrink-0">
+                          <x.icon size={18} />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-900">{x.title}</div>
+                          <div className="mt-1 text-xs text-gray-500 truncate">{x.desc}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                  暂无，请先完成深度测评（Q2-19）
+                </div>
+              )}
             </div>
           </div>
 
@@ -1489,9 +1512,9 @@ function RequirementsDoc({
                     )
                   })}
                 </div>
-              ) : selectedSmartHome.length > 0 ? (
+              ) : displaySmartHomeLabels.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {selectedSmartHome.map((o) => (
+                  {smartHomeOptions.filter((o) => displaySmartHomeLabels.includes(o.label)).map((o) => (
                     <div key={o.key} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3">
                       <span className="w-9 h-9 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600 shrink-0">
                         <o.icon size={18} className="text-[#FF9C3E]" />
@@ -1502,7 +1525,7 @@ function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无选择结果
+                  暂无，请先完成深度测评（Q2-18）
                 </div>
               )}
             </div>
@@ -1551,9 +1574,9 @@ function RequirementsDoc({
                     )
                   })}
                 </div>
-              ) : selectedSpecialDevices.length > 0 ? (
+              ) : displayDeviceLabels.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {selectedSpecialDevices.map((o) => (
+                  {specialDeviceOptions.filter((o) => displayDeviceLabels.includes(o.label)).map((o) => (
                     <div key={o.key} className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3">
                       <span className="w-9 h-9 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600 shrink-0">
                         <o.icon size={18} className="text-[#FF9C3E]" />
@@ -1564,7 +1587,7 @@ function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无选择结果
+                  暂无，请先完成深度测评（Q2-20）
                 </div>
               )}
             </div>
@@ -1584,9 +1607,15 @@ function RequirementsDoc({
               </div>
             </div>
             <div className="p-6">
-              <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed">
-                {fengshuiResult}
-              </div>
+              {(useMock && fengshuiResult) || (d?.fengshui?.trim()) ? (
+                <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed">
+                  {fengshuiResult}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                  暂无，请先完成深度测评（Q2-17）
+                </div>
+              )}
             </div>
           </div>
 
@@ -1604,13 +1633,19 @@ function RequirementsDoc({
               </div>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {storageFocusResult.map((it) => (
-                  <div key={it} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3 text-sm font-semibold text-gray-800">
-                    {it}
-                  </div>
-                ))}
-              </div>
+              {storageFocusResult.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {storageFocusResult.map((it) => (
+                    <div key={it} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3 text-sm font-semibold text-gray-800">
+                      {it}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                  暂无，请先完成深度测评（Q2-14）
+                </div>
+              )}
             </div>
           </div>
 
@@ -1618,6 +1653,7 @@ function RequirementsDoc({
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
               <div className="text-sm font-semibold text-gray-900">个性化定制说明</div>
+              <div className="text-xs text-gray-500">Q2-16 底线与妥协 · Q2-21 其他需求</div>
             </div>
             <div className="p-6">
               {isEditing ? (
@@ -1627,16 +1663,36 @@ function RequirementsDoc({
                   placeholder="请输入其他补充需求..."
                   className="w-full min-h-[140px] rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#FF9C3E]/20"
                 />
-              ) : customNeedsNote.trim() ? (
-                <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {customNeedsNote}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无
-                  <div className="mt-1 text-xs text-gray-500">进入编辑模式后可补充说明</div>
-                </div>
-              )}
+              ) : (() => {
+                const fromData = !useMock && (
+                  (d?.otherNeeds?.trim()) ||
+                  (Array.isArray(d?.bottomLine) && d.bottomLine.length > 0)
+                )
+                const displayText = useMock
+                  ? '其他补充：希望儿童房预留成长空间。\n\n底线与妥协：\n• 绝对要环保（哪怕多花钱，也要进场就能住，没味儿、没甲醛）\n• 收纳够强大（空间利用率要高，东西放得下、找得到）'
+                  : fromData
+                    ? [
+                        d?.otherNeeds?.trim(),
+                        (d?.bottomLine ?? []).length
+                          ? '\n\n底线与妥协：\n' + (d.bottomLine as string[]).map((b) => '• ' + b).join('\n')
+                          : '',
+                      ].filter(Boolean).join('')
+                    : ''
+                return displayText.trim() ? (
+                  <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {displayText}
+                  </div>
+                ) : customNeedsNote.trim() ? (
+                  <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {customNeedsNote}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                    暂无
+                    <div className="mt-1 text-xs text-gray-500">进入编辑模式后可补充说明，或完成 Q2-16、Q2-21 自动生成</div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -1681,14 +1737,20 @@ function RequirementsDoc({
               </div>
             </div>
             <div className="md:col-span-2 space-y-3">
-              {activeSpace.items.map((it, idx) => (
-                <div key={it} className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4">
-                  <span className="w-8 h-8 rounded-2xl bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center text-xs font-bold">
-                    {idx + 1}
-                  </span>
-                  <div className="text-sm text-gray-700 leading-relaxed">{it}</div>
+              {activeSpaceItems.length > 0 ? (
+                activeSpaceItems.map((it, idx) => (
+                  <div key={it} className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-4">
+                    <span className="w-8 h-8 rounded-2xl bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </span>
+                    <div className="text-sm text-gray-700 leading-relaxed">{it}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                  暂无，请先完成深度测评（{activeSpace.q}）
                 </div>
-              ))}
+              )}
             </div>
           </div>
 

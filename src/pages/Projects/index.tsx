@@ -13,7 +13,7 @@ export default function ProjectsPage() {
         // Handle project selection logic if needed, e.g. update global data
         navigate('/home');
       }}
-      onBack={() => navigate('/style-eval')}
+      onBack={() => navigate('/')}
     />
   );
 }
