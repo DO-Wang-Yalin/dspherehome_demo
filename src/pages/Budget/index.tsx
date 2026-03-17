@@ -19,7 +19,7 @@ export default function BudgetPage() {
           >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-2xl font-medium text-gray-900">项目预算拆解</h1>
+          <h1 className="text-2xl font-medium text-gray-900">初步预算拆解</h1>
           <NavigationMenu />
         </div>
       </header>

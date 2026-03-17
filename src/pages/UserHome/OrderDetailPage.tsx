@@ -153,30 +153,37 @@ export default function OrderDetailPage() {
     setWindowStartIndex(start);
   }, [activeIndex]);
 
-  const visibleSteps = useMemo(() => {
-    return ORDER_STEPS.slice(windowStartIndex, windowStartIndex + WINDOW_SIZE);
-  }, [windowStartIndex]);
-
   const handlePrev = () => {
-    setWindowStartIndex(prev => Math.max(0, prev - 6));
+    setWindowStartIndex(prev => Math.max(0, prev - 3));
   };
 
   const handleNext = () => {
-    setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 6));
+    setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 3));
   };
 
-  // Calculate phases for the visible window
-  const visiblePhases = useMemo(() => {
+  // Phase English labels mapping
+  const PHASE_EN_MAP: Record<string, string> = {
+    '意向期': 'INT',
+    '订购期': 'ORD',
+    '交付期': 'DEL',
+    '验收期': 'ACC',
+    '维保期': 'MNT',
+    '结束': 'FIN'
+  };
+
+  // Calculate all phases for the entire timeline
+  const allPhases = useMemo(() => {
     const result = [];
     let currentP = null;
 
-    visibleSteps.forEach((step, index) => {
+    ORDER_STEPS.forEach((step, index) => {
       if (!currentP || currentP.name !== step.phase) {
         if (currentP) {
           currentP.endIndex = index - 1;
         }
         currentP = {
           name: step.phase,
+          en: PHASE_EN_MAP[step.phase] || '',
           startIndex: index,
           endIndex: index,
           color: step.blockText,
@@ -187,8 +194,9 @@ export default function OrderDetailPage() {
         currentP.endIndex = index;
       }
     });
+    if (currentP) currentP.endIndex = ORDER_STEPS.length - 1;
     return result;
-  }, [visibleSteps]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] p-6 md:p-12">
@@ -256,14 +264,14 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* 订单颗粒度进程 Section */}
+        {/* 订单状态进程 Section */}
         <section className="bg-white/45 backdrop-blur-[25px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-6 sm:p-8 relative overflow-hidden group">
           <div className={`absolute -top-10 -right-10 w-64 h-64 ${currentStep?.blockBg.replace('/10', '/20') || 'bg-phase-delivery/20'} rounded-full blur-3xl pointer-events-none transition-colors`}></div>
           
           <div className="flex items-center justify-between mb-10 relative z-10">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <Activity size={18} />
-              订单颗粒度进程
+              订单状态进程
             </h3>
             <div className="flex items-center gap-4">
               <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full backdrop-blur-sm border ${
@@ -276,137 +284,138 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="relative z-10 pb-4 px-4">
+          <div className="relative z-10 pb-4">
             <div className="relative mt-16 mb-4">
-            <button 
-              onClick={handlePrev}
-              disabled={windowStartIndex === 0}
-              className="absolute -left-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-20"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button 
-              onClick={handleNext}
-              disabled={windowStartIndex + WINDOW_SIZE >= ORDER_STEPS.length}
-              className="absolute -right-10 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-20"
-            >
-              <ChevronRight size={16} />
-            </button>
-              {/* Phase Brackets for Visible Window */}
-              {visiblePhases.map((p, i) => {
-                const isFirst = i === 0;
-                const isLast = i === visiblePhases.length - 1;
-                
-                // Adjust start and end to close gaps between phases
-                const adjustedStart = isFirst ? p.startIndex : p.startIndex - 0.5;
-                const adjustedEnd = isLast ? p.endIndex : p.endIndex + 0.5;
-                
-                const left = (adjustedStart / (WINDOW_SIZE - 1)) * 100;
-                const width = ((adjustedEnd - adjustedStart) / (WINDOW_SIZE - 1)) * 100;
-
-                return (
-                  <div 
-                    key={`${p.name}-${p.startIndex}`}
-                    className={`absolute -top-10 flex items-center ${p.color} transition-all duration-500`}
-                    style={{
-                      left: `${left}%`,
-                      width: `${width}%`
-                    }}
-                  >
-                    <div className="absolute left-0 top-1/2 h-[2px] bg-current -translate-y-1/2 opacity-20 w-full"></div>
-                    
-                    {/* Vertical Divider at the start of the phase or midpoint */}
-                    <div className="absolute left-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
-                    
-                    {isLast && (
-                      <div className="absolute right-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
-                    )}
-                    
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="relative z-10 px-2 py-0.5 text-[9px] font-black tracking-[0.2em] bg-[#FFFDF3] rounded-full uppercase whitespace-nowrap shadow-sm border border-current/10">
-                        {p.name}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Progress Line */}
-              <div className="absolute top-5 left-0 w-full h-1 bg-slate-200/30 -z-10 rounded-full"></div>
-              
-              <motion.div 
-                layout
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="flex justify-between w-full"
+              <button 
+                onClick={handlePrev}
+                disabled={windowStartIndex === 0}
+                className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-30"
               >
-                {visibleSteps.map((step, idx) => {
-                  const globalIdx = windowStartIndex + idx;
-                  const isCompleted = globalIdx < activeIndex;
-                  const isCurrent = globalIdx === activeIndex;
-                  const isPending = globalIdx > activeIndex;
+                <ChevronLeft size={16} />
+              </button>
+              <button 
+                onClick={handleNext}
+                disabled={windowStartIndex + WINDOW_SIZE >= ORDER_STEPS.length}
+                className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm z-30"
+              >
+                <ChevronRight size={16} />
+              </button>
 
-                  return (
-                    <motion.div 
-                      layout
-                      key={step.id} 
-                      className={`flex flex-col items-center relative ${isPending ? 'opacity-40' : ''}`} 
-                      style={{ width: `${100 / WINDOW_SIZE}%` }}
-                    >
-                      {/* English Code */}
-                      <span className={`absolute -top-6 text-[8px] font-mono font-bold tracking-tighter ${
-                        isCurrent ? step.blockText : 'text-slate-400'
-                      }`}>
-                        {step.id}
-                      </span>
+              <div className="overflow-hidden px-4">
+                <motion.div 
+                  className="relative flex"
+                  animate={{ x: `-${(windowStartIndex / ORDER_STEPS.length) * 100}%` }}
+                  transition={{ type: "spring", stiffness: 150, damping: 20 }}
+                  style={{ width: `${(ORDER_STEPS.length * 100) / WINDOW_SIZE}%` }}
+                >
+                  {/* Phase Brackets */}
+                  {allPhases.map((p, i) => {
+                    const isLast = i === allPhases.length - 1;
+                    
+                    const left = (p.startIndex / ORDER_STEPS.length) * 100;
+                    const width = ((p.endIndex - p.startIndex + 1) / ORDER_STEPS.length) * 100;
 
-                      {/* Node Circle */}
-                      <div className="mt-4">
-                        {isCurrent ? (
-                          <div className="relative">
-                            <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')}`}></div>
-                            <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md ring-2 ring-white/60 backdrop-blur-md ${
-                              isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')
-                            }`}>
-                              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            </div>
-                          </div>
-                        ) : isCompleted ? (
-                          <div className={`w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center shadow-sm ${
-                            isExceptionState ? 'border-red-200 text-red-500' : `${step.blockText.replace('text-', 'border-')}/30 ${step.blockText}`
-                          }`}>
-                            <Check size={12} strokeWidth={4} />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
-                          </div>
+                    return (
+                      <div 
+                        key={`${p.name}-${p.startIndex}`}
+                        className={`absolute -top-10 flex items-center ${p.color}`}
+                        style={{
+                          left: `${left}%`,
+                          width: `${width}%`
+                        }}
+                      >
+                        <div className="absolute left-0 top-1/2 h-[2px] bg-current -translate-y-1/2 opacity-20 w-full"></div>
+                        <div className="absolute left-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
+                        {isLast && (
+                          <div className="absolute right-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
                         )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="relative z-10 px-2 py-0.5 text-[9px] font-black tracking-[0.1em] bg-white rounded-full uppercase whitespace-nowrap shadow-sm border border-current/10 flex items-center gap-1">
+                            <span className="opacity-50 font-mono">{p.en}</span>
+                            <span>{p.name}</span>
+                          </span>
+                        </div>
                       </div>
+                    );
+                  })}
 
-                      {/* Label */}
-                      <div className="mt-3 flex flex-col items-center">
-                        <span className={`text-[10px] font-bold text-center leading-tight transition-all ${
-                          isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : `${step.blockText} scale-110`) :
-                          isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
-                          'text-slate-400'
+                  {/* Progress Line - Aligned to node centers */}
+                  <div 
+                    className="absolute top-[34px] h-1 bg-slate-200/30 -z-10 rounded-full"
+                    style={{ 
+                      left: `${(0.5 / ORDER_STEPS.length) * 100}%`, 
+                      width: `${((ORDER_STEPS.length - 1) / ORDER_STEPS.length) * 100}%` 
+                    }}
+                  ></div>
+                  
+                  {/* Steps */}
+                  {ORDER_STEPS.map((step, globalIdx) => {
+                    const isCompleted = globalIdx < activeIndex;
+                    const isCurrent = globalIdx === activeIndex;
+                    const isPending = globalIdx > activeIndex;
+
+                    return (
+                      <div 
+                        key={step.id} 
+                        className={`flex flex-col items-center relative shrink-0 ${isPending ? 'opacity-40' : ''}`} 
+                        style={{ width: `${100 / ORDER_STEPS.length}%` }}
+                      >
+                        {/* English Code */}
+                        <span className={`absolute -top-6 text-[8px] font-mono font-bold tracking-tighter ${
+                          isCurrent ? step.blockText : 'text-slate-400'
                         }`}>
-                          {isCurrent ? (isExceptionState ? '异常中断中' : step.label) : step.label}
+                          {step.id}
                         </span>
-                        {isCurrent && (
-                          <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')} animate-bounce`} />
-                        )}
+
+                        {/* Node Circle */}
+                        <div className="mt-4">
+                          {isCurrent ? (
+                            <div className="relative">
+                              <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')}`}></div>
+                              <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md ring-2 ring-white/60 backdrop-blur-md ${
+                                isExceptionState ? 'bg-gradient-to-br from-red-500 to-red-600' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')
+                              }`}>
+                                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                              </div>
+                            </div>
+                          ) : isCompleted ? (
+                            <div className={`w-6 h-6 rounded-full bg-white border-2 flex items-center justify-center shadow-sm ${
+                              isExceptionState ? 'border-red-200 text-red-500' : `${step.blockText.replace('text-', 'border-')}/30 ${step.blockText}`
+                            }`}>
+                              <Check size={12} strokeWidth={4} />
+                            </div>
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center">
+                              <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Label */}
+                        <div className="mt-3 flex flex-col items-center">
+                          <span className={`text-[10px] font-bold text-center leading-tight transition-all ${
+                            isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : `${step.blockText} scale-110`) :
+                            isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
+                            'text-slate-400'
+                          }`}>
+                            {isCurrent ? (isExceptionState ? '异常中断中' : step.label) : step.label}
+                          </span>
+                          {isCurrent && (
+                            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')} animate-bounce`} />
+                          )}
+                        </div>
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
+                    );
+                  })}
+                </motion.div>
+              </div>
             </div>
           </div>
           
           {/* Progress Indicator */}
           <div className="mt-6 flex justify-center gap-1.5">
-            {Array.from({ length: Math.ceil(ORDER_STEPS.length / 2) }).map((_, i) => {
-              const isActive = Math.floor(windowStartIndex / 2) === i;
+            {Array.from({ length: Math.ceil((ORDER_STEPS.length - WINDOW_SIZE) / 3) + 1 }).map((_, i) => {
+              const isActive = Math.round(windowStartIndex / 3) === i;
               return (
                 <div 
                   key={i} 

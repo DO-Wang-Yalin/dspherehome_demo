@@ -21,7 +21,7 @@ export default function UserHomePage() {
       contractCustomText={data.contractCustomText}
       initialTab={initialTab}
       onExit={() => navigate('/')}
-      onGoToFirstPage={() => navigate('/style-eval')}
+      onGoToContract={() => navigate('/contracts')}
       onBackToProjects={() => navigate('/projects')}
       onViewOrderDetail={(id) => navigate(`/order/${id}`)}
     />

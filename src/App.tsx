@@ -4,6 +4,7 @@ import { GlobalProvider } from './context/GlobalContext';
 import { DeepEvalFormProvider } from './components/DeepEvalFormContext';
 
 import StyleEvalPage from './pages/StyleEval';
+import LandingPage from './pages/Landing/LandingPage';
 import LeadsPage from './pages/Leads';
 import RegisterPage from './pages/Register';
 import LoginWrapper from './pages/Register/LoginWrapper';
@@ -23,7 +24,8 @@ export default function App() {
       <DeepEvalFormProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/style-eval" replace />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/admin" element={<StyleEvalPage />} />
             <Route path="/style-eval" element={<StyleEvalPage />} />
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/register" element={<RegisterPage />} />

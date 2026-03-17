@@ -30,7 +30,7 @@ export default function LeadsPage() {
     if (step === 2) {
       navigate('/leads?step=1');
     } else {
-      navigate('/style-eval');
+      navigate('/style-eval?showResult=true');
     }
   };
 

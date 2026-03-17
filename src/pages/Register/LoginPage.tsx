@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Phone, ChevronLeft } from 'lucide-react';
 import { StepWrapper } from '../../components/ui';
 import { sendSmsCode, loginWithCode } from '../../services/auth';
+import { useGlobal } from '../../context/GlobalContext';
 
 export interface LoginPageProps {
   onSuccess: () => void;
@@ -9,6 +10,7 @@ export interface LoginPageProps {
 }
 
 export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
+  const { setLoggedIn } = useGlobal();
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [countdown, setCountdown] = useState(0);
@@ -62,6 +64,7 @@ export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
       return;
     }
     if (mockLoginEnabled && (!phoneValid || !codeValid)) {
+      setLoggedIn(true);
       onSuccess();
       return;
     }
@@ -75,10 +78,16 @@ export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
         }
         setError(result.message || '验证失败（测试模式已放行）');
       }
+      setLoggedIn(true);
       onSuccess();
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleMockLogin = () => {
+    setLoggedIn(true);
+    onSuccess();
   };
 
   return (
@@ -139,13 +148,13 @@ export function LoginPage({ onSuccess, onBack }: LoginPageProps) {
             disabled={(!mockLoginEnabled && (!phoneValid || !codeValid)) || submitting}
             className="w-full mt-2 flex items-center justify-center rounded-xl bg-[#EF6B00] px-4 py-4 text-sm font-medium text-white hover:bg-[#D85F00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-[0.99]"
           >
-            {submitting ? '验证中…' : '登录并进入工作台'}
+            {submitting ? '验证中…' : '登录并进入项目中心'}
           </button>
 
           {mockLoginEnabled && (
             <button
               type="button"
-              onClick={onSuccess}
+              onClick={handleMockLogin}
               className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
             >
               开发模式：直接登录 (跳过验证)

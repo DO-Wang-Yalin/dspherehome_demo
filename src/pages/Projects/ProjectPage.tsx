@@ -27,7 +27,7 @@ export function ProjectPage({ onSelectProject, onBack }: ProjectPageProps) {
             <span className="text-xs font-semibold text-[#EF6B00] tracking-wide">我的项目</span>
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mb-1">选择项目</h2>
-          <p className="text-sm text-gray-500 mb-6">选择一个项目进入工作台，查看项目概览、需求书与订单等信息。</p>
+          <p className="text-sm text-gray-500 mb-6">选择一个项目进入项目中心，查看项目概览、需求书与订单等信息。</p>
 
           {/* 项目选择卡片 - 置顶 */}
           {loading ? (

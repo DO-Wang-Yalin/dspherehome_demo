@@ -5,19 +5,22 @@ interface GlobalContextType {
   data: FormData;
   updateData: (fields: Partial<FormData>) => void;
   setData: React.Dispatch<React.SetStateAction<FormData>>;
+  isLoggedIn: boolean;
+  setLoggedIn: (val: boolean) => void;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export function GlobalProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<FormData>(initialFormData);
+  const [isLoggedIn, setLoggedIn] = useState(false);
 
   const updateData = (fields: Partial<FormData>) => {
     setData((prev) => ({ ...prev, ...fields }));
   };
 
   return (
-    <GlobalContext.Provider value={{ data, updateData, setData }}>
+    <GlobalContext.Provider value={{ data, updateData, setData, isLoggedIn, setLoggedIn }}>
       {children}
     </GlobalContext.Provider>
   );

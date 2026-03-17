@@ -62,7 +62,7 @@ export interface WorkbenchPageProps {
   contractCustomText?: string
   initialTab?: NavKey
   onExit?: () => void
-  onGoToFirstPage?: () => void
+  onGoToContract?: () => void
   /** 返回项目列表（从项目页进入工作台时使用） */
   onBackToProjects?: () => void
   onViewOrderDetail?: (orderId: string) => void
@@ -80,7 +80,7 @@ export function WorkbenchPage({
   contractCustomText,
   initialTab,
   onExit,
-  onGoToFirstPage,
+  onGoToContract,
   onBackToProjects,
   onViewOrderDetail,
 }: WorkbenchPageProps) {
@@ -144,7 +144,7 @@ export function WorkbenchPage({
   const navItems: Array<{ key: NavKey; label: string; icon: React.ElementType }> = [
     { key: 'home', label: '项目首页', icon: Home },
     { key: 'requirements', label: '项目需求书', icon: FileText },
-    { key: 'budget', label: '项目预算', icon: PieChart },
+    { key: 'budget', label: '预算看板', icon: PieChart },
     { key: 'orders', label: '项目订单', icon: ShoppingCart },
     { key: 'contracts', label: '项目合同', icon: ScrollText },
   ]
@@ -183,7 +183,7 @@ export function WorkbenchPage({
         <div className="px-5">
           <button
             type="button"
-            onClick={onGoToFirstPage}
+            onClick={onExit}
             className="flex items-center gap-3 px-2 text-left rounded-2xl hover:bg-black/5 transition-colors py-2 -my-2"
           >
             <img src={logoImg} alt="DSPHR Workspace" className="h-10 w-auto object-contain" />
@@ -260,15 +260,15 @@ export function WorkbenchPage({
               <div className="group/tooltip relative">
                 <button
                   type="button"
-                  onClick={onGoToFirstPage}
+                  onClick={onExit}
                   className="w-9 h-9 rounded-2xl bg-[#FF9C3E]/10 text-[#FF9C3E] flex items-center justify-center shrink-0 hover:bg-[#FF9C3E]/15 transition"
-                  title="返回第一页"
-                  aria-label="返回第一页"
+                  title="返回欢迎页"
+                  aria-label="返回欢迎页"
                 >
                   <Home size={18} />
                 </button>
                 <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2.5 py-1 text-xs font-medium text-white bg-slate-800 rounded-lg whitespace-nowrap opacity-0 pointer-events-none transition-opacity group-hover/tooltip:opacity-100 group-focus-within/tooltip:opacity-100 z-50">
-                  返回第一页
+                  返回欢迎页
                 </span>
               </div>
               <div className="min-w-0 flex items-center gap-2">
@@ -376,7 +376,7 @@ export function WorkbenchPage({
                     />
                     <FeatureCard
                       icon={<PieChart size={18} />}
-                      title="项目预算"
+                      title="预算看板"
                       desc="一键总览项目预算结构，按空间与品类拆解费用构成，支持在线确认。"
                       action="查看预算"
                       onClick={() => setActive('budget')}
@@ -410,7 +410,7 @@ export function WorkbenchPage({
                 hasSigned={hasSignedContract}
                 signatureData={contractSignatureData}
                 customText={contractCustomText}
-                onGoToContractStep={onGoToFirstPage}
+                onGoToContractStep={onGoToContract}
               />
             ) : active === 'designFeedback' ? (
               <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-4 md:p-6">
@@ -798,7 +798,7 @@ function ComingSoon({ title, onBackHome }: { title: string; onBackHome: () => vo
           <Construction size={22} />
         </div>
         <h2 className="mt-5 text-xl font-semibold">{title}</h2>
-        <p className="mt-2 text-sm text-gray-600 leading-relaxed">功能开发中，敬请期待；你可以先返回项目首页查看工作台概览。</p>
+        <p className="mt-2 text-sm text-gray-600 leading-relaxed">功能开发中，敬请期待；你可以先返回项目首页查看项目中心概览。</p>
         <button
           type="button"
           onClick={onBackHome}

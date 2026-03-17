@@ -7,7 +7,7 @@ export type NavStep = {
 };
 
 export const NAVIGATION_STEPS: NavStep[] = [
-  { id: 'welcome', title: '欢迎', path: '/style-eval' },
+  { id: 'welcome', title: '后台管理', path: '/admin' },
   { id: 'style-eval', title: '家居风格测评', path: '/style-eval' },
   { id: 'leads-1', title: '项目概况', path: '/leads', search: '?step=1', qId: 'DE-1' },
   { id: 'leads-2', title: '您的信息', path: '/leads', search: '?step=2', qId: 'DE-2' },
