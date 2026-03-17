@@ -163,7 +163,15 @@ export const DESIGN_FEEDBACK_ORDER: DesignOrder = {
           title: '主卧软装方案',
           text: '温馨色调，增加储物空间。采用无主灯设计，营造舒适睡眠环境。',
           imageUrl: 'https://picsum.photos/seed/bedroom/1200/800',
-          annotations: [],
+          annotations: [
+            {
+              id: 'a1-p2',
+              targetType: 'image_point',
+              point: { x: 45, y: 35 },
+              content: '无主灯设计：床头两侧壁灯 + 顶部线性灯带，色温 3000K',
+              createdAt: '2024-03-01T10:30:00Z',
+            },
+          ],
           comments: [],
           lock: { isLocked: true, lockedAt: '2024-03-02T11:00:00Z', action: 'satisfied' },
         },
@@ -244,7 +252,15 @@ export const DESIGN_FEEDBACK_ORDER: DesignOrder = {
           title: '客厅布局方案 (最终确认)',
           text: '所有家具尺寸已核对，动线优化完成。',
           imageUrl: 'https://picsum.photos/seed/living-v3/1200/800',
-          annotations: [],
+          annotations: [
+            {
+              id: 'a3-p1',
+              targetType: 'image_point',
+              point: { x: 35, y: 42 },
+              content: 'L 型沙发与茶几尺寸已按确认方案落图，预留动线 ≥ 900mm',
+              createdAt: '2024-03-10T09:00:00Z',
+            },
+          ],
           comments: [],
           lock: { isLocked: true, lockedAt: '2024-03-11T09:00:00Z', action: 'satisfied' },
         },
@@ -256,7 +272,15 @@ export const DESIGN_FEEDBACK_ORDER: DesignOrder = {
           title: '主卧软装方案 (最终确认)',
           text: '材质与灯光方案已确认。',
           imageUrl: 'https://picsum.photos/seed/bedroom-v3/1200/800',
-          annotations: [],
+          annotations: [
+            {
+              id: 'a3-p2',
+              targetType: 'image_point',
+              point: { x: 50, y: 30 },
+              content: '床头背景墙与隐藏灯带节点已确认，施工按此图实施',
+              createdAt: '2024-03-10T09:15:00Z',
+            },
+          ],
           comments: [],
           lock: { isLocked: true, lockedAt: '2024-03-11T10:00:00Z', action: 'satisfied' },
         },
@@ -363,7 +387,7 @@ export function getDesignVersionInfo(orderNumber: string | undefined): {
   const description =
     orderNumber === 'PSO-OD_LHJCF-00584'
       ? '卫生间墙地砖铺贴方案，含 EPC 标注，等待您的确认与反馈。'
-      : '包含平面布置图、效果图及施工节点大样图，等待您的最终确认。';
+      : '包含平面布置图、效果图及施工节点大样图，含 EPC 标注，等待您的最终确认。';
   return {
     versionName: version.name,
     statusLabel,
@@ -504,10 +528,11 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
     >
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-30">{drawLines()}</svg>
 
-      {/* Left Column: Annotations */}
+      {/* Left Column: EPC 标注（历史版本同展示） */}
       <div className="w-1/5 flex flex-col gap-4 z-20 relative">
         <div className="flex-none bg-[#4887FF] text-white rounded-xl p-3 text-center shadow-sm z-40 relative">
-          <h2 className="text-xs font-bold tracking-wide">设计注释 (历史)</h2>
+          <h2 className="text-xs font-bold tracking-wide">EPC 标注</h2>
+          <p className="text-[10px] opacity-90 mt-0.5 uppercase tracking-wider">Design Notes</p>
         </div>
         <div
           className="flex-1 overflow-y-auto space-y-3 custom-scrollbar p-4 -mx-4"
@@ -534,7 +559,7 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
             </div>
           ))}
           {sortedAnnotations.length === 0 && (
-            <div className="text-center text-slate-400 text-xs py-8">无设计注释</div>
+            <div className="text-center text-slate-400 text-xs py-8">暂无设计注释</div>
           )}
         </div>
       </div>

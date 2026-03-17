@@ -975,16 +975,28 @@ export const Step4 = ({ data, updateData }: StepProps) => {
       reader.readAsDataURL(file);
     });
 
+  const floorPlanLoadingRef = React.useRef(false);
   const handleFloorFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    if (floorPlanLoadingRef.current) return; // 正在添加时忽略新选择，避免竞态
     const next = Array.from(files).filter((f) => f.type.startsWith('image/'));
     if (!next.length) return;
+    floorPlanLoadingRef.current = true;
     setFloorPlanFiles(next);
+    const existing = data.floorPlanImages ?? [];
     Promise.all(next.map((f) => readFileAsDataUrl(f).then((url) => ({ name: f.name, url }))))
-      .then((floorPlanImages) => {
-        updateData({ floorPlanUploaded: true, floorPlanImages });
+      .then((newImages) => {
+        updateData({ floorPlanUploaded: true, floorPlanImages: [...existing, ...newImages] });
+        setFloorPlanFiles([]);
       })
-      .catch(() => updateData({ floorPlanUploaded: true }));
+      .catch(() => updateData({ floorPlanUploaded: true }))
+      .finally(() => { floorPlanLoadingRef.current = false; });
+  };
+
+  const removeFloorPlanImage = (index: number) => {
+    const list = data.floorPlanImages ?? [];
+    const next = list.filter((_, i) => i !== index);
+    updateData({ floorPlanImages: next.length ? next : undefined, floorPlanUploaded: next.length > 0 });
   };
 
   const handleMediaFiles = (files: FileList | null) => {
@@ -1025,14 +1037,18 @@ export const Step4 = ({ data, updateData }: StepProps) => {
         <div className="space-y-3">
           <SubQuestion className="flex items-center gap-2">
             <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
-            上传户型图
+            上传户型图（可多张）
           </SubQuestion>
           <div
             className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
             onClick={() => floorInputRef.current?.click()}
           >
             <p className="text-gray-500 mb-4">
-              {floorPlanFiles.length > 0 ? '已选择户型图，可重新选择替换' : '点击或拖拽上传户型图'}
+              {(() => {
+                const total = (data.floorPlanImages?.length ?? 0) + floorPlanFiles.length;
+                if (total > 0) return `已上传 ${total} 张户型图，点击继续添加`;
+                return '点击或拖拽上传户型图，支持多张';
+              })()}
             </p>
             <button
               type="button"
@@ -1046,15 +1062,30 @@ export const Step4 = ({ data, updateData }: StepProps) => {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => handleFloorFiles(e.target.files)}
+              onChange={(e) => {
+                handleFloorFiles(e.target.files);
+                e.target.value = '';
+              }}
             />
-            {floorPlanFiles.length > 0 && (
-              <div className="mt-4 text-xs text-gray-600 text-left max-h-24 overflow-y-auto">
-                {floorPlanFiles.map((file) => (
-                  <div key={file.name} className="truncate">
-                    {file.name}
+            {(data.floorPlanImages?.length ?? 0) > 0 && (
+              <div className="mt-4 text-left space-y-2 max-h-40 overflow-y-auto">
+                {(data.floorPlanImages ?? []).map((img, index) => (
+                  <div key={`${img.name}-${index}`} className="flex items-center gap-2 text-xs text-gray-600">
+                    <span className="truncate flex-1">{img.name}</span>
+                    <button
+                      type="button"
+                      className="shrink-0 text-red-500 hover:text-red-600"
+                      onClick={(e) => { e.stopPropagation(); removeFloorPlanImage(index); }}
+                    >
+                      删除
+                    </button>
                   </div>
                 ))}
+              </div>
+            )}
+            {floorPlanFiles.length > 0 && (
+              <div className="mt-2 text-xs text-amber-600">
+                正在添加 {floorPlanFiles.length} 张…
               </div>
             )}
           </div>

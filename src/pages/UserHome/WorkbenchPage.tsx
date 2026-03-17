@@ -53,6 +53,40 @@ import {
   Plus,
 } from 'lucide-react'
 import { DesignFeedbackApp } from '../DesignFeedback/DesignFeedbackApp'
+
+/** 可添加的空间类型选项（下拉选择，与核心空间及常见扩展一致） */
+const ADDABLE_SPACE_TYPE_OPTIONS = [
+  '客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园',
+  '衣帽间', '玄关', '阳台', '储物间', '健身区', '影音室', '保姆间', '家政间', '洗衣房',
+]
+
+/** 核心空间「添加空间类型」一行：下拉选项 + 添加按钮 */
+function AddSpaceTypeRow({ onAdd, existingNames }: { onAdd: (name: string) => void; existingNames: string[] }) {
+  const available = ADDABLE_SPACE_TYPE_OPTIONS.filter((o) => !existingNames.includes(o))
+  const [value, setValue] = React.useState('')
+  const handleAdd = () => {
+    if (!value || existingNames.includes(value)) return
+    onAdd(value)
+    setValue('')
+  }
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <select
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        className="rounded-xl border border-gray-200 px-3 py-2 text-sm min-w-[140px]"
+      >
+        <option value="">选择要添加的空间类型</option>
+        {available.map((opt) => (
+          <option key={opt} value={opt}>{opt}</option>
+        ))}
+      </select>
+      <button type="button" onClick={handleAdd} disabled={!value} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-[#FFFDF3] hover:border-[#FF9C3E]/30 transition-colors disabled:opacity-50 disabled:pointer-events-none">
+        <Plus size={14} /> 添加空间类型
+      </button>
+    </div>
+  )
+}
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel'
 import { ContractDetailModal } from '../../components/ContractDetailModal'
 import { getPaymentAccountCopyText } from '../../constants/contract'
@@ -790,6 +824,55 @@ export function RequirementsDoc({
 
   /** 与 Q2-9 核心空间一致，用于自定义空间名称选项 */
   const CORE_SPACE_OPTIONS = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
+  /** 成员画像：角色选项（与 Q2-6、Q2-6-1 一致，选后仅展示该角色对应的年龄段/身份/活动选项） */
+  const MEMBER_ROLE_OPTIONS = ['男主人', '女主人', '长辈/长住家属', '女儿', '儿子', '猫猫', '狗狗', '其他']
+  /** 按角色映射「年龄段」选项：成人不用学龄前/小学等，儿童不用 20-30 岁等 */
+  const ROLE_TO_AGE_OPTIONS: Record<string, string[]> = {
+    '男主人': ['20-30岁', '31-40岁', '41-50岁', '50岁以上', '其他'],
+    '女主人': ['20-30岁', '31-40岁', '41-50岁', '50岁以上', '其他'],
+    '长辈/长住家属': ['50岁以上', '41-50岁', '31-40岁', '其他'],
+    '女儿': ['学龄前', '小学', '初中', '高中', '其他'],
+    '儿子': ['学龄前', '小学', '初中', '高中', '其他'],
+    '猫猫': ['幼年', '成年', '老年', '其他'],
+    '狗狗': ['幼年', '成年', '老年', '其他'],
+    '其他': ['20-30岁', '31-40岁', '41-50岁', '50岁以上', '学龄前', '小学', '初中', '高中', '其他'],
+  }
+  /** 按角色映射「身份/职业」选项：已选角色后不再出现其他角色名 */
+  const ROLE_TO_PROFESSION_OPTIONS: Record<string, string[]> = {
+    '男主人': ['金融从业', '教育', '医疗', '自由职业', '退休', '学生', '其他'],
+    '女主人': ['金融从业', '教育', '医疗', '自由职业', '退休', '学生', '其他'],
+    '长辈/长住家属': ['退休', '金融从业', '教育', '医疗', '自由职业', '其他'],
+    '女儿': ['学龄前', '小学', '初中', '高中', '其他'],
+    '儿子': ['学龄前', '小学', '初中', '高中', '其他'],
+    '猫猫': ['其他'],
+    '狗狗': ['其他'],
+    '其他': ['金融从业', '教育', '医疗', '自由职业', '退休', '学生', '学龄前', '小学', '初中', '高中', '其他'],
+  }
+  const MEMBER_AGE_OPTIONS_FALLBACK = ROLE_TO_AGE_OPTIONS['其他']
+  const MEMBER_PROFESSION_OPTIONS_FALLBACK = ROLE_TO_PROFESSION_OPTIONS['其他']
+  /** 按角色映射「主要活动及空间」选项（与 Q2-6、Q2-6-1 题目一致） */
+  const ROLE_TO_ACTIVITY_OPTIONS: Record<string, string[]> = {
+    '男主人': ['智能书房', '客厅影音中心', '社交餐厨'],
+    '女主人': ['梦幻衣帽间', '全能厨房', '主卧疗愈区'],
+    '长辈/长住家属': ['阳光卧室', '茶室/宁静角', '独立卫浴'],
+    '女儿': ['梦幻公主房', '独立书画区', '乐器练琴房', '超大储衣空间'],
+    '儿子': ['乐高/积木区', '运动攀爬墙', '电脑电竞区', '独立手作台'],
+    '猫猫': ['猫墙/跑道', '嵌入式猫砂盆', '阳台封窗', '独立喂食区'],
+    '狗狗': ['进门洗脚池', '独立卧榻', '宠物互动区', '扫拖机器人基地'],
+    '其他': [
+      '智能书房', '客厅影音中心', '社交餐厨', '梦幻衣帽间', '全能厨房', '主卧疗愈区', '阳光卧室', '茶室/宁静角', '独立卫浴',
+      '梦幻公主房', '独立书画区', '乐器练琴房', '超大储衣空间', '乐高/积木区', '运动攀爬墙', '电脑电竞区', '独立手作台',
+      '猫墙/跑道', '嵌入式猫砂盆', '阳台封窗', '独立喂食区', '进门洗脚池', '独立卧榻', '宠物互动区', '扫拖机器人基地',
+    ],
+  }
+  const MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK = ROLE_TO_ACTIVITY_OPTIONS['其他']
+  /** 风水要求选项（与 Q2-17 Step17 一致） */
+  const FENGSHUI_OPTIONS = [
+    '没讲究，怎么舒服怎么来',
+    '避开大众忌讳就行',
+    '有比较看重的特定要求',
+    '我有专门的方案，需配合执行',
+  ]
   const planInputId = React.useId()
   const mediaInputId = React.useId()
   const [planImages, setPlanImages] = React.useState<Array<{ name: string; url: string }>>([])
@@ -838,7 +921,7 @@ export function RequirementsDoc({
     dog: d?.dogSpaces ?? [],
   }
 
-  type PersonaRow = { name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; accent: 'amber' | 'slate'; isStyleTaker?: boolean }
+  type PersonaRow = { name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; otherActivityNote?: string; accent: 'amber' | 'slate'; isStyleTaker?: boolean }
   const displayPersonas = useMock
     ? [
         { name: '父亲', age: '42岁', profession: '金融从业', height: '178cm', stylePersona: '理性秩序派' as string | null, mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'], accent: 'amber' as const, isStyleTaker: true },
@@ -855,6 +938,7 @@ export function RequirementsDoc({
             height: '',
             stylePersona: null,
             mainActivitiesAndSpaces: (m.spaces ?? []).map((s) => (s.description?.trim() ? `${s.name}：${s.description}` : s.name)),
+            otherActivityNote: m.otherActivityNote ?? '',
             accent: (i % 2 === 0 ? 'amber' : 'slate') as const,
             isStyleTaker: m.id === 'role',
           })) as PersonaRow[]
@@ -862,12 +946,12 @@ export function RequirementsDoc({
         const list: PersonaRow[] = []
         if (d?.role) {
           const name = ROLE_LABELS[d.role] || d.role
-          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], accent: 'amber', isStyleTaker: true })
+          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], otherActivityNote: '', accent: 'amber', isStyleTaker: true })
         }
         ;(d?.additionalMembers ?? []).forEach((memberId) => {
           const label = MEMBER_LABELS[memberId] ?? memberId
           const spaces = MEMBER_SPACES[memberId] ?? []
-          list.push({ name: label, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: spaces, accent: 'slate', isStyleTaker: false })
+          list.push({ name: label, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: spaces, otherActivityNote: '', accent: 'slate', isStyleTaker: false })
         })
         return list
       })()
@@ -1405,30 +1489,59 @@ export function RequirementsDoc({
 
       <section className="space-y-4">
         <SectionTitle title="空间规划（Q2-9）" />
-        {(useMock || d?.coreSpaces || d?.childGrowth || d?.guestStay || d?.futureChanges) ? (
+        {(useMock || d?.coreSpaces || d?.childGrowth || d?.guestStay || d?.futureChanges || (isEditing && updateData && !useMock)) ? (
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
               <div className="font-semibold">核心空间与规划</div>
             </div>
             {(() => {
-              const coreOptions = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
-              const parseCounts = (str: string) => {
+              const customNames = d?.customCoreSpaceOptions ?? []
+              const baseOptions = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
+              const parseCounts = (str: string): Record<string, number> => {
                 const counts: Record<string, number> = {}
-                coreOptions.forEach((k) => { counts[k] = 0 })
                 if (!str?.trim()) return counts
-                coreOptions.forEach((k) => {
-                  const m = str.match(new RegExp(`(\\d+)${k}`))
-                  if (m) counts[k] = parseInt(m[1], 10)
-                })
+                const re = /(\d+)([^\d]+)/g
+                let m: RegExpExecArray | null
+                while ((m = re.exec(str)) !== null) counts[m[2]] = parseInt(m[1], 10)
                 return counts
               }
               const raw = useMock ? '1客厅1餐厅1主卧室1次卧室1主卫浴室1公卫浴室' : (d?.coreSpaces ?? '')
               const counts = parseCounts(raw)
-              const entries = coreOptions.filter((k) => counts[k] > 0).map((k) => ({ name: k, count: counts[k] }))
+              const fullOptionList = Array.from(new Set([...baseOptions, ...customNames, ...Object.keys(counts)]))
+              const entries = fullOptionList.filter((k) => (counts[k] ?? 0) > 0).map((k) => ({ name: k, count: counts[k] ?? 0 }))
+              const updateCoreCount = (name: string, val: number) => {
+                if (!updateData || useMock) return
+                const next = { ...counts, [name]: Math.max(0, val) }
+                const newStr = fullOptionList.filter((k) => (next[k] ?? 0) > 0).map((k) => `${next[k]}${k}`).join('')
+                updateData({ coreSpaces: newStr })
+              }
+              const addCustomSpaceOption = (newName: string) => {
+                if (!updateData || useMock || !newName?.trim()) return
+                const next = [...customNames, newName.trim()]
+                updateData({ customCoreSpaceOptions: next })
+              }
+              const isEditable = isEditing && updateData && !useMock
               return (
                 <>
-                  {entries.length > 0 && (
+                  {isEditable ? (
+                    <div className="mb-5">
+                      <div className="text-xs font-semibold text-gray-500 mb-3">核心空间（数量可改，可添加空间类型）</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {fullOptionList.map((name) => (
+                          <div key={name} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-gray-900 truncate" title={name}>{name}</span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button type="button" onClick={() => updateCoreCount(name, Math.max(0, (counts[name] ?? 0) - 1))} className="w-8 h-8 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm font-bold" aria-label="减少">−</button>
+                              <input type="number" min={0} max={9} value={counts[name] ?? 0} onChange={(e) => updateCoreCount(name, parseInt(e.target.value, 10) || 0)} className="w-10 h-8 rounded-xl border border-gray-200 px-1 py-0 text-center text-sm font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+                              <button type="button" onClick={() => updateCoreCount(name, (counts[name] ?? 0) + 1)} className="w-8 h-8 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 flex items-center justify-center text-sm font-bold" aria-label="增加">+</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <AddSpaceTypeRow onAdd={addCustomSpaceOption} existingNames={fullOptionList} />
+                    </div>
+                  ) : entries.length > 0 ? (
                     <div className="mb-5">
                       <div className="text-xs font-semibold text-gray-500 mb-3">核心空间</div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -1440,13 +1553,7 @@ export function RequirementsDoc({
                         ))}
                       </div>
                     </div>
-                  )}
-                  <div className="space-y-2 text-sm text-gray-700 border-t border-gray-100 pt-4">
-                    {useMock && <><div><span className="font-semibold text-gray-800">儿童成长：</span>预留可变空间</div><div><span className="font-semibold text-gray-800">亲友留宿：</span>偶尔留宿</div></>}
-                    {!useMock && d?.childGrowth?.trim() && <div><span className="font-semibold text-gray-800">儿童成长：</span>{d.childGrowth}</div>}
-                    {!useMock && d?.guestStay?.trim() && <div><span className="font-semibold text-gray-800">亲友留宿：</span>{d.guestStay}</div>}
-                    {!useMock && d?.futureChanges?.trim() && <div><span className="font-semibold text-gray-800">未来变动：</span>{d.futureChanges}</div>}
-                  </div>
+                  ) : null}
                 </>
               )
             })()}
@@ -1466,7 +1573,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-base font-semibold truncate">户型图（Q2-4）</div>
-                  <div className="text-xs text-gray-500">支持上传图片并预览</div>
+                  <div className="text-xs text-gray-500">支持多张图片上传并预览</div>
                 </div>
               </div>
               {isEditing ? (
@@ -1497,23 +1604,34 @@ export function RequirementsDoc({
                 </div>
                 <div className="mt-3 text-sm font-semibold text-gray-800">暂无</div>
                 <div className="mt-1 text-sm text-gray-600">
-                  {!isEditing ? '进入编辑模式后可上传户型图' : '可在此上传户型图'}
+                  {!isEditing ? '进入编辑模式后可上传户型图' : '可在此上传多张户型图'}
                 </div>
               </div>
             ) : (
               <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {planImages.map((img) => (
-                  <a
-                    key={img.url}
-                    href={img.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group block rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm"
-                    title={img.name}
-                  >
-                    <img src={img.url} alt={img.name} className="w-full h-28 object-cover group-hover:scale-[1.01] transition-transform" />
-                    <div className="px-3 py-2 text-[11px] text-gray-600 truncate">{img.name}</div>
-                  </a>
+                {planImages.map((img, index) => (
+                  <div key={`${img.name}-${index}`} className="relative group/card">
+                    <a
+                      href={img.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm"
+                      title={img.name}
+                    >
+                      <img src={img.url} alt={img.name} className="w-full h-28 object-cover group-hover/card:scale-[1.01] transition-transform" />
+                      <div className="px-3 py-2 text-[11px] text-gray-600 truncate">{img.name}</div>
+                    </a>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => setPlanImages((prev) => prev.filter((_, i) => i !== index))}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 hover:bg-red-500 text-white text-xs flex items-center justify-center"
+                        title="删除"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -1610,23 +1728,35 @@ export function RequirementsDoc({
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 min-w-0">
                     <div>
-                      <label className="text-xs text-gray-500 block mb-1">姓名</label>
-                      <input
+                      <label className="text-xs text-gray-500 block mb-1">角色</label>
+                      <select
                         value={member.name}
                         onChange={(e) => {
                           setMembersEdit((prev) => {
                             const next = [...prev]
-                            next[memberIdx] = { ...next[memberIdx], name: e.target.value }
+                            const newName = e.target.value
+                            const allowedSpaces = ROLE_TO_ACTIVITY_OPTIONS[newName] ?? MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK
+                            const allowedAges = ROLE_TO_AGE_OPTIONS[newName] ?? MEMBER_AGE_OPTIONS_FALLBACK
+                            const allowedProfs = ROLE_TO_PROFESSION_OPTIONS[newName] ?? MEMBER_PROFESSION_OPTIONS_FALLBACK
+                            const m = next[memberIdx]
+                            const spaces = (m.spaces ?? []).filter((s) => allowedSpaces.includes(s.name))
+                            const age = (m.age && allowedAges.includes(m.age)) ? m.age : ''
+                            const profession = (m.profession && allowedProfs.includes(m.profession)) ? m.profession : ''
+                            next[memberIdx] = { ...m, name: newName, spaces, age, profession }
                             return next
                           })
                         }}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                        placeholder="如：父亲、女儿"
-                      />
+                      >
+                        <option value="">请选择角色</option>
+                        {[...MEMBER_ROLE_OPTIONS, (member.name?.trim() && !MEMBER_ROLE_OPTIONS.includes(member.name)) ? member.name : null].filter(Boolean).map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 block mb-1">年龄</label>
-                      <input
+                      <label className="text-xs text-gray-500 block mb-1">年龄段</label>
+                      <select
                         value={member.age ?? ''}
                         onChange={(e) => {
                           setMembersEdit((prev) => {
@@ -1636,12 +1766,20 @@ export function RequirementsDoc({
                           })
                         }}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                        placeholder="如：42岁、8岁"
-                      />
+                      >
+                        <option value="">请选择</option>
+                        {((): string[] => {
+                          const byRole = ROLE_TO_AGE_OPTIONS[member.name] ?? MEMBER_AGE_OPTIONS_FALLBACK
+                          const extra = (member.age?.trim() && !byRole.includes(member.age)) ? [member.age] : []
+                          return [...byRole, ...extra]
+                        })().map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">身份/职业</label>
-                      <input
+                      <select
                         value={member.profession ?? ''}
                         onChange={(e) => {
                           setMembersEdit((prev) => {
@@ -1651,8 +1789,16 @@ export function RequirementsDoc({
                           })
                         }}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                        placeholder="如：金融从业、小学生"
-                      />
+                      >
+                        <option value="">请选择</option>
+                        {((): string[] => {
+                          const byRole = ROLE_TO_PROFESSION_OPTIONS[member.name] ?? MEMBER_PROFESSION_OPTIONS_FALLBACK
+                          const extra = (member.profession?.trim() && !byRole.includes(member.profession)) ? [member.profession] : []
+                          return [...byRole, ...extra]
+                        })().map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <button
@@ -1671,19 +1817,50 @@ export function RequirementsDoc({
                     <div className="text-sm font-semibold text-[#C87800]">{d.styleName}</div>
                   </div>
                 )}
-                {((member.spaces ?? []).length > 0) && (
-                  <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
-                    <div className="text-xs font-semibold text-gray-700 mb-2">主要活动及空间（来自测评，请在「空间需求」中添加/编辑空间）</div>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      {(member.spaces ?? []).map((s, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                          <span>{s.description?.trim() ? `${s.name}：${s.description}` : s.name}</span>
-                        </li>
-                      ))}
-                    </ul>
+                <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    主要活动及空间{member.name ? `（${member.name} 对应选项）` : '（请先选择角色）'}
                   </div>
-                )}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(ROLE_TO_ACTIVITY_OPTIONS[member.name] ?? MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK).map((spaceName) => {
+                      const selected = (member.spaces ?? []).some((s) => s.name === spaceName)
+                      return (
+                        <button
+                          key={spaceName}
+                          type="button"
+                          onClick={() => {
+                            setMembersEdit((prev) => {
+                              const next = [...prev]
+                              const spaces = next[memberIdx].spaces ?? []
+                              if (selected) next[memberIdx] = { ...next[memberIdx], spaces: spaces.filter((s) => s.name !== spaceName) }
+                              else next[memberIdx] = { ...next[memberIdx], spaces: [...spaces, { name: spaceName }] }
+                              return next
+                            })
+                          }}
+                          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors ${selected ? 'border-[#FF9C3E]/30 bg-[#FF9C3E]/10 text-[#C87800]' : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'}`}
+                        >
+                          {selected ? <span className="w-4 h-4 rounded border-2 border-[#FF9C3E] bg-[#FF9C3E] flex items-center justify-center"><span className="w-1.5 h-1.5 rounded-sm bg-white" /></span> : <span className="w-4 h-4 rounded border border-gray-200" />}
+                          {spaceName}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">其他说明</label>
+                    <input
+                      value={member.otherActivityNote ?? ''}
+                      onChange={(e) => {
+                        setMembersEdit((prev) => {
+                          const next = [...prev]
+                          next[memberIdx] = { ...next[memberIdx], otherActivityNote: e.target.value }
+                          return next
+                        })
+                      }}
+                      placeholder="可补充该成员的其他活动或空间需求..."
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
             <button
@@ -1691,7 +1868,7 @@ export function RequirementsDoc({
               onClick={() => {
                 setMembersEdit((prev) => [
                   ...prev,
-                  { id: `custom-${Date.now()}`, name: '', age: '', profession: '', spaces: [] },
+                  { id: `custom-${Date.now()}`, name: '', age: '', profession: '', spaces: [], otherActivityNote: '' },
                 ])
               }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 py-4 text-sm font-medium text-gray-600 hover:bg-[#FFFDF3] hover:border-[#FF9C3E]/30 transition-colors"
@@ -1761,6 +1938,11 @@ export function RequirementsDoc({
                         </li>
                       ))}
                     </ul>
+                    {p.otherActivityNote?.trim() ? (
+                      <div className="mt-2 pt-2 border-t border-gray-100 text-sm text-gray-600">
+                        <span className="font-semibold text-gray-700">其他说明：</span>{p.otherActivityNote}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               ))}
@@ -1991,12 +2173,16 @@ export function RequirementsDoc({
             </div>
             <div className="p-6">
               {isEditing && updateData && !useMock ? (
-                <textarea
+                <select
                   value={fengshuiEdit}
                   onChange={(e) => setFengshuiEdit(e.target.value)}
-                  placeholder="请输入风水/讲究方面的要求..."
-                  className="w-full min-h-[100px] rounded-2xl border border-gray-100 bg-[#FFFDF3] px-4 py-3 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#FF9C3E]/20"
-                />
+                  className="w-full rounded-2xl border border-gray-200 bg-[#FFFDF3] px-4 py-3 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-[#FF9C3E]/20"
+                >
+                  <option value="">请选择</option>
+                  {[...FENGSHUI_OPTIONS, (fengshuiEdit?.trim() && !FENGSHUI_OPTIONS.includes(fengshuiEdit)) ? fengshuiEdit : null].filter(Boolean).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
               ) : (useMock && fengshuiResult) || (d?.fengshui?.trim()) ? (
                 <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 text-sm text-gray-700 leading-relaxed">
                   {fengshuiResult}
@@ -2311,7 +2497,10 @@ export function RequirementsDoc({
             <div className="pt-2 flex justify-end">
               <button
                 type="button"
-                onClick={() => setShowSubmitModal(false)}
+                onClick={() => {
+                  setShowSubmitModal(false)
+                  onBackHome()
+                }}
                 className="px-5 py-2.5 rounded-2xl bg-[#EF6B00] text-white text-sm font-semibold hover:bg-[#D85F00] transition-colors"
               >
                 我知道了
@@ -2352,6 +2541,11 @@ export function RequirementsDoc({
                     diningNote: d?.diningNote ?? '',
                     kitchenNote: d?.kitchenNote ?? '',
                     bathroomNote: d?.bathroomNote ?? '',
+                    coreSpaces: d?.coreSpaces ?? '',
+                    customCoreSpaceOptions: d?.customCoreSpaceOptions ?? [],
+                    childGrowth: d?.childGrowth ?? '',
+                    guestStay: d?.guestStay ?? '',
+                    futureChanges: d?.futureChanges ?? '',
                     requirementsMembers: membersEdit,
                     floorPlanImages: planImages,
                     siteMedia: mediaFiles,

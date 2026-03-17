@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
@@ -171,16 +171,18 @@ export default function OrderDetailPage() {
 
   const progressPercentage = ORDER_STEPS.length > 1 ? (activeIndex / (ORDER_STEPS.length - 1)) * 100 : 0;
 
-  /** 滑动窗口：一次仅展示 6 个步骤，当前活跃步骤尽量居中 */
+  /** 滑动窗口：一次仅展示 6 个步骤，初始化时当前状态尽量居中，无法居中则正常显示 */
   const WINDOW_SIZE = 6;
-  const [windowStartIndex, setWindowStartIndex] = useState(0);
-
-  useEffect(() => {
-    const start = Math.max(0, activeIndex - Math.floor(WINDOW_SIZE / 2));
-    const clampedStart = start + WINDOW_SIZE > ORDER_STEPS.length
+  const getCenteredStart = (active: number) => {
+    const start = Math.max(0, active - Math.floor(WINDOW_SIZE / 2));
+    return start + WINDOW_SIZE > ORDER_STEPS.length
       ? Math.max(0, ORDER_STEPS.length - WINDOW_SIZE)
       : start;
-    setWindowStartIndex(clampedStart);
+  };
+  const [windowStartIndex, setWindowStartIndex] = useState(() => getCenteredStart(activeIndex));
+
+  useLayoutEffect(() => {
+    setWindowStartIndex(getCenteredStart(activeIndex));
   }, [activeIndex]);
 
   const handlePrev = () => {
@@ -286,10 +288,10 @@ export default function OrderDetailPage() {
         </div>
 
         {/* 订单状态进程 Section */}
-        <section className="bg-white/45 backdrop-blur-[25px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-6 sm:p-8 relative overflow-hidden group">
-          <div className={`absolute -top-10 -right-10 w-64 h-64 ${currentStep?.blockBg.replace('/10', '/20') || 'bg-phase-delivery/20'} rounded-full blur-3xl pointer-events-none transition-colors`}></div>
+        <section className="bg-white/45 backdrop-blur-[25px] rounded-[32px] border border-white/60 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] p-4 sm:p-6 relative overflow-hidden group">
+          <div className={`absolute -top-10 -right-10 w-48 h-48 ${currentStep?.blockBg.replace('/10', '/20') || 'bg-phase-delivery/20'} rounded-full blur-3xl pointer-events-none transition-colors`}></div>
           
-          <div className="flex items-center justify-between mb-10 relative z-10">
+          <div className="flex items-center justify-between mb-6 relative z-10">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
               <Activity size={18} />
               订单状态进程
@@ -305,8 +307,8 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          <div className="relative z-10 pb-4">
-            <div className="relative mt-16 mb-4">
+          <div className="relative z-10 pb-2">
+            <div className="relative mt-8 mb-2">
               <button 
                 onClick={handlePrev}
                 disabled={windowStartIndex === 0}
@@ -322,26 +324,29 @@ export default function OrderDetailPage() {
                 <ChevronRight size={16} />
               </button>
 
-              {/* 预留顶部空间给阶段标签，避免 overflow-hidden 裁掉 -top-10 的绝对定位 */}
-              <div className="overflow-hidden px-4 pt-12">
+              {/* 预留顶部空间给阶段标签；下方增加与状态节点的间距 */}
+              <div className="overflow-hidden px-3 pt-10">
                 <motion.div 
                   className="relative flex"
                   animate={{ x: `-${(windowStartIndex / ORDER_STEPS.length) * 100}%` }}
                   transition={{ type: "spring", stiffness: 150, damping: 20 }}
                   style={{ width: `${(ORDER_STEPS.length * 100) / WINDOW_SIZE}%` }}
                 >
-                  {/* 阶段标签：按 allPhases 用 startIndex/endIndex 与百分比宽度绘制阶段大括号，显示在时间轴上方 */}
+                  {/* 阶段标签：边界取相邻节点中点，使各阶段首尾相连、无断点 */}
                   {allPhases.map((p, i) => {
+                    const N = ORDER_STEPS.length;
+                    const isFirst = i === 0;
                     const isLast = i === allPhases.length - 1;
-                    const left = (p.startIndex / ORDER_STEPS.length) * 100;
-                    const width = ((p.endIndex - p.startIndex + 1) / ORDER_STEPS.length) * 100;
+                    const leftPct = isFirst ? (0.5 / N) * 100 : (p.startIndex / N) * 100;
+                    const rightPct = isLast ? ((p.endIndex + 0.5) / N) * 100 : ((p.endIndex + 1) / N) * 100;
+                    const width = rightPct - leftPct;
 
                     return (
                       <div 
                         key={`${p.name}-${p.startIndex}`}
                         className={`absolute top-0 flex items-center pointer-events-none ${p.color}`}
                         style={{
-                          left: `${left}%`,
+                          left: `${leftPct}%`,
                           width: `${width}%`,
                           transform: 'translateY(-100%)'
                         }}
@@ -360,9 +365,9 @@ export default function OrderDetailPage() {
                     );
                   })}
 
-                  {/* Progress Line - Aligned to node centers */}
+                  {/* Progress Line - 与阶段标签留出间距后对齐节点中心 */}
                   <div 
-                    className="absolute top-[34px] h-1 bg-slate-200/30 -z-10 rounded-full"
+                    className="absolute top-[44px] h-1 bg-slate-200/30 -z-10 rounded-full"
                     style={{ 
                       left: `${(0.5 / ORDER_STEPS.length) * 100}%`, 
                       width: `${((ORDER_STEPS.length - 1) / ORDER_STEPS.length) * 100}%` 
@@ -381,8 +386,8 @@ export default function OrderDetailPage() {
                         className={`flex flex-col items-center relative shrink-0 ${isPending ? 'opacity-40' : ''}`} 
                         style={{ width: `${100 / ORDER_STEPS.length}%` }}
                       >
-                        {/* Node Circle */}
-                        <div className="mt-4">
+                        {/* Node Circle - mt-7 与阶段区域拉开间距，圆心对齐进度条 */}
+                        <div className="mt-7">
                           {isCurrent ? (
                             <div className="relative">
                               <div className={`absolute inset-0 rounded-full animate-ping opacity-20 ${isExceptionState ? 'bg-red-500' : (currentStep?.blockBg.replace('/10', '') || 'bg-phase-delivery')}`}></div>
@@ -405,9 +410,16 @@ export default function OrderDetailPage() {
                           )}
                         </div>
 
-                        {/* Label */}
-                        <div className="mt-3 flex flex-col items-center">
-                          <span className={`text-[10px] font-bold text-center leading-tight transition-all ${
+                        {/* Label：英文状态码在上、中文在下，居中 */}
+                        <div className="mt-3 flex flex-col items-center text-center">
+                          <span className={`text-[8px] font-mono font-bold tracking-tighter mb-0.5 ${
+                            isCurrent ? (isExceptionState ? 'text-red-600' : step.blockText) :
+                            isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
+                            'text-slate-400'
+                          }`}>
+                            {step.id}
+                          </span>
+                          <span className={`text-[10px] font-bold leading-tight transition-all ${
                             isCurrent ? (isExceptionState ? 'text-red-600 scale-110' : `${step.blockText} scale-110`) :
                             isCompleted ? (isExceptionState ? 'text-red-500' : step.blockText) :
                             'text-slate-400'
@@ -427,7 +439,7 @@ export default function OrderDetailPage() {
           </div>
           
           {/* Progress Indicator */}
-          <div className="mt-6 flex justify-center gap-1.5">
+          <div className="mt-4 flex justify-center gap-1.5">
             {Array.from({ length: Math.ceil((ORDER_STEPS.length - WINDOW_SIZE) / 3) + 1 }).map((_, i) => {
               const isActive = Math.round(windowStartIndex / 3) === i;
               return (

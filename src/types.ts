@@ -13,6 +13,8 @@ export interface RequirementsMember {
   age?: string;
   profession?: string;
   spaces: MemberSpaceItem[];
+  /** 主要活动及空间以外的其他说明 */
+  otherActivityNote?: string;
 }
 
 export interface FormData {
@@ -60,6 +62,8 @@ export interface FormData {
   timeline: string;
   // Q2-9
   coreSpaces: string;
+  /** 用户自定义增加的核心空间类型名称（用于需求书编辑） */
+  customCoreSpaceOptions?: string[];
   childGrowth: string;
   guestStay: string;
   futureChanges: string;
