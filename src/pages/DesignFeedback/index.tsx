@@ -8,6 +8,9 @@ export default function DesignFeedbackPage() {
   const { orderNumber } = location.state || {};
 
   return (
-    <DesignFeedbackApp onGoHome={() => navigate(-1)} orderNumber={orderNumber} />
+    <DesignFeedbackApp
+      onGoHome={() => (orderNumber ? navigate(`/order/${orderNumber}`) : navigate(-1))}
+      orderNumber={orderNumber}
+    />
   );
 }

@@ -19,36 +19,60 @@ export default function OrderDetailPage() {
   const foundOrder = orders.find((o: any) => o.id === id);
 
   const currentStatusCode = foundOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || 'S06-01';
-  
+
+  /**
+   * 订单状态进程 - 仅展示主路径状态（成交订单会经历的阶段）。
+   * 不展示 S04 客户已婉拒、S05 客户决策中、S08 订单终止中、S13 订单休眠中，避免误导。
+   * 当订单处于上述异常状态时，仅通过「当前状态」标签和进度高亮位置体现。
+   */
   const ORDER_STEPS = [
-    // 意向期
     { id: 'S00', label: '意向报价中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
     { id: 'S01', label: '意向沟通中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
-    { id: 'S05', label: '客户决策中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
-    // 订购期
+    { id: 'S02', label: '订单深化中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     { id: 'S02-01', label: '提案设计中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     { id: 'S02-02', label: '订购报价中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     { id: 'S03', label: '订购确认中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
-    // 交付期
+    { id: 'S06', label: '订单交付中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     { id: 'S06-01', label: '交付设计中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     { id: 'S06-02', label: '方案汇报中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     { id: 'S06-03', label: '交付备货中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     { id: 'S06-04', label: '交付施工中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
     { id: 'S06-05', label: '交付内审中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    { id: 'S13', label: '订单休眠中', phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
-    // 验收期
     { id: 'S07', label: '订单验收中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
     { id: 'S09', label: '订单整改中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
-    { id: 'S08', label: '订单终止中', phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
-    // 维保期
     { id: 'S11', label: '订单已交付', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
     { id: 'S10', label: '订单维保中', phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
-    // 结束
     { id: 'S12', label: '订单已结束', phase: '结束', blockBg: 'bg-gray-100/50', blockText: 'text-gray-500' },
   ];
 
-  const currentStep = ORDER_STEPS.find(s => s.id === currentStatusCode);
-  const currentPhase = currentStep?.phase || '';
+  /** 所有状态码对应的阶段与样式（含异常状态），用于当前阶段、报价单可见性等逻辑 */
+  const STATUS_PHASE_MAP: Record<string, { phase: string; blockBg: string; blockText: string }> = {
+    S00: { phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    S01: { phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    S05: { phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    S04: { phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    S02: { phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    'S02-01': { phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    'S02-02': { phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    S03: { phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
+    S06: { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    'S06-01': { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    'S06-02': { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    'S06-03': { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    'S06-04': { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    'S06-05': { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    S13: { phase: '交付期', blockBg: 'bg-phase-delivery/10', blockText: 'text-phase-delivery' },
+    S07: { phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    S09: { phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    S08: { phase: '验收期', blockBg: 'bg-phase-acceptance/10', blockText: 'text-phase-acceptance' },
+    S11: { phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
+    S10: { phase: '维保期', blockBg: 'bg-phase-maintenance/10', blockText: 'text-phase-maintenance' },
+    S12: { phase: '结束', blockBg: 'bg-gray-100/50', blockText: 'text-gray-500' },
+  };
+
+  const phaseInfo = STATUS_PHASE_MAP[currentStatusCode] || STATUS_PHASE_MAP['S06-01'];
+  const currentPhase = phaseInfo.phase;
+  const currentStep = ORDER_STEPS.find(s => s.id === currentStatusCode) ?? { ...ORDER_STEPS[0], blockBg: phaseInfo.blockBg, blockText: phaseInfo.blockText };
 
   const dynamicQuotations = useMemo(() => {
     const list = [];
@@ -129,29 +153,34 @@ export default function OrderDetailPage() {
   const settlementStatus = settlementStatusInfo.text;
   const settlementStatusColor = settlementStatusInfo.color;
 
-  let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusCode);
   const exceptionCodes = ['S04', 'S05', 'S08', 'S13'];
-  let isExceptionState = exceptionCodes.includes(currentStatusCode);
+  const isExceptionState = exceptionCodes.includes(currentStatusCode);
 
+  /** 主路径中无异常状态节点，异常状态映射到最近阶段用于高亮 */
+  const EXCEPTION_ACTIVE_INDEX: Record<string, number> = {
+    S04: 1,   // 婉拒 -> 意向期
+    S05: 1,   // 客户决策中 -> 意向期
+    S08: 12,  // 终止 -> 验收期 (S07)
+    S13: 8,   // 休眠 -> 交付期 (S06-01)
+  };
+
+  let activeIndex = ORDER_STEPS.findIndex(s => s.id === currentStatusCode);
   if (activeIndex === -1) {
-    if (currentStatusCode === 'S04') activeIndex = 1; // 婉拒映射到意向沟通
-    else activeIndex = 0;
+    activeIndex = EXCEPTION_ACTIVE_INDEX[currentStatusCode] ?? 0;
   }
 
   const progressPercentage = ORDER_STEPS.length > 1 ? (activeIndex / (ORDER_STEPS.length - 1)) * 100 : 0;
 
-  // Sliding window state
+  /** 滑动窗口：一次仅展示 6 个步骤，当前活跃步骤尽量居中 */
   const WINDOW_SIZE = 6;
   const [windowStartIndex, setWindowStartIndex] = useState(0);
 
   useEffect(() => {
-    // Center the window around activeIndex
-    let start = Math.max(0, activeIndex - Math.floor(WINDOW_SIZE / 2));
-    // Ensure we don't go out of bounds at the end
-    if (start + WINDOW_SIZE > ORDER_STEPS.length) {
-      start = Math.max(0, ORDER_STEPS.length - WINDOW_SIZE);
-    }
-    setWindowStartIndex(start);
+    const start = Math.max(0, activeIndex - Math.floor(WINDOW_SIZE / 2));
+    const clampedStart = start + WINDOW_SIZE > ORDER_STEPS.length
+      ? Math.max(0, ORDER_STEPS.length - WINDOW_SIZE)
+      : start;
+    setWindowStartIndex(clampedStart);
   }, [activeIndex]);
 
   const handlePrev = () => {
@@ -162,20 +191,12 @@ export default function OrderDetailPage() {
     setWindowStartIndex(prev => Math.min(ORDER_STEPS.length - WINDOW_SIZE, prev + 3));
   };
 
-  // Phase English labels mapping
-  const PHASE_EN_MAP: Record<string, string> = {
-    '意向期': 'INT',
-    '订购期': 'ORD',
-    '交付期': 'DEL',
-    '验收期': 'ACC',
-    '维保期': 'MNT',
-    '结束': 'FIN'
-  };
-
-  // Calculate all phases for the entire timeline
+  /**
+   * 阶段聚合：将相同 phase 的连续步骤合并为阶段块，用于绘制时间轴上方「阶段大括号」（仅中文阶段名）。
+   */
   const allPhases = useMemo(() => {
-    const result = [];
-    let currentP = null;
+    const result: Array<{ name: string; startIndex: number; endIndex: number; color: string; bgColor: string }> = [];
+    let currentP: (typeof result)[0] | null = null;
 
     ORDER_STEPS.forEach((step, index) => {
       if (!currentP || currentP.name !== step.phase) {
@@ -184,7 +205,6 @@ export default function OrderDetailPage() {
         }
         currentP = {
           name: step.phase,
-          en: PHASE_EN_MAP[step.phase] || '',
           startIndex: index,
           endIndex: index,
           color: step.blockText,
@@ -302,38 +322,38 @@ export default function OrderDetailPage() {
                 <ChevronRight size={16} />
               </button>
 
-              <div className="overflow-hidden px-4">
+              {/* 预留顶部空间给阶段标签，避免 overflow-hidden 裁掉 -top-10 的绝对定位 */}
+              <div className="overflow-hidden px-4 pt-12">
                 <motion.div 
                   className="relative flex"
                   animate={{ x: `-${(windowStartIndex / ORDER_STEPS.length) * 100}%` }}
                   transition={{ type: "spring", stiffness: 150, damping: 20 }}
                   style={{ width: `${(ORDER_STEPS.length * 100) / WINDOW_SIZE}%` }}
                 >
-                  {/* Phase Brackets */}
+                  {/* 阶段标签：按 allPhases 用 startIndex/endIndex 与百分比宽度绘制阶段大括号，显示在时间轴上方 */}
                   {allPhases.map((p, i) => {
                     const isLast = i === allPhases.length - 1;
-                    
                     const left = (p.startIndex / ORDER_STEPS.length) * 100;
                     const width = ((p.endIndex - p.startIndex + 1) / ORDER_STEPS.length) * 100;
 
                     return (
                       <div 
                         key={`${p.name}-${p.startIndex}`}
-                        className={`absolute -top-10 flex items-center ${p.color}`}
+                        className={`absolute top-0 flex items-center pointer-events-none ${p.color}`}
                         style={{
                           left: `${left}%`,
-                          width: `${width}%`
+                          width: `${width}%`,
+                          transform: 'translateY(-100%)'
                         }}
                       >
-                        <div className="absolute left-0 top-1/2 h-[2px] bg-current -translate-y-1/2 opacity-20 w-full"></div>
-                        <div className="absolute left-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
+                        <div className="absolute left-0 top-1/2 h-[2px] bg-current -translate-y-1/2 opacity-30 w-full" />
+                        <div className="absolute left-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-50" />
                         {isLast && (
-                          <div className="absolute right-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-40"></div>
+                          <div className="absolute right-0 top-1/2 w-[2px] h-4 bg-current -translate-y-1/2 opacity-50" />
                         )}
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="relative z-10 px-2 py-0.5 text-[9px] font-black tracking-[0.1em] bg-white rounded-full uppercase whitespace-nowrap shadow-sm border border-current/10 flex items-center gap-1">
-                            <span className="opacity-50 font-mono">{p.en}</span>
-                            <span>{p.name}</span>
+                          <span className="relative z-10 px-2.5 py-1 text-[9px] font-black tracking-wider bg-white rounded-full whitespace-nowrap shadow-sm border border-current/20 text-current">
+                            {p.name}
                           </span>
                         </div>
                       </div>
@@ -349,7 +369,7 @@ export default function OrderDetailPage() {
                     }}
                   ></div>
                   
-                  {/* Steps */}
+                  {/* 节点状态：已完成 / 进行中 / 未开始，对应勾选、呼吸灯、灰点；异常状态(S04/S05/S08/S13)高亮为红 */}
                   {ORDER_STEPS.map((step, globalIdx) => {
                     const isCompleted = globalIdx < activeIndex;
                     const isCurrent = globalIdx === activeIndex;
@@ -361,13 +381,6 @@ export default function OrderDetailPage() {
                         className={`flex flex-col items-center relative shrink-0 ${isPending ? 'opacity-40' : ''}`} 
                         style={{ width: `${100 / ORDER_STEPS.length}%` }}
                       >
-                        {/* English Code */}
-                        <span className={`absolute -top-6 text-[8px] font-mono font-bold tracking-tighter ${
-                          isCurrent ? step.blockText : 'text-slate-400'
-                        }`}>
-                          {step.id}
-                        </span>
-
                         {/* Node Circle */}
                         <div className="mt-4">
                           {isCurrent ? (

@@ -96,6 +96,17 @@ export interface FormData {
   otherNeedsOptions: string[];
   /** 空间需求区块内「其他说明」编辑内容 */
   spaceOtherNote?: string;
+  /** 各空间需求说明（与分页一一对应） */
+  livingRoomNote?: string;
+  diningNote?: string;
+  kitchenNote?: string;
+  bathroomNote?: string;
+  /** 需求书内户型图（与需求书打通，url 为 data URL 或可持久化地址） */
+  floorPlanImages?: Array<{ name: string; url: string }>;
+  /** 需求书内现场视频/照片（与需求书打通） */
+  siteMedia?: Array<{ name: string; url: string; kind: 'image' | 'video' }>;
+  /** 空间需求区块内自定义/其他空间（添加空间） */
+  customSpaceItems?: Array<{ name: string; description?: string }>;
   // 家居风格测评
   styleId: string;
   styleName: string;

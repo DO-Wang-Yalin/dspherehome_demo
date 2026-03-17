@@ -442,7 +442,11 @@ export function WorkbenchPage({
             ) : active === 'designFeedback' ? (
               <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-4 md:p-6">
                 <DesignFeedbackApp
-                  onGoHome={() => setActive('home')}
+                  onGoHome={
+                    designFeedbackOrderNumber
+                      ? () => navigate(`/order/${designFeedbackOrderNumber}`)
+                      : () => setActive('home')
+                  }
                   orderNumber={designFeedbackOrderNumber}
                 />
               </div>
@@ -782,7 +786,10 @@ export function RequirementsDoc({
   const [editHint, setEditHint] = React.useState<string | null>(null)
   const [hasSubmitted, setHasSubmitted] = React.useState(false)
   const [showSubmitModal, setShowSubmitModal] = React.useState(false)
-  const [spaceTab, setSpaceTab] = React.useState<'living' | 'dining' | 'kitchen' | 'bathroom'>('living')
+  const [spaceTab, setSpaceTab] = React.useState<string>('living')
+
+  /** 与 Q2-9 核心空间一致，用于自定义空间名称选项 */
+  const CORE_SPACE_OPTIONS = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
   const planInputId = React.useId()
   const mediaInputId = React.useId()
   const [planImages, setPlanImages] = React.useState<Array<{ name: string; url: string }>>([])
@@ -831,15 +838,15 @@ export function RequirementsDoc({
     dog: d?.dogSpaces ?? [],
   }
 
+  type PersonaRow = { name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; accent: 'amber' | 'slate'; isStyleTaker?: boolean }
   const displayPersonas = useMock
     ? [
-        { name: '父亲', age: '42岁', profession: '金融从业', height: '178cm', stylePersona: '理性秩序派' as string | null, mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'], accent: 'amber' as const },
-        { name: '母亲', age: '39岁', profession: '品牌市场', height: '165cm', stylePersona: '氛围生活家' as string | null, mainActivitiesAndSpaces: ['烹饪与备餐（厨房/轻食台）', '社交招待（餐厨/客厅）', '展示收纳（餐边/陈列区）'], accent: 'slate' as const },
-        { name: '女儿', age: '8岁', profession: '小学生', height: '128cm', stylePersona: null, mainActivitiesAndSpaces: ['学习阅读（书桌/阅读角）', '游戏玩耍（客厅/儿童区）', '收纳整理（玩具/衣物储物）'], accent: 'amber' as const },
-        { name: 'Mochi', age: '2岁', profession: '猫', height: '约25cm（肩高）', stylePersona: null, mainActivitiesAndSpaces: ['活动动线（猫墙/跑道）', '休息晒太阳（窗边/阳台）', '饮食如厕（喂食区/猫砂区）'], accent: 'slate' as const },
+        { name: '父亲', age: '42岁', profession: '金融从业', height: '178cm', stylePersona: '理性秩序派' as string | null, mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'], accent: 'amber' as const, isStyleTaker: true },
+        { name: '母亲', age: '39岁', profession: '品牌市场', height: '165cm', stylePersona: null, mainActivitiesAndSpaces: ['烹饪与备餐（厨房/轻食台）', '社交招待（餐厨/客厅）', '展示收纳（餐边/陈列区）'], accent: 'slate' as const, isStyleTaker: false },
+        { name: '女儿', age: '8岁', profession: '小学生', height: '128cm', stylePersona: null, mainActivitiesAndSpaces: ['学习阅读（书桌/阅读角）', '游戏玩耍（客厅/儿童区）', '收纳整理（玩具/衣物储物）'], accent: 'amber' as const, isStyleTaker: false },
+        { name: 'Mochi', age: '2岁', profession: '猫', height: '约25cm（肩高）', stylePersona: null, mainActivitiesAndSpaces: ['活动动线（猫墙/跑道）', '休息晒太阳（窗边/阳台）', '饮食如厕（喂食区/猫砂区）'], accent: 'slate' as const, isStyleTaker: false },
       ]
     : (() => {
-        type PersonaRow = { name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; accent: 'amber' | 'slate' }
         if (d?.requirementsMembers?.length) {
           return d.requirementsMembers.map((m, i) => ({
             name: m.name,
@@ -849,17 +856,18 @@ export function RequirementsDoc({
             stylePersona: null,
             mainActivitiesAndSpaces: (m.spaces ?? []).map((s) => (s.description?.trim() ? `${s.name}：${s.description}` : s.name)),
             accent: (i % 2 === 0 ? 'amber' : 'slate') as const,
+            isStyleTaker: m.id === 'role',
           })) as PersonaRow[]
         }
         const list: PersonaRow[] = []
         if (d?.role) {
           const name = ROLE_LABELS[d.role] || d.role
-          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], accent: 'amber' })
+          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], accent: 'amber', isStyleTaker: true })
         }
         ;(d?.additionalMembers ?? []).forEach((memberId) => {
           const label = MEMBER_LABELS[memberId] ?? memberId
           const spaces = MEMBER_SPACES[memberId] ?? []
-          list.push({ name: label, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: spaces, accent: 'slate' })
+          list.push({ name: label, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: spaces, accent: 'slate', isStyleTaker: false })
         })
         return list
       })()
@@ -926,6 +934,7 @@ export function RequirementsDoc({
   const [fengshuiEdit, setFengshuiEdit] = React.useState('')
   const [storageFocusEdit, setStorageFocusEdit] = React.useState<string[]>([])
   const [membersEdit, setMembersEdit] = React.useState<RequirementsMember[]>([])
+  const [customSpaceItemsEdit, setCustomSpaceItemsEdit] = React.useState<Array<{ name: string; description?: string }>>([])
 
   const fengshuiResult = useMock ? '避开大众忌讳就行' : val(d?.fengshui ?? '')
   const storageFocusResult = useMock ? ['衣帽间/衣柜系统', '厨房餐储收纳', '展示性收纳（书籍、收藏品）'] : (d?.storageFocus?.length ? d.storageFocus : [])
@@ -939,46 +948,91 @@ export function RequirementsDoc({
   const kitchenItems = useMock ? ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'] : [val(d?.cookingHabit ?? '', '') ? `烹饪习惯：${COOKING_HABIT_LABELS[d!.cookingHabit] ?? d!.cookingHabit}` : '', val(d?.secondKitchen ?? '', '') ? `第二厨房：${SECOND_KITCHEN_LABELS[d!.secondKitchen] ?? d!.secondKitchen}` : ''].filter(Boolean)
   const bathroomItems = useMock ? ['必须彻底干湿分离（洗手台外置）'] : (val(d?.dryWetSeparation ?? '', '') ? [DRY_WET_LABELS[d!.dryWetSeparation] ?? d!.dryWetSeparation] : [])
 
-  const spaceResultMap: Record<
-    'living' | 'dining' | 'kitchen' | 'bathroom',
-    { title: string; q: string; icon: React.ElementType; items: string[] }
-  > = {
-    living: {
-      title: '客厅',
-      q: 'Q2-13',
-      icon: Sofa,
-      items: ['影音娱乐', '社交会客', '冥想放松'],
-    },
-    dining: {
-      title: '餐厅',
-      q: 'Q2-12',
-      icon: Utensils,
-      items: ['平时就餐：3-4人', '节假日最多：7-10人'],
-    },
-    kitchen: {
-      title: '厨房',
-      q: 'Q2-11',
-      icon: ChefHat,
-      items: ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'],
-    },
-    bathroom: {
-      title: '卫生间',
-      q: 'Q2-15',
-      icon: Bath,
-      items: ['必须彻底干湿分离（洗手台外置）'],
-    },
+  const spaceResultMap: Record<string, { title: string; q: string; icon: React.ElementType; items: string[] }> = {
+    living: { title: '客厅', q: 'Q2-13', icon: Sofa, items: ['影音娱乐', '社交会客', '冥想放松'] },
+    dining: { title: '餐厅', q: 'Q2-12', icon: Utensils, items: ['平时就餐：3-4人', '节假日最多：7-10人'] },
+    kitchen: { title: '厨房', q: 'Q2-11', icon: ChefHat, items: ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'] },
+    bathroom: { title: '卫生间', q: 'Q2-15', icon: Bath, items: ['必须彻底干湿分离（洗手台外置）'] },
   }
 
-  const activeSpace = spaceResultMap[spaceTab]
-  const activeSpaceItems = spaceTab === 'living' ? livingItems : spaceTab === 'dining' ? diningItems : spaceTab === 'kitchen' ? kitchenItems : bathroomItems
+  const customSpaceDisplayItems = (d?.customSpaceItems ?? []).map((s) => (s.description?.trim() ? `${s.name}：${s.description}` : s.name))
+  const customSpaceItemsForTabs = (isEditing && updateData && !useMock) ? customSpaceItemsEdit : (d?.customSpaceItems ?? [])
+
+  const spaceTabsList: Array<{ key: string; label: string }> = [
+    { key: 'living', label: '客厅' },
+    { key: 'dining', label: '餐厅' },
+    { key: 'kitchen', label: '厨房' },
+    { key: 'bathroom', label: '卫生间' },
+    ...customSpaceItemsForTabs.map((s, i) => ({ key: `custom-${i}`, label: s.name?.trim() || `空间${i + 1}` })),
+  ]
+
+  const activeSpace = spaceTab.startsWith('custom-')
+    ? (() => {
+        const i = parseInt(spaceTab.replace('custom-', ''), 10)
+        const item = customSpaceItemsForTabs[i]
+        return { title: item?.name?.trim() || '其他空间', q: '自定义', icon: LayoutGrid, items: item?.description?.trim() ? [item.description] : [] }
+      })()
+    : spaceResultMap[spaceTab] ?? spaceResultMap.living
+
+  const activeSpaceItems =
+    spaceTab === 'living'
+      ? livingItems
+      : spaceTab === 'dining'
+        ? diningItems
+        : spaceTab === 'kitchen'
+          ? kitchenItems
+          : spaceTab === 'bathroom'
+            ? bathroomItems
+            : spaceTab.startsWith('custom-')
+              ? (() => {
+                  const i = parseInt(spaceTab.replace('custom-', ''), 10)
+                  const list = (isEditing && updateData && !useMock) ? customSpaceItemsEdit : (d?.customSpaceItems ?? [])
+                  const item = list[i]
+                  return item?.description?.trim() ? [item.description] : []
+                })()
+              : []
+
+  const currentSpaceNote =
+    spaceTab === 'living'
+      ? (d?.livingRoomNote ?? '')
+      : spaceTab === 'dining'
+        ? (d?.diningNote ?? '')
+        : spaceTab === 'kitchen'
+          ? (d?.kitchenNote ?? '')
+          : spaceTab === 'bathroom'
+            ? (d?.bathroomNote ?? '')
+            : spaceTab.startsWith('custom-')
+              ? (() => {
+                  const i = parseInt(spaceTab.replace('custom-', ''), 10)
+                  const list = (isEditing && updateData && !useMock) ? customSpaceItemsEdit : (d?.customSpaceItems ?? [])
+                  return list[i]?.description ?? ''
+                })()
+              : ''
 
   React.useEffect(() => {
     return () => {
-      planImages.forEach((x) => URL.revokeObjectURL(x.url))
-      mediaFiles.forEach((x) => URL.revokeObjectURL(x.url))
+      planImages.forEach((x) => { if (x.url.startsWith('blob:')) URL.revokeObjectURL(x.url) })
+      mediaFiles.forEach((x) => { if (x.url.startsWith('blob:')) URL.revokeObjectURL(x.url) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const justExitedEditRef = React.useRef(false)
+  const prevIsEditingRef = React.useRef(false)
+  React.useEffect(() => {
+    if (prevIsEditingRef.current && !isEditing) justExitedEditRef.current = true
+    prevIsEditingRef.current = isEditing
+  }, [isEditing])
+  React.useEffect(() => {
+    if (isEditing) return
+    if (!d) return
+    if (justExitedEditRef.current) {
+      justExitedEditRef.current = false
+      return
+    }
+    if (d.floorPlanImages) setPlanImages(d.floorPlanImages)
+    if (d.siteMedia) setMediaFiles(d.siteMedia)
+  }, [d?.floorPlanImages, d?.siteMedia, isEditing])
 
   const prevEditingRef = React.useRef(false)
   React.useEffect(() => {
@@ -1026,34 +1080,33 @@ export function RequirementsDoc({
       })
       setMembersEdit(list)
     }
+    setCustomSpaceItemsEdit(d.customSpaceItems ?? [])
   }, [isEditing, useMock, d])
 
   const onPickPlanFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
-    setPlanImages((prev) => {
-      const next = [...prev]
-      Array.from(files).forEach((f) => {
-        if (!f.type.startsWith('image/')) return
-        next.push({ name: f.name, url: URL.createObjectURL(f) })
-      })
-      return next
+    Array.from(files).forEach((f) => {
+      if (!f.type.startsWith('image/')) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        setPlanImages((prev) => [...prev, { name: f.name, url: dataUrl }])
+      }
+      reader.readAsDataURL(f)
     })
   }
 
   const onPickMediaFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return
-    setMediaFiles((prev) => {
-      const next = [...prev]
-      Array.from(files).forEach((f) => {
-        const kind: 'image' | 'video' | null = f.type.startsWith('video/')
-          ? 'video'
-          : f.type.startsWith('image/')
-            ? 'image'
-            : null
-        if (!kind) return
-        next.push({ name: f.name, url: URL.createObjectURL(f), kind })
-      })
-      return next
+    Array.from(files).forEach((f) => {
+      const kind: 'image' | 'video' | null = f.type.startsWith('video/') ? 'video' : f.type.startsWith('image/') ? 'image' : null
+      if (!kind) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        setMediaFiles((prev) => [...prev, { name: f.name, url: dataUrl, kind }])
+      }
+      reader.readAsDataURL(f)
     })
   }
 
@@ -1242,7 +1295,12 @@ export function RequirementsDoc({
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-500">项目类型</label>
-                    <input value={d?.projectType ?? ''} onChange={(e) => updateData({ projectType: e.target.value })} className="rounded-xl border border-gray-200 px-3 py-2 text-sm" placeholder="如：平层公寓" />
+                    <select value={d?.projectType ?? ''} onChange={(e) => updateData({ projectType: e.target.value })} className="rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                      <option value="">请选择</option>
+                      {['独栋别墅', '平层公寓', '复式联排'].map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-500">实际面积（㎡）</label>
@@ -1250,7 +1308,18 @@ export function RequirementsDoc({
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-500">预算范围</label>
-                    <input value={d?.budgetStandard ?? ''} onChange={(e) => updateData({ budgetStandard: e.target.value })} className="rounded-xl border border-gray-200 px-3 py-2 text-sm" placeholder="预算" />
+                    <select value={d?.budgetStandard ?? ''} onChange={(e) => updateData({ budgetStandard: e.target.value })} className="rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                      <option value="">请选择</option>
+                      {[
+                        { value: 'A', label: '精工全案高定 (5,000 - 8,000)' },
+                        { value: 'B', label: '豪华奢享方案 (8,000 - 12,000)' },
+                        { value: 'C', label: '顶奢私享空间 (12,000 - 20,000)' },
+                        { value: 'D', label: '艺术殿堂级定制 (20,000 以上)' },
+                        { value: 'E', label: '了解更多高性价比方案' },
+                      ].map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-500">入住周期</label>
@@ -1342,32 +1411,45 @@ export function RequirementsDoc({
               <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
               <div className="font-semibold">核心空间与规划</div>
             </div>
-            <div className="space-y-3 text-sm text-gray-700">
-              <div><span className="font-semibold text-gray-800">核心空间：</span>1客厅1餐厅1主卧室1次卧室1主卫浴室1公卫浴室</div>
-              <div><span className="font-semibold text-gray-800">儿童成长：</span>预留可变空间</div>
-              <div><span className="font-semibold text-gray-800">亲友留宿：</span>偶尔留宿</div>
-            </div>
-          </div>
-        ) : (d?.coreSpaces || d?.childGrowth || d?.guestStay || d?.futureChanges) ? (
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-              <div className="font-semibold">核心空间与规划</div>
-            </div>
-            <div className="space-y-3 text-sm text-gray-700">
-              {d?.coreSpaces?.trim() && (
-                <div><span className="font-semibold text-gray-800">核心空间：</span>{d.coreSpaces}</div>
-              )}
-              {d?.childGrowth?.trim() && (
-                <div><span className="font-semibold text-gray-800">儿童成长：</span>{d.childGrowth}</div>
-              )}
-              {d?.guestStay?.trim() && (
-                <div><span className="font-semibold text-gray-800">亲友留宿：</span>{d.guestStay}</div>
-              )}
-              {d?.futureChanges?.trim() && (
-                <div><span className="font-semibold text-gray-800">未来变动：</span>{d.futureChanges}</div>
-              )}
-            </div>
+            {(() => {
+              const coreOptions = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
+              const parseCounts = (str: string) => {
+                const counts: Record<string, number> = {}
+                coreOptions.forEach((k) => { counts[k] = 0 })
+                if (!str?.trim()) return counts
+                coreOptions.forEach((k) => {
+                  const m = str.match(new RegExp(`(\\d+)${k}`))
+                  if (m) counts[k] = parseInt(m[1], 10)
+                })
+                return counts
+              }
+              const raw = useMock ? '1客厅1餐厅1主卧室1次卧室1主卫浴室1公卫浴室' : (d?.coreSpaces ?? '')
+              const counts = parseCounts(raw)
+              const entries = coreOptions.filter((k) => counts[k] > 0).map((k) => ({ name: k, count: counts[k] }))
+              return (
+                <>
+                  {entries.length > 0 && (
+                    <div className="mb-5">
+                      <div className="text-xs font-semibold text-gray-500 mb-3">核心空间</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {entries.map(({ name, count }) => (
+                          <div key={name} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-gray-900">{name}</span>
+                            <span className="w-8 h-8 rounded-xl bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center text-sm font-bold shrink-0">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-2 text-sm text-gray-700 border-t border-gray-100 pt-4">
+                    {useMock && <><div><span className="font-semibold text-gray-800">儿童成长：</span>预留可变空间</div><div><span className="font-semibold text-gray-800">亲友留宿：</span>偶尔留宿</div></>}
+                    {!useMock && d?.childGrowth?.trim() && <div><span className="font-semibold text-gray-800">儿童成长：</span>{d.childGrowth}</div>}
+                    {!useMock && d?.guestStay?.trim() && <div><span className="font-semibold text-gray-800">亲友留宿：</span>{d.guestStay}</div>}
+                    {!useMock && d?.futureChanges?.trim() && <div><span className="font-semibold text-gray-800">未来变动：</span>{d.futureChanges}</div>}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         ) : null}
       </section>
@@ -1510,7 +1592,7 @@ export function RequirementsDoc({
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <SectionTitle title="成员画像" />
+          <SectionTitle title="成员画像（Q2-6 核心成员）" />
           {hasMemberData && !(isEditing && updateData && !useMock) ? (
             <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
               <Users size={14} className="text-gray-400" />
@@ -1583,76 +1665,25 @@ export function RequirementsDoc({
                     <Trash2 size={18} />
                   </button>
                 </div>
-                <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
-                  <div className="text-xs font-semibold text-gray-700 mb-3">主要活动及空间（可添加描述）</div>
-                  <ul className="space-y-3">
-                    {(member.spaces ?? []).map((space, spaceIdx) => (
-                      <li key={spaceIdx} className="flex flex-col sm:flex-row gap-2 sm:items-start">
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <input
-                            value={space.name}
-                            onChange={(e) => {
-                              setMembersEdit((prev) => {
-                                const next = [...prev]
-                                const spaces = [...(next[memberIdx].spaces ?? [])]
-                                spaces[spaceIdx] = { ...spaces[spaceIdx], name: e.target.value }
-                                next[memberIdx] = { ...next[memberIdx], spaces }
-                                return next
-                              })
-                            }}
-                            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                            placeholder="空间名称"
-                          />
-                          <textarea
-                            value={space.description ?? ''}
-                            onChange={(e) => {
-                              setMembersEdit((prev) => {
-                                const next = [...prev]
-                                const spaces = [...(next[memberIdx].spaces ?? [])]
-                                spaces[spaceIdx] = { ...spaces[spaceIdx], description: e.target.value }
-                                next[memberIdx] = { ...next[memberIdx], spaces }
-                                return next
-                              })
-                            }}
-                            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm min-h-[60px]"
-                            placeholder="描述性说明（可选）"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMembersEdit((prev) => {
-                              const next = [...prev]
-                              const spaces = (next[memberIdx].spaces ?? []).filter((_, i) => i !== spaceIdx)
-                              next[memberIdx] = { ...next[memberIdx], spaces }
-                              return next
-                            })
-                          }}
-                          className="shrink-0 p-2 rounded-xl text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          title="删除该空间"
-                          aria-label="删除该空间"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMembersEdit((prev) => {
-                        const next = [...prev]
-                        const spaces = [...(next[memberIdx].spaces ?? []), { name: '', description: '' }]
-                        next[memberIdx] = { ...next[memberIdx], spaces }
-                        return next
-                      })
-                    }}
-                    className="mt-3 inline-flex items-center gap-2 rounded-xl border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-[#FFFDF3] hover:border-[#FF9C3E]/30 transition-colors"
-                  >
-                    <Plus size={16} />
-                    添加空间
-                  </button>
-                </div>
+                {member.id === 'role' && (d?.styleName?.trim()) && (
+                  <div className="mt-4 rounded-2xl border border-[#FF9C3E]/20 bg-[#FF9C3E]/5 p-4">
+                    <div className="text-xs font-semibold text-gray-500 mb-1">风格人格（本人做的测评）</div>
+                    <div className="text-sm font-semibold text-[#C87800]">{d.styleName}</div>
+                  </div>
+                )}
+                {((member.spaces ?? []).length > 0) && (
+                  <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">主要活动及空间（来自测评，请在「空间需求」中添加/编辑空间）</div>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      {(member.spaces ?? []).map((s, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
+                          <span>{s.description?.trim() ? `${s.name}：${s.description}` : s.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ))}
             <button
@@ -1707,14 +1738,10 @@ export function RequirementsDoc({
                         ) : null}
                       </div>
 
-                      {p.stylePersona ? (
+                      {p.isStyleTaker && (useMock ? p.stylePersona : d?.styleName?.trim()) ? (
                         <div className="mt-2">
-                          <span
-                            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              p.accent === 'amber' ? 'bg-[#FF9C3E]/10 text-[#C87800]' : 'bg-[#EF6B00]/5 text-gray-700'
-                            }`}
-                          >
-                            风格人设：{p.stylePersona}
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#FF9C3E]/10 text-[#C87800]">
+                            风格人格：{useMock ? p.stylePersona : d?.styleName}
                           </span>
                         </div>
                       ) : null}
@@ -2098,19 +2125,17 @@ export function RequirementsDoc({
                 <span className="ml-2 text-xs font-semibold text-gray-500">（{activeSpace.q}）</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-2xl bg-[#FFFDF3] p-1 border border-gray-100">
-              <TabPill active={spaceTab === 'living'} onClick={() => setSpaceTab('living')}>
-                客厅
-              </TabPill>
-              <TabPill active={spaceTab === 'dining'} onClick={() => setSpaceTab('dining')}>
-                餐厅
-              </TabPill>
-              <TabPill active={spaceTab === 'kitchen'} onClick={() => setSpaceTab('kitchen')}>
-                厨房
-              </TabPill>
-              <TabPill active={spaceTab === 'bathroom'} onClick={() => setSpaceTab('bathroom')}>
-                卫生间
-              </TabPill>
+            <div className="flex items-center gap-2 rounded-2xl bg-[#FFFDF3] p-1 border border-gray-100 flex-wrap">
+              {spaceTabsList.map((tab) => (
+                <TabPill key={tab.key} active={spaceTab === tab.key} onClick={() => setSpaceTab(tab.key)}>
+                  {tab.label}
+                </TabPill>
+              ))}
+              {isEditing && updateData && !useMock && (
+                <button type="button" onClick={() => { const len = customSpaceItemsEdit.length; setCustomSpaceItemsEdit((prev) => [...prev, { name: '', description: '' }]); setSpaceTab(`custom-${len}`) }} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-white hover:border-[#FF9C3E]/30 transition-colors">
+                  <Plus size={14} /> 添加空间
+                </button>
+              )}
             </div>
           </div>
 
@@ -2119,10 +2144,27 @@ export function RequirementsDoc({
               <div className="w-11 h-11 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-[#FF9C3E]">
                 <activeSpace.icon size={18} />
               </div>
-              <div className="mt-3 text-sm font-semibold text-gray-900">空间说明</div>
-              <div className="mt-1 text-sm text-gray-600 leading-relaxed">
-                本区聚焦该空间的关键使用方式与容量预期，便于后续方案与设备位落地。
-              </div>
+              <div className="mt-3 text-sm font-semibold text-gray-900">需求说明</div>
+              {isEditing && updateData && !useMock ? (
+                <textarea
+                  value={spaceTab.startsWith('custom-') ? (customSpaceItemsEdit[parseInt(spaceTab.replace('custom-', ''), 10)]?.description ?? '') : (spaceTab === 'living' ? (d?.livingRoomNote ?? '') : spaceTab === 'dining' ? (d?.diningNote ?? '') : spaceTab === 'kitchen' ? (d?.kitchenNote ?? '') : (d?.bathroomNote ?? ''))}
+                  onChange={(e) => {
+                    if (spaceTab.startsWith('custom-')) {
+                      const i = parseInt(spaceTab.replace('custom-', ''), 10)
+                      setCustomSpaceItemsEdit((prev) => { const n = [...prev]; n[i] = { ...n[i], description: e.target.value }; return n })
+                    } else {
+                      const key = spaceTab === 'living' ? 'livingRoomNote' : spaceTab === 'dining' ? 'diningNote' : spaceTab === 'kitchen' ? 'kitchenNote' : 'bathroomNote'
+                      updateData({ [key]: e.target.value })
+                    }
+                  }}
+                  placeholder="填写该空间的需求说明..."
+                  className="mt-2 w-full min-h-[100px] rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 placeholder:text-gray-400"
+                />
+              ) : (
+                <div className="mt-2 text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
+                  {currentSpaceNote?.trim() || '本区聚焦该空间的关键使用方式与容量预期，便于后续方案与设备位落地。'}
+                </div>
+              )}
             </div>
             <div className="md:col-span-2 space-y-3">
               {isEditing && updateData && !useMock ? (
@@ -2153,8 +2195,22 @@ export function RequirementsDoc({
                   if (spaceTab === 'dining') {
                     return (
                       <div className="space-y-4">
-                        <div><label className="text-xs text-gray-500 block mb-1">平时就餐人数</label><input value={d?.diningCount ?? ''} onChange={(e) => updateData({ diningCount: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" placeholder="如：3-4人" /></div>
-                        <div><label className="text-xs text-gray-500 block mb-1">节假日最多人数</label><input value={d?.festivalDiningCount ?? ''} onChange={(e) => updateData({ festivalDiningCount: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" placeholder="如：7-10人" /></div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-2">平时就餐人数</label>
+                          <div className="flex flex-wrap gap-2">
+                            {['1-2人', '3-4人', '5-6人', '6人以上'].map((opt) => (
+                              <button key={opt} type="button" onClick={() => updateData({ diningCount: opt })} className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${d?.diningCount === opt ? 'border-[#FF9C3E] bg-[#FF9C3E]/10 text-[#C87800]' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>{opt}</button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-2">节假日最多人数</label>
+                          <div className="flex flex-wrap gap-2">
+                            {['4-6人', '7-10人', '10人以上'].map((opt) => (
+                              <button key={opt} type="button" onClick={() => updateData({ festivalDiningCount: opt })} className={`px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${d?.festivalDiningCount === opt ? 'border-[#FF9C3E] bg-[#FF9C3E]/10 text-[#C87800]' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>{opt}</button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )
                   }
@@ -2171,6 +2227,32 @@ export function RequirementsDoc({
                       <div><label className="text-xs text-gray-500 block mb-1">干湿分离</label><select value={d?.dryWetSeparation ?? ''} onChange={(e) => updateData({ dryWetSeparation: e.target.value })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"><option value="">请选择</option>{Object.entries(DRY_WET_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
                     )
                   }
+                  if (spaceTab.startsWith('custom-')) {
+                    const customIdx = parseInt(spaceTab.replace('custom-', ''), 10)
+                    const item = customSpaceItemsEdit[customIdx]
+                    if (item == null) {
+                      return (
+                        <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
+                          该空间不存在，请切换到其他页或点击「添加空间」
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="flex flex-col sm:flex-row gap-2 sm:items-start rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs text-gray-500 block mb-2">空间名称（与核心空间一致）</label>
+                          <select value={item.name} onChange={(e) => setCustomSpaceItemsEdit((prev) => { const n = [...prev]; n[customIdx] = { ...n[customIdx], name: e.target.value }; return n })} className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+                            <option value="">请选择</option>
+                            {CORE_SPACE_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                          <p className="mt-2 text-xs text-gray-500">需求说明请在左侧「需求说明」中填写</p>
+                        </div>
+                        <button type="button" onClick={() => { const nextList = customSpaceItemsEdit.filter((_, i) => i !== customIdx); setCustomSpaceItemsEdit(nextList); setSpaceTab(nextList.length === 0 ? 'living' : 'custom-0') }} className="shrink-0 p-2 rounded-xl text-gray-400 hover:bg-red-50 hover:text-red-600" title="删除" aria-label="删除"><Trash2 size={16} /></button>
+                      </div>
+                    )
+                  }
                   return null
                 })()
               ) : activeSpaceItems.length > 0 ? (
@@ -2184,7 +2266,7 @@ export function RequirementsDoc({
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（{activeSpace.q}）
+                  {spaceTab.startsWith('custom-') ? '暂无需求说明，进入编辑模式可在左侧填写' : `暂无，请先完成深度测评（${activeSpace.q}）`}
                 </div>
               )}
             </div>
@@ -2266,7 +2348,14 @@ export function RequirementsDoc({
                     fengshui: fengshuiEdit.trim(),
                     storageFocus: storageFocusEdit,
                     spaceOtherNote: spaceOtherNote.trim(),
+                    livingRoomNote: d?.livingRoomNote ?? '',
+                    diningNote: d?.diningNote ?? '',
+                    kitchenNote: d?.kitchenNote ?? '',
+                    bathroomNote: d?.bathroomNote ?? '',
                     requirementsMembers: membersEdit,
+                    floorPlanImages: planImages,
+                    siteMedia: mediaFiles,
+                    customSpaceItems: customSpaceItemsEdit,
                   })
                 }
                 setIsEditing((v) => !v)

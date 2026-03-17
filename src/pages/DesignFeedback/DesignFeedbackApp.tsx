@@ -293,7 +293,7 @@ export const DESIGN_FEEDBACK_ORDER_00584: DesignOrder = {
               id: 'epc-a1',
               targetType: 'image_point',
               point: { x: 35, y: 45 },
-              content: '墙砖铺贴高度至吊顶下 20mm，阴角处做 45° 倒角对缝。',
+              content: '墙面使用20*300的小条砖，精致有细节',
               createdAt: '2026-03-15T10:00:00Z',
             },
           ],
@@ -306,14 +306,14 @@ export const DESIGN_FEEDBACK_ORDER_00584: DesignOrder = {
           pageId: 'p2',
           order: 2,
           title: '公卫墙地砖铺贴方案',
-          text: '公卫墙地砖规格与主卫一致，墙压地铺贴，地漏处做八字切割保证排水坡度。',
+          text: '公卫整体风格现代有设计感',
           imageUrl: img公卫,
           annotations: [
             {
               id: 'epc-b1',
               targetType: 'image_point',
               point: { x: 50, y: 40 },
-              content: '地砖从门口向内侧铺贴，地漏处做八字切割，保证排水坡度。',
+              content: '公卫背景整片水泥灰岩板，更整体，拼缝少',
               createdAt: '2026-03-15T10:15:00Z',
             },
           ],
@@ -333,7 +333,7 @@ export const DESIGN_FEEDBACK_ORDER_00584: DesignOrder = {
               id: 'epc-c1',
               targetType: 'image_point',
               point: { x: 50, y: 50 },
-              content: '儿童卫墙地砖铺贴，E 类选型、C 类施工，防滑地砖与易清洁墙砖。',
+              content: '儿童卫做半墙，上半部分用防水涂料，配色更高级，充满少女情怀',
               createdAt: '2026-03-15T10:25:00Z',
             },
           ],
@@ -644,7 +644,7 @@ function HistorySnapshotViewer({ snapshot }: { snapshot: PageSnapshot }) {
   );
 }
 
-// 2. Page Viewer Component（完整交互版，带图纸打点）
+// 2. Page Viewer Component（完整交互版，带图上添加评论）
 function PageViewer({
   order,
   version,
@@ -654,6 +654,7 @@ function PageViewer({
   globalComments,
   onUpdateComments,
   onUpdateProgress,
+  onPageReplied,
   initialMaxReachedIndex,
   orderNumber,
   data,
@@ -667,6 +668,7 @@ function PageViewer({
   globalComments: Record<string, Comment[]>;
   onUpdateComments: (pageId: string, comments: Comment[]) => void;
   onUpdateProgress: (index: number) => void;
+  onPageReplied?: (versionId: string, repliedCount: number) => void;
   initialMaxReachedIndex: number;
   orderNumber?: string;
   data?: any;
@@ -684,7 +686,6 @@ function PageViewer({
   const comments = globalComments[pageSnapshot.pageId] || pageSnapshot.comments || [];
   const isPageLocked = readOnly || currentPageIndex < maxReachedPageIndex;
 
-  const [isAddingCommentToImage, setIsAddingCommentToImage] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -742,17 +743,12 @@ function PageViewer({
 
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('.marker-dot')) return;
-
-    if (!isAddingCommentToImage) {
-      setIsLightboxOpen(true);
-      return;
-    }
-
+    if ((e.target as HTMLElement).closest('[data-zoom-btn]')) return;
     if (isPageLocked) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    const rect = imageContainerRef.current?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
 
     const newCommentId = `comment-${Date.now()}`;
     const newComment: Comment = {
@@ -765,7 +761,6 @@ function PageViewer({
 
     updateCurrentPageComments([...comments, newComment]);
     setEditingCommentIds((prev) => new Set(prev).add(newCommentId));
-    setIsAddingCommentToImage(false);
   };
 
   const handleAddTextComment = () => {
@@ -823,7 +818,7 @@ function PageViewer({
       setMaxReachedPageIndex(Math.max(maxReachedPageIndex, nextIndex));
       setCurrentPageIndex(nextIndex);
       setShowConfirmDialog(false);
-      setIsAddingCommentToImage(false);
+      onPageReplied?.(version.id, nextIndex);
 
       if (nextIndex === version.pages.length && orderNumber && data && updateData) {
         handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
@@ -846,7 +841,6 @@ function PageViewer({
     if (currentPageIndex > 0) {
       setCurrentPageIndex((prev) => prev - 1);
       setShowConfirmDialog(false);
-      setIsAddingCommentToImage(false);
     }
   };
 
@@ -966,16 +960,16 @@ function PageViewer({
       ref={containerRef}
       className="h-[calc(100vh-120px)] w-full overflow-hidden bg-[#FFFDF3] font-sans flex flex-col relative rounded-3xl border border-gray-100 shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
     >
-      {/* 订单标题栏 */}
-      <div className="flex-shrink-0 px-6 py-3 bg-white/60 backdrop-blur-md border-b border-gray-100 flex items-center justify-between gap-4 z-50">
+      {/* 订单标题栏：紧凑，不抢主内容 */}
+      <div className="flex-shrink-0 px-5 py-2.5 bg-white/60 backdrop-blur-md border-b border-gray-100 flex items-center justify-between gap-4 z-50">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-semibold text-slate-800 truncate">
+          <span className="text-xs font-semibold text-slate-700 truncate">
             {order.orderNumber}
-            <span className="text-slate-400 font-normal mx-2">·</span>
+            <span className="text-slate-400 font-normal mx-1.5">·</span>
             {order.orderName}
           </span>
         </div>
-        <span className="text-xs text-slate-500 flex-shrink-0">{version.name}</span>
+        <span className="text-[11px] text-slate-500 flex-shrink-0">{version.name}</span>
       </div>
 
       {/* 背景渐变 */}
@@ -989,32 +983,32 @@ function PageViewer({
 
       {isThankYouPage ? (
         <div className="flex-1 flex flex-col items-center justify-center z-20 text-center p-8">
-          <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mb-8 shadow-[0_0_40px_-10px_rgba(16,185,129,0.5)]">
-            <CheckCircle2 className="w-12 h-12 text-emerald-600" />
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-6 shadow-[0_0_32px_-8px_rgba(16,185,129,0.4)]">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
-          <h1 className="text-4xl font-bold text-slate-800 mb-4 tracking-tight">感谢您的审阅</h1>
-          <p className="text-slate-600 text-lg max-w-md leading-relaxed mb-12">
+          <h1 className="text-2xl font-bold text-slate-800 mb-3 tracking-tight">感谢您的审阅</h1>
+          <p className="text-slate-600 text-sm max-w-md leading-relaxed mb-10">
             您的反馈已全部提交。设计师将根据您的意见进行修改，并在完成后通知您。
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button
               onClick={handlePrevPageClick}
-              className="px-8 py-3.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full font-medium hover:bg-white transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-5 py-2.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full text-sm font-medium hover:bg-white transition-all flex items-center gap-1.5 shadow-md"
             >
-              <ArrowLeft className="w-4 h-4" /> 返回查看
+              <ArrowLeft className="w-3.5 h-3.5" /> 返回查看
             </button>
             <button
               onClick={onBack}
-              className="px-8 py-3.5 bg-[#FF9C3E] text-white rounded-full font-medium hover:bg-[#EF6B00] transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-5 py-2.5 bg-[#FF9C3E] text-white rounded-full text-sm font-medium hover:bg-[#EF6B00] transition-all flex items-center gap-1.5 shadow-md"
             >
-              <LayoutGrid className="w-4 h-4" /> 返回订单总览
+              <LayoutGrid className="w-3.5 h-3.5" /> 返回订单详情
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-row overflow-hidden p-6 pb-28 gap-6">
+        <div className="flex-1 flex flex-row overflow-hidden p-5 pb-24 gap-5">
           {/* 左侧 EPC 标注 */}
-          <div className="w-1/5 flex flex-col gap-4">
+          <div className="w-1/5 flex flex-col gap-3">
             <div className="flex items-center justify-start gap-2 px-1">
               <button
                 onClick={onBack}
@@ -1025,15 +1019,13 @@ function PageViewer({
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden">
-              <div className="p-5 border-b border-white/50 flex justify-between items-center pt-5">
-                <div>
-                  <h2 className="font-semibold text-slate-800 tracking-wide">EPC 标注</h2>
-                  <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider">Design Notes</p>
-                </div>
+            <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-2xl rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden">
+              <div className="p-4 border-b border-white/50">
+                <h2 className="text-sm font-semibold text-slate-800 tracking-wide">EPC 标注</h2>
+                <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Design Notes</p>
               </div>
               <div
-                className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
                 onScroll={() => setRedrawTrigger((prev) => prev + 1)}
               >
                 {sortedAnnotations.map((anno) => (
@@ -1064,27 +1056,27 @@ function PageViewer({
           </div>
 
           {/* 中间内容：标题 + 文本 + 图纸 */}
-          <div className="w-3/5 flex flex-col gap-6">
-            <div className="flex-none bg-white/60 backdrop-blur-2xl rounded-3xl p-5 md:p-6 text-center border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800 tracking-tight">
+          <div className="w-3/5 flex flex-col gap-4">
+            <div className="flex-none bg-white/60 backdrop-blur-2xl rounded-2xl px-5 py-3.5 text-center border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+              <h1 className="text-lg font-semibold text-slate-800 tracking-tight">
                 {pageSnapshot.title}
               </h1>
             </div>
 
             <div
               ref={textContainerRef}
-              className="flex-none bg-white/60 backdrop-blur-2xl rounded-3xl p-5 md:p-6 text-center border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative group"
+              className="flex-none bg-white/60 backdrop-blur-2xl rounded-2xl pl-5 pr-12 py-4 text-center border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative"
             >
-              <p className="text-slate-600 text-sm md:text-base max-w-4xl mx-auto leading-relaxed">
+              <p className="text-slate-600 text-sm max-w-4xl mx-auto leading-relaxed">
                 {pageSnapshot.text}
               </p>
               {!isPageLocked && (
                 <button
                   onClick={handleAddTextComment}
-                  className="absolute top-3 right-3 p-2 bg-[#FFF4E0] text-[#C87800] rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-[#FFE4B5] border border-[#FFD699]/60 shadow-sm hover:shadow"
-                  title="对这段文字发表意见"
+                  className="absolute top-3 right-3 p-1.5 bg-[#FFF4E0] text-[#C87800] rounded-lg transition-all hover:bg-[#FFE4B5] border border-[#FFD699]/60 shadow-sm hover:shadow"
+                  title="点击图标，再点击需要评论的地方，即可输入评论"
                 >
-                  <MessageSquarePlus className="w-4 h-4" />
+                  <MessageSquarePlus className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -1093,18 +1085,7 @@ function PageViewer({
               onClick={handleImageClick}
               className="flex-1 min-h-0 relative flex items-center justify-center p-3 group"
             >
-              <div
-                className={cn(
-                  'absolute inset-0 bg-white/60 backdrop-blur-2xl rounded-3xl border shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 -z-10',
-                  isAddingCommentToImage && !isPageLocked ? 'border-[#FF9C3E]/70 ring-4 ring-[#FF9C3E]/20' : 'border-white/80',
-                )}
-              />
-
-              {isAddingCommentToImage && !isPageLocked && (
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#EF6B00]/90 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-sm font-medium shadow-lg z-[60] pointer-events-none">
-                  请点击图纸上的具体位置进行标注
-                </div>
-              )}
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-2xl rounded-2xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 -z-10" />
 
               <div
                 ref={imageContainerRef}
@@ -1115,15 +1096,24 @@ function PageViewer({
                   alt="CAD Floor Plan"
                   className={cn(
                     'w-full h-full object-cover relative z-10 transition-transform duration-300',
-                    !isAddingCommentToImage && 'cursor-zoom-in group-hover:scale-[1.01]',
+                    !isPageLocked && 'cursor-crosshair group-hover:scale-[1.01]',
                   )}
                   referrerPolicy="no-referrer"
                 />
 
-                {!isAddingCommentToImage && (
-                  <div className="absolute bottom-4 right-4 bg-black/50 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 flex items-center gap-1.5">
-                    <ZoomIn className="w-3.5 h-3.5" /> 点击查看大图
-                  </div>
+                {!isPageLocked && (
+                  <button
+                    type="button"
+                    data-zoom-btn
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsLightboxOpen(true);
+                    }}
+                    className="absolute bottom-3 right-3 z-20 p-2 rounded-lg bg-black/50 hover:bg-black/70 text-white shadow-md transition-colors flex items-center justify-center"
+                    title="点击查看大图"
+                  >
+                    <ZoomIn className="w-4 h-4" />
+                  </button>
                 )}
 
                 {pageSnapshot.annotations
@@ -1166,7 +1156,7 @@ function PageViewer({
           </div>
 
           {/* 右侧客户反馈 */}
-          <div className="w-1/5 flex flex-col gap-4">
+          <div className="w-1/5 flex flex-col gap-3">
             <div className="flex items-center justify-end gap-2 px-1">
               <button
                 className="px-3 py-1.5 bg-white/60 backdrop-blur-md border border-white/50 text-slate-500 hover:text-slate-700 hover:bg-white rounded-full text-xs font-medium shadow-sm flex items-center gap-1.5 transition-all"
@@ -1193,37 +1183,29 @@ function PageViewer({
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-2xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden relative">
+            <div className="flex-1 flex flex-col bg-white/60 backdrop-blur-2xl rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 overflow-hidden relative">
               {isPageLocked && (
-                <div className="absolute top-0 left-0 right-0 h-16 bg-slate-50/80 backdrop-blur-sm z-10 flex items-center justify-center border-b border-slate-200">
-                  <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
-                    <Lock className="w-4 h-4" /> {readOnly ? '历史版本仅供查看' : '本页已提交，不可修改'}
+                <div className="absolute top-0 left-0 right-0 h-12 bg-slate-50/80 backdrop-blur-sm z-10 flex items-center justify-center border-b border-slate-200">
+                  <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
+                    <Lock className="w-3.5 h-3.5" /> {readOnly ? '历史版本仅供查看' : '本页已提交，不可修改'}
                   </div>
                 </div>
               )}
 
-              <div className="p-5 border-b border-white/50 flex justify-between items-center">
+              <div className="p-4 border-b border-white/50">
                 <div>
-                  <h2 className="font-semibold text-slate-800 tracking-wide">客户反馈</h2>
-                  <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider">Your Comments</p>
+                  <h2 className="text-sm font-semibold text-slate-800 tracking-wide">客户反馈</h2>
+                  <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider">Your Comments</p>
                 </div>
                 {!isPageLocked && (
-                  <button
-                    onClick={() => setIsAddingCommentToImage(!isAddingCommentToImage)}
-                    className={cn(
-                      'p-2 rounded-xl transition-all text-sm font-medium flex items-center gap-1 shadow-sm',
-                      isAddingCommentToImage
-                        ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                        : 'bg-[#4887FF]/10 text-[#4887FF] hover:bg-[#4887FF]/20 border border-[#4887FF]/30',
-                    )}
-                  >
-                    {isAddingCommentToImage ? '取消标注' : '图纸打点'}
-                  </button>
+                  <p className="text-[11px] text-slate-500 leading-snug mt-2">
+                    点击图片任意位置即可添加评论；点击右下角放大图标可查看大图；方案说明旁点击「+」可对文字添加评论
+                  </p>
                 )}
               </div>
 
               <div
-                className="flex-1 overflow-y-auto p-5 space-y-5 custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
                 onScroll={() => setRedrawTrigger((prev) => prev + 1)}
               >
                 {sortedComments.map((comment) => (
@@ -1302,13 +1284,13 @@ function PageViewer({
                   </div>
                 ))}
 
-                {comments.length === 0 && !isAddingCommentToImage && (
-                  <div className="text-center text-slate-400 text-sm py-12 flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-2">
-                      <MessageSquarePlus className="w-5 h-5 text-slate-300" />
+                {comments.length === 0 && (
+                  <div className="text-center py-10 flex flex-col items-center gap-3 px-4">
+                    <div className="w-10 h-10 rounded-full bg-[#FF9C3E]/10 flex items-center justify-center">
+                      <MessageSquarePlus className="w-5 h-5 text-[#FF9C3E]/70" />
                     </div>
-                    <p className="leading-relaxed">
-                      {isPageLocked ? '本页无反馈意见' : '点击上方按钮或文字框\n添加您的反馈意见'}
+                    <p className="text-slate-500 text-sm leading-relaxed">
+                      {isPageLocked ? '本页无反馈意见' : '点击图片任意位置或方案说明旁的「+」即可添加评论'}
                     </p>
                   </div>
                 )}
@@ -1320,49 +1302,52 @@ function PageViewer({
 
       {/* 底部导航 + 满意按钮 */}
       {!isThankYouPage && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-50">
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex items-center gap-3 z-50">
           {currentPageIndex > 0 && (
             <button
               onClick={handlePrevPageClick}
-              className="px-6 py-3.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full font-medium hover:bg-white transition-all flex items-center gap-2 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+              className="px-4 py-2.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full text-sm font-medium hover:bg-white transition-all flex items-center gap-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
             >
-              <ArrowLeft className="w-4 h-4" /> 上一页
+              <ArrowLeft className="w-3.5 h-3.5" /> 上一页
             </button>
           )}
           <button
             onClick={handleNextPageClick}
-            className="px-8 py-3.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full font-medium hover:bg-white transition-all flex items-center gap-2 shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+            className="px-5 py-2.5 bg-white/80 backdrop-blur-xl border border-white/50 text-slate-700 rounded-full text-sm font-medium hover:bg-white transition-all flex items-center gap-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
           >
             {currentPageIndex === version.pages.length - 1 ? '完成审阅' : '下一页'}{' '}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
           {!readOnly && (
             <button
               onClick={goToNextPage}
-              className="px-8 py-3.5 bg-gradient-to-r from-[#FF9C3E] to-[#EF6B00] text-white rounded-full font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-[0_8px_30px_rgba(255,156,62,0.3)] hover:shadow-[0_8px_30px_rgba(255,156,62,0.4)]"
+              className="px-5 py-2.5 bg-gradient-to-r from-[#FF9C3E] to-[#EF6B00] text-white rounded-full text-sm font-medium hover:opacity-90 transition-all flex items-center gap-1.5 shadow-[0_8px_30px_rgba(255,156,62,0.3)]"
             >
-              {currentPageIndex === version.pages.length - 1 ? '满意并提交' : '满意 😄'}
+              {currentPageIndex === version.pages.length - 1 ? '满意并提交' : '满意'}
             </button>
           )}
         </div>
       )}
 
-      {/* 页码显示 */}
+      {/* 页码 + 操作说明 */}
       {!isThankYouPage && (
-        <div className="absolute bottom-8 right-8 px-5 py-2.5 bg-white/60 backdrop-blur-xl border border-white/50 text-slate-600 rounded-full text-sm font-medium shadow-[0_8px_30px_rgb(0,0,0,0.04)] z-50 tracking-widest">
-          {currentPageIndex + 1} / {version.pages.length}
+        <div className="absolute bottom-5 right-6 flex flex-col items-end gap-1 z-50">
+          <div className="px-3 py-1.5 bg-white/60 backdrop-blur-xl border border-white/50 text-slate-600 rounded-full text-xs font-medium shadow-[0_8px_30px_rgb(0,0,0,0.04)] tracking-wide">
+            {currentPageIndex + 1} / {version.pages.length}
+          </div>
+          <span className="text-[10px] text-slate-400">审阅后可下一页或标记满意</span>
         </div>
       )}
 
       {/* 没有反馈时的确认弹窗 */}
       {showConfirmDialog && (
         <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-[0_20px_60px_rgb(0,0,0,0.1)] border border-white">
-            <div className="flex items-center gap-3 text-indigo-500 mb-5">
-              <AlertCircle className="w-6 h-6" />
-              <h3 className="text-xl font-bold text-slate-800 tracking-tight">这页方案还满意吗？</h3>
+          <div className="bg-white/90 backdrop-blur-2xl rounded-2xl p-6 max-w-md w-full shadow-[0_20px_60px_rgb(0,0,0,0.1)] border border-white">
+            <div className="flex items-center gap-2.5 text-indigo-500 mb-4">
+              <AlertCircle className="w-5 h-5" />
+              <h3 className="text-lg font-semibold text-slate-800 tracking-tight">这页方案还满意吗？</h3>
             </div>
-            <p className="text-slate-600 text-sm leading-relaxed mb-8">
+            <p className="text-slate-600 text-sm leading-relaxed mb-6">
               我看您在这页还没有留下反馈哦。如果觉得方案不错，我们可以直接看下一页；如果有任何小想法，随时欢迎补充～
             </p>
             <div className="flex gap-3 justify-end">
@@ -1545,12 +1530,15 @@ function DesignOverview({
   order,
   onStartView,
   onGoHome,
+  repliedCountByVersion = {},
 }: {
   order: DesignOrder;
   onStartView: (versionId: string) => void;
   onGoHome?: () => void;
+  repliedCountByVersion?: Record<string, number>;
 }) {
   const activeVersion = order.versions.find((v) => v.id === order.currentVersionId) || order.versions[0];
+  const repliedCount = repliedCountByVersion[activeVersion.id] ?? 0;
 
   return (
     <div className="w-full flex flex-col items-center justify-center py-8">
@@ -1595,12 +1583,17 @@ function DesignOverview({
             <span className="text-slate-600 font-medium">进行中</span>
           </div>
           <div className="text-slate-400 text-sm font-mono">
-            已回复 0 / {activeVersion.pages.length}
+            已回复 {repliedCount} / {activeVersion.pages.length}
           </div>
         </div>
 
-        {/* 缩略图网格 */}
-        <div className="grid grid-cols-6 gap-4 mb-10">
+        {/* 缩略图网格：只展示实际页数，不补空白占位 */}
+        <div
+          className="grid gap-4 mb-10"
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(Math.max(activeVersion.pages.length, 1), 6)}, minmax(0, 1fr))`,
+          }}
+        >
           {activeVersion.pages.map((page, idx) => (
             <div
               key={page.snapshotId}
@@ -1617,12 +1610,6 @@ function DesignOverview({
               </div>
               <div className="absolute inset-0 bg-transparent" />
             </div>
-          ))}
-          {Array.from({ length: Math.max(0, 6 - activeVersion.pages.length) }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="aspect-video bg-slate-50/50 rounded-xl border border-dashed border-slate-200"
-            />
           ))}
         </div>
 
@@ -1699,6 +1686,12 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
 
   // 进度状态：Record<versionId, maxReachedIndex>
   const [progressMap, setProgressMap] = useState<Record<string, number>>({});
+  // 已回复页数：Record<versionId, 已点击「满意」的页数>
+  const [repliedCountByVersion, setRepliedCountByVersion] = useState<Record<string, number>>({});
+
+  const handlePageReplied = useCallback((versionId: string, count: number) => {
+    setRepliedCountByVersion((prev) => (prev[versionId] === count ? prev : { ...prev, [versionId]: count }));
+  }, []);
 
   const handleSelectVersion = useCallback((versionId: string, readOnly: boolean) => {
     setActiveVersionId(versionId);
@@ -1742,6 +1735,7 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
           order={designOrder}
           onStartView={(versionId) => handleSelectVersion(versionId, false)}
           onGoHome={onGoHome}
+          repliedCountByVersion={repliedCountByVersion}
         />
       )}
 
@@ -1755,6 +1749,7 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
           globalComments={allComments[activeVersionId] || {}}
           onUpdateComments={(pageId, comments) => handleUpdateComments(activeVersionId, pageId, comments)}
           onUpdateProgress={(index) => handleUpdateProgress(activeVersionId, index)}
+          onPageReplied={handlePageReplied}
           initialMaxReachedIndex={progressMap[activeVersionId] || 0}
           orderNumber={orderNumber}
           data={data}

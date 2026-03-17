@@ -967,12 +967,24 @@ export const Step4 = ({ data, updateData }: StepProps) => {
   const floorInputRef = React.useRef<HTMLInputElement | null>(null);
   const mediaInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
   const handleFloorFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const next = Array.from(files).filter((f) => f.type.startsWith('image/'));
     if (!next.length) return;
     setFloorPlanFiles(next);
-    updateData({ floorPlanUploaded: true });
+    Promise.all(next.map((f) => readFileAsDataUrl(f).then((url) => ({ name: f.name, url }))))
+      .then((floorPlanImages) => {
+        updateData({ floorPlanUploaded: true, floorPlanImages });
+      })
+      .catch(() => updateData({ floorPlanUploaded: true }));
   };
 
   const handleMediaFiles = (files: FileList | null) => {
@@ -982,10 +994,22 @@ export const Step4 = ({ data, updateData }: StepProps) => {
     );
     if (!next.length) return;
     setSiteMediaFiles(next);
-    // 只要有任一类附件，即认为 Q2-4 已同步过资料
-    if (!data.floorPlanUploaded) {
-      updateData({ floorPlanUploaded: true });
-    }
+    const kind = (f: File): 'image' | 'video' =>
+      f.type.startsWith('video/') ? 'video' : 'image';
+    Promise.all(
+      next.map((f) =>
+        readFileAsDataUrl(f).then((url) => ({ name: f.name, url, kind: kind(f) }))
+      )
+    )
+      .then((siteMedia) => {
+        updateData({
+          floorPlanUploaded: data.floorPlanUploaded || true,
+          siteMedia,
+        });
+      })
+      .catch(() => {
+        if (!data.floorPlanUploaded) updateData({ floorPlanUploaded: true });
+      });
   };
 
   return (
