@@ -3,6 +3,8 @@ import { motion } from 'motion/react'
 import { CheckCircle2 } from 'lucide-react'
 import { PROJECT_TYPES, AGE_GROUPS, BUDGET_RANGES, INDUSTRIES } from './DeepEvalConstants'
 import { leadsApi, buildDesignVoyageLeadPayload } from '../services/designVoyage/LeadsService'
+import { addUserLead } from '../services/leads/savedLeadsStorage'
+import { useGlobal } from '../context/GlobalContext'
 import type { LeadsOptionsResponse } from '../services/designVoyage/LeadsOptionsService'
 import { leadsOptionsApi } from '../services/designVoyage/LeadsOptionsService'
 
@@ -69,7 +71,13 @@ interface DeepEvalFormContextValue {
   isSubmitting: boolean
   submitError: string | null
   setSubmitError: (v: string | null) => void
-  submit: () => Promise<void>
+  submit: (options?: {
+    onSuccess?: () => void
+    /** 提交成功后不弹成功窗（用于直接跳转） */
+    skipSuccessModal?: boolean
+    /** 接口失败时仍保存本地线索并执行 onSuccess */
+    saveLocalOnFailure?: boolean
+  }) => Promise<void>
   showSuccess: boolean
   setShowSuccess: (v: boolean) => void
   isLocating: boolean
@@ -97,6 +105,7 @@ export function useDeepEvalForm() {
 }
 
 export function DeepEvalFormProvider({ children }: { children: React.ReactNode }) {
+  const { data: globalData } = useGlobal()
   const [leadsOptions, setLeadsOptions] = useState<LeadsOptionsResponse | null>(null)
   const [formData, setFormData] = useState<DeepEvalFormData>(initialFormData)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -256,22 +265,44 @@ export function DeepEvalFormProvider({ children }: { children: React.ReactNode }
     return Object.keys(nextErrors).length === 0
   }, [formData.city, formData.phone])
 
-  const submit = useCallback(async () => {
-    setIsSubmitting(true)
-    setSubmitError(null)
-    try {
-      const payload = buildDesignVoyageLeadPayload(formData, {
-        journeySummary: { currentFavorite: null, focusSpace: null },
-        ...(geo != null ? { project_location: geo } : {})
-      })
-      await leadsApi.submitLead(payload)
-      setShowSuccess(true)
-    } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : '提交失败，请重试')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }, [formData, geo])
+  const submit = useCallback(
+    async (options?: {
+      onSuccess?: () => void
+      skipSuccessModal?: boolean
+      saveLocalOnFailure?: boolean
+    }) => {
+      setIsSubmitting(true)
+      setSubmitError(null)
+      const snapshot = {
+        ...formData,
+        projectName: globalData.projectName?.trim() || ''
+      }
+      try {
+        const payload = buildDesignVoyageLeadPayload(formData, {
+          journeySummary: { currentFavorite: null, focusSpace: null },
+          ...(geo != null ? { project_location: geo } : {})
+        })
+        await leadsApi.submitLead(payload)
+        addUserLead(snapshot)
+        if (options?.onSuccess) {
+          options.onSuccess()
+          if (!options.skipSuccessModal) setShowSuccess(true)
+        } else {
+          setShowSuccess(true)
+        }
+      } catch (err: unknown) {
+        if (options?.saveLocalOnFailure && options?.onSuccess) {
+          addUserLead(snapshot)
+          options.onSuccess()
+        } else {
+          setSubmitError(err instanceof Error ? err.message : '提交失败，请重试')
+        }
+      } finally {
+        setIsSubmitting(false)
+      }
+    },
+    [formData, geo, globalData.projectName]
+  )
 
   const projectTypeOptions = useMemo(() => getProjectTypeOptions(leadsOptions), [leadsOptions])
   const budgetOptions = leadsOptions?.project_budget_range ?? BUDGET_RANGES

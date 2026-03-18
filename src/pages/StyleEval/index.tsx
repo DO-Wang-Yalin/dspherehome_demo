@@ -4,6 +4,7 @@ import { HomeStyleEval } from './HomeStyleEval';
 import { StepWelcome } from '../../components/steps';
 import { useGlobal } from '../../context/GlobalContext';
 import { NavigationMenu } from '../../components/NavigationMenu';
+import { isRequirementsSupplementFlow } from '../../utils/navigationConfig';
 import { ChevronLeft } from 'lucide-react';
 
 export default function StyleEvalPage() {
@@ -12,7 +13,15 @@ export default function StyleEvalPage() {
   const [showWelcome, setShowWelcome] = useState(location.pathname === '/admin');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showResult, setShowResult] = useState(false);
-  const { data, updateData } = useGlobal();
+  const { data, updateData, activeProjectLeadId } = useGlobal();
+  const fromRequirements = isRequirementsSupplementFlow(location.search);
+
+  const buildDeepEvalEntry = () => {
+    const p = new URLSearchParams({ step: '0' });
+    p.set('from', 'requirements');
+    if (activeProjectLeadId) p.set('leadId', activeProjectLeadId);
+    return `/deep-eval?${p.toString()}`;
+  };
 
   useEffect(() => {
     setShowWelcome(location.pathname === '/admin');
@@ -37,9 +46,11 @@ export default function StyleEvalPage() {
 
     // 第一页返回欢迎页，后面每一页返回上一题（与 PAGES_GUIDE 一致）
     if (currentIndex === 0) {
-      // 从 /admin 进入时先回到后台管理；从 /style-eval 进入时返回欢迎页 /
+      // 从 /admin 进入时先回到后台管理；从需求书补齐流程返回项目中心需求书 tab
       if (location.pathname === '/admin') {
         setShowWelcome(true);
+      } else if (fromRequirements) {
+        navigate('/home', { state: { activeTab: 'requirements' } });
       } else {
         navigate('/');
       }
@@ -99,7 +110,12 @@ export default function StyleEvalPage() {
       </header>
       <main className="flex-1 relative overflow-x-hidden">
         <HomeStyleEval
-          onGoDeepEval={() => navigate('/leads')}
+          onGoDeepEval={() =>
+            fromRequirements ? navigate(buildDeepEvalEntry()) : navigate('/leads')
+          }
+          deepEvalButtonLabel={
+            fromRequirements ? '开始深度需求测评' : undefined
+          }
           onGoHome={() => setShowWelcome(true)}
           onStyleResult={(r) => updateData({ styleId: r.styleId, styleName: r.styleName, colorGene: r.colorGene, styleSuggestions: r.styleSuggestions })}
           controlledPageIndex={showResult ? 10 : currentIndex}

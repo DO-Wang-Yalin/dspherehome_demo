@@ -5,7 +5,7 @@ import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, 
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
 import { useGlobal } from '../../context/GlobalContext';
 import { INITIAL_ORDERS } from '../../data/mockOrders';
-import { getDesignVersionInfo } from '../../pages/DesignFeedback/DesignFeedbackApp';
+import { getDesignVersionInfo, getDesignFirstPagePreview } from '../../pages/DesignFeedback/DesignFeedbackApp';
 import { handleOrderAction } from '../../utils/orderStateMachine';
 import { toast } from 'sonner';
 
@@ -462,8 +462,13 @@ export default function OrderDetailPage() {
               <h2 className="text-base font-bold text-gray-900">设计方案与图纸</h2>
             </div>
             {currentStatusCode !== 'S00' && (
-              <button 
-                onClick={() => navigate('/feedback', { state: { orderNumber: orderData.id } })}
+              <button
+                type="button"
+                onClick={() =>
+                  navigate('/feedback', {
+                    state: { orderNumber: orderData.id, openViewerDirectly: true },
+                  })
+                }
                 className="inline-flex items-center gap-2 bg-[#FF9C3E] text-white px-5 py-2.5 rounded-2xl text-xs font-bold hover:bg-[#F58B2B] transition-all active:scale-95"
               >
                 查看并反馈
@@ -481,23 +486,55 @@ export default function OrderDetailPage() {
             </div>
           ) : (() => {
             const designInfo = getDesignVersionInfo(orderData.id);
+            const firstPage = getDesignFirstPagePreview(orderData.id);
             const versionName = designInfo?.versionName ?? '当前设计方案';
             const description = designInfo?.description ?? '包含平面布置图、效果图及施工节点大样图，等待您的最终确认。';
             const updatedAt = designInfo?.updatedAt ?? '2023-11-25';
             const statusLabel = designInfo?.statusLabel;
+            const openFeedback = () =>
+              navigate('/feedback', {
+                state: { orderNumber: orderData.id, openViewerDirectly: true },
+              });
             return (
-              <div className="p-6 bg-gray-50 rounded-[24px] border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 mb-1">
-                    当前版本：{versionName}
-                    {statusLabel && (
-                      <span className="ml-2 text-xs font-medium text-slate-500">{statusLabel}</span>
-                    )}
-                  </h3>
-                  <p className="text-xs text-gray-500">{description}</p>
+              <button
+                type="button"
+                onClick={openFeedback}
+                className="w-full text-left p-0 rounded-[24px] border border-gray-100 bg-gray-50 hover:border-orange-200/80 hover:bg-orange-50/20 transition-all cursor-pointer group overflow-hidden"
+              >
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 p-4 sm:p-6">
+                  {firstPage && (
+                    <div className="shrink-0 w-full sm:w-[200px] aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200/80 bg-white shadow-sm">
+                      <img
+                        src={firstPage.imageUrl}
+                        alt={firstPage.pageTitle}
+                        className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900 mb-1">
+                        当前版本：{versionName}
+                        {statusLabel && (
+                          <span className="ml-2 text-xs font-medium text-slate-500">{statusLabel}</span>
+                        )}
+                      </h3>
+                      {firstPage && (
+                        <p className="text-xs font-semibold text-gray-800 mb-1">{firstPage.pageTitle}</p>
+                      )}
+                      <p className="text-xs text-gray-500 line-clamp-2">{description}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                      <span className="text-xs font-medium text-gray-400">更新于 {updatedAt}</span>
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-[#FF9C3E] group-hover:text-[#F58B2B]">
+                        进入设计反馈
+                        <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-xs font-medium text-gray-400 shrink-0">更新于 {updatedAt}</div>
-              </div>
+              </button>
             );
           })()}
         </section>

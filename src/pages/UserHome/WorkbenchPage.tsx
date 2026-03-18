@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { RequirementsMember, MemberSpaceItem } from '../../types'
+import type { RequirementsMember, MemberSpaceItem, RequirementDocRevisionEntry } from '../../types'
 import {
   Home,
   FileText,
@@ -87,7 +87,9 @@ function AddSpaceTypeRow({ onAdd, existingNames }: { onAdd: (name: string) => vo
     </div>
   )
 }
+import BudgetSankey from '../../components/BudgetSankey'
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel'
+import { buildBudgetSankeyFromDisplayOrders } from '../../utils/ordersToBudgetSankey'
 import { ContractDetailModal } from '../../components/ContractDetailModal'
 import { getPaymentAccountCopyText } from '../../constants/contract'
 
@@ -138,7 +140,10 @@ export function WorkbenchPage({
 
   const navigate = useNavigate()
   const [active, setActive] = React.useState<NavKey>(initialTab || 'home')
-  /** 从「当前待办」进入设计反馈时指定订单号（如 00584），否则为 undefined 使用默认订单 */
+  React.useEffect(() => {
+    if (initialTab) setActive(initialTab)
+  }, [initialTab])
+  /** 从「当前待定」进入设计反馈时指定订单号（如 00584），否则为 undefined 使用默认订单 */
   const [designFeedbackOrderNumber, setDesignFeedbackOrderNumber] = React.useState<string | undefined>(undefined)
   const SIDEBAR_WIDTH_KEY = 'ai-studio:workbench:sidebarWidth:v1'
   const SIDEBAR_COLLAPSED_KEY = 'ai-studio:workbench:sidebarCollapsed:v1'
@@ -185,14 +190,14 @@ export function WorkbenchPage({
   const hasSignedContract = !!contractAccepted && !!contractSignatureData
 
   const navItems: Array<{ key: NavKey; label: string; icon: React.ElementType }> = [
-    { key: 'home', label: '项目首页', icon: Home },
-    { key: 'requirements', label: '项目需求书', icon: FileText },
-    { key: 'budget', label: '预算看板', icon: PieChart },
-    { key: 'orders', label: '项目订单', icon: ShoppingCart },
-    { key: 'contracts', label: '项目合同', icon: ScrollText },
+    { key: 'home', label: '待定决策', icon: Home },
+    { key: 'contracts', label: '项目协议', icon: ScrollText },
+    { key: 'requirements', label: '用户需求', icon: FileText },
+    { key: 'budget', label: '预算资金', icon: PieChart },
+    { key: 'orders', label: '订单方案', icon: ShoppingCart },
   ]
 
-  const activeLabel = navItems.find((n) => n.key === active)?.label || '项目首页'
+  const activeLabel = navItems.find((n) => n.key === active)?.label || '待定决策'
 
   const startResize = (e: React.MouseEvent) => {
     if (sidebarCollapsed) return
@@ -364,17 +369,9 @@ export function WorkbenchPage({
               <div className="space-y-8">
                 {/* Current todo */}
                 <section>
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-                      <h2 className="text-lg font-semibold">当前待办</h2>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-sm text-gray-600 font-medium hover:text-gray-900 hover:underline underline-offset-4"
-                    >
-                      查看全部
-                    </button>
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
+                    <h2 className="text-lg font-semibold">当前待定</h2>
                   </div>
 
                   <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
@@ -410,41 +407,6 @@ export function WorkbenchPage({
                     </div>
                   </div>
                 </section>
-
-                {/* Feature entry */}
-                <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-                    <h2 className="text-lg font-semibold">功能入口</h2>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                    <FeatureCard
-                      icon={<FileText size={18} />}
-                      title="项目需求书"
-                      desc="深度解析您的居住梦想，包含空间偏好、风格色彩及功能细节的完整定义。"
-                      action="立即查看"
-                      onClick={() => setActive('requirements')}
-                    />
-                    <FeatureCard
-                      icon={<PieChart size={18} />}
-                      title="预算看板"
-                      desc="一键总览项目预算结构，按空间与品类拆解费用构成，支持在线确认。"
-                      action="查看预算"
-                      onClick={() => setActive('budget')}
-                    />
-                    <FeatureCard
-                      icon={<Sparkles size={18} />}
-                      title="设计反馈"
-                      desc="集中查看设计方案与效果图，对关键空间逐条点评并同步给设计师。"
-                      action="进入反馈"
-                      onClick={() => {
-                        setDesignFeedbackOrderNumber(undefined)
-                        setActive('designFeedback')
-                      }}
-                    />
-                  </div>
-                </section>
               </div>
             ) : active === 'requirements' ? (
               <RequirementsDoc
@@ -454,7 +416,7 @@ export function WorkbenchPage({
                 ownerDisplayName={displayName}
                 onBackHome={() => setActive('home')}
                 onShowShowcase={() => navigate('/requirement-showcase')}
-                onGoToStyleEval={() => navigate('/style-eval')}
+                onGoToStyleEval={() => navigate('/style-eval?from=requirements')}
               />
             ) : active === 'orders' ? (
               <OrderManagementSection 
@@ -462,7 +424,11 @@ export function WorkbenchPage({
                 onSelectOrder={(id) => navigate(`/order/${id}`)}
               />
             ) : active === 'budget' ? (
-              <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-4 md:p-6">
+              <div className="space-y-5">
+                <div className="flex items-center gap-2">
+                  <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
+                  <h2 className="text-lg font-semibold">预算资金</h2>
+                </div>
                 <BudgetConfirmPanel />
               </div>
             ) : active === 'contracts' ? (
@@ -504,6 +470,8 @@ function OrderManagementSection({
 }) {
   const [searchQuery, setSearchQuery] = React.useState('')
   const [selectedPhases, setSelectedPhases] = React.useState<string[]>([])
+  /** 0 = 桑基图（先），1 = 订单列表（后） */
+  const [orderPresentationPage, setOrderPresentationPage] = React.useState<0 | 1>(0)
 
   const PHASES = [
     { id: 'intention', label: '意向期' },
@@ -544,83 +512,145 @@ function OrderManagementSection({
     return result;
   }, [searchQuery, selectedPhases, orders])
 
+  const sankeyData = React.useMemo(
+    () => buildBudgetSankeyFromDisplayOrders(orders),
+    [orders]
+  )
+
   return (
     <div className="space-y-6">
       {/* 顶部：标题 */}
-      <h1 className="text-xl font-semibold text-gray-900">订单管理</h1>
+      <h1 className="text-xl font-semibold text-gray-900">订单方案</h1>
 
-      {/* 搜索与筛选 */}
-      <div className="space-y-4">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索订单标题、订单编号"
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF9C3E]/20 focus:border-[#FF9C3E]"
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-2">阶段筛选:</span>
-          {PHASES.map(phase => (
-            <button
-              key={phase.id}
-              onClick={() => togglePhase(phase.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
-                selectedPhases.includes(phase.id)
-                  ? `${STATUS_BADGE_COLORS[phase.id as any]} border-current`
-                  : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
-              }`}
-            >
-              {phase.label}
-            </button>
-          ))}
-          {selectedPhases.length > 0 && (
-            <button
-              onClick={() => setSelectedPhases([])}
-              className="text-xs font-bold text-gray-400 hover:text-gray-600 ml-2"
-            >
-              清除全部
-            </button>
-          )}
-        </div>
+      {/* 呈现方式：低调文案切换 */}
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-100">
+        <nav className="flex gap-6" aria-label="订单方案呈现方式">
+          <button
+            type="button"
+            onClick={() => setOrderPresentationPage(0)}
+            className={`pb-2.5 text-sm transition-colors border-b-2 -mb-px ${
+              orderPresentationPage === 0
+                ? 'border-gray-800 text-gray-900 font-medium'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            预算树（桑基图）
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrderPresentationPage(1)}
+            className={`pb-2.5 text-sm transition-colors border-b-2 -mb-px ${
+              orderPresentationPage === 1
+                ? 'border-gray-800 text-gray-900 font-medium'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            订单列表
+          </button>
+        </nav>
+        {orderPresentationPage === 1 ? (
+          <span className="pb-2 text-xs text-gray-400 hidden sm:inline">支持搜索与阶段筛选</span>
+        ) : (
+          <span className="pb-2 text-xs text-gray-400 hidden sm:inline">展示全部订单</span>
+        )}
       </div>
 
-      {/* 订单列表 */}
-      <div className="space-y-4">
-        {filteredOrders.map((order) => (
-          <div
-            key={order.id}
-            onClick={() => onSelectOrder?.(order.id)}
-            className="bg-white border border-gray-100 rounded-2xl flex gap-4 py-5 px-4 hover:border-gray-200 hover:shadow-sm transition-all group cursor-pointer"
-          >
-            {/* 左侧状态色条 */}
-            <div className={`w-1 rounded-full shrink-0 self-stretch min-h-[60px] ${STATUS_BAR_COLORS[getOrderStatusColor(order.status)]}`} />
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="min-w-0">
-                  <span
-                    className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium mb-1.5 border ${STATUS_BADGE_COLORS[getOrderStatusColor(order.status)]}`}
-                  >
-                    {order.status}
-                  </span>
-                  <div className="font-semibold text-gray-900 truncate">
-                    {order.id} · {order.title}
+      {orderPresentationPage === 0 ? (
+        orders.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-16 text-center text-sm text-gray-500">
+            暂无订单
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-gray-100 shadow-sm overflow-hidden max-h-[min(72vh,1200px)] overflow-y-auto">
+            {sankeyData ? (
+              <BudgetSankey
+                data={sankeyData}
+                title="订单预算树"
+                subtitle={`共 ${orders.length} 笔订单 · 金额由列表展示换算为万元`}
+              />
+            ) : null}
+          </div>
+        )
+      ) : (
+        <>
+          {/* 列表页：搜索与阶段筛选 */}
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="搜索订单标题、订单编号"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF9C3E]/20 focus:border-[#FF9C3E]"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-2">阶段筛选:</span>
+              {PHASES.map((phase) => (
+                <button
+                  key={phase.id}
+                  type="button"
+                  onClick={() => togglePhase(phase.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                    selectedPhases.includes(phase.id)
+                      ? `${STATUS_BADGE_COLORS[phase.id as keyof typeof STATUS_BADGE_COLORS]} border-current`
+                      : 'bg-white text-gray-500 border-gray-100 hover:border-gray-200'
+                  }`}
+                >
+                  {phase.label}
+                </button>
+              ))}
+              {selectedPhases.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPhases([])}
+                  className="text-xs font-bold text-gray-400 hover:text-gray-600 ml-2"
+                >
+                  清除全部
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filteredOrders.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-16 text-center text-sm text-gray-500">
+              当前筛选下暂无订单，请调整搜索或阶段筛选
+            </div>
+          ) : (
+            <div className="space-y-4">
+          {filteredOrders.map((order) => (
+            <div
+              key={order.id}
+              onClick={() => onSelectOrder?.(order.id)}
+              className="bg-white border border-gray-100 rounded-2xl flex gap-4 py-5 px-4 hover:border-gray-200 hover:shadow-sm transition-all group cursor-pointer"
+            >
+              <div className={`w-1 rounded-full shrink-0 self-stretch min-h-[60px] ${STATUS_BAR_COLORS[getOrderStatusColor(order.status)]}`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="min-w-0">
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-lg text-xs font-medium mb-1.5 border ${STATUS_BADGE_COLORS[getOrderStatusColor(order.status)]}`}
+                    >
+                      {order.status}
+                    </span>
+                    <div className="font-semibold text-gray-900 truncate">
+                      {order.id} · {order.title}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-4 shrink-0 text-right">
-                  <div className="text-base font-semibold text-gray-900">
-                    {order.amount}
+                  <div className="flex items-center gap-4 shrink-0 text-right">
+                    <div className="text-base font-semibold text-gray-900">{order.amount}</div>
+                    <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
                   </div>
-                  <ChevronRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -665,13 +695,13 @@ function ComingSoon({ title, onBackHome }: { title: string; onBackHome: () => vo
           <Construction size={22} />
         </div>
         <h2 className="mt-5 text-xl font-semibold">{title}</h2>
-        <p className="mt-2 text-sm text-gray-600 leading-relaxed">功能开发中，敬请期待；你可以先返回项目首页查看项目中心概览。</p>
+        <p className="mt-2 text-sm text-gray-600 leading-relaxed">功能开发中，敬请期待；你可以先返回「待定决策」查看项目中心概览。</p>
         <button
           type="button"
           onClick={onBackHome}
           className="mt-6 inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] text-white font-semibold px-6 py-3 hover:brightness-95 active:scale-[0.99] transition"
         >
-          返回项目首页
+          返回待定决策
           <ChevronRight size={18} className="ml-1" />
         </button>
       </div>
@@ -708,7 +738,7 @@ function ContractsSection({
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-          <h2 className="text-lg font-semibold">项目合同</h2>
+          <h2 className="text-lg font-semibold">项目协议</h2>
         </div>
         <button
           type="button"
@@ -788,6 +818,172 @@ function ContractsSection({
   )
 }
 
+type RequirementDocPayloadShape = {
+  smartHomeOptions?: string[]
+  devices?: string[]
+  otherNeeds?: string
+  comfortSystems?: string[]
+  fengshui?: string
+  storageFocus?: string[]
+  spaceOtherNote?: string
+  livingRoomNote?: string
+  diningNote?: string
+  kitchenNote?: string
+  bathroomNote?: string
+  coreSpaces?: string
+  customCoreSpaceOptions?: string[]
+  childGrowth?: string
+  guestStay?: string
+  futureChanges?: string
+  requirementsMembers?: RequirementsMember[]
+  floorPlanImages?: Array<{ name: string; url: string }>
+  siteMedia?: Array<{ name: string; url: string; kind?: string }>
+  customSpaceItems?: Array<{ name: string; description?: string }>
+}
+
+function fingerprintRequirementDocPayload(p: RequirementDocPayloadShape): Record<string, string> {
+  return {
+    smartHome: [...(p.smartHomeOptions ?? [])].sort().join('\u0001'),
+    devices: [...(p.devices ?? [])].sort().join('\u0001'),
+    otherNeeds: p.otherNeeds ?? '',
+    comfort: [...(p.comfortSystems ?? [])].sort().join('\u0001'),
+    fengshui: p.fengshui ?? '',
+    storage: JSON.stringify([...(p.storageFocus ?? [])].sort()),
+    spaceOther: p.spaceOtherNote ?? '',
+    living: p.livingRoomNote ?? '',
+    dining: p.diningNote ?? '',
+    kitchen: p.kitchenNote ?? '',
+    bath: p.bathroomNote ?? '',
+    coreSpaces: p.coreSpaces ?? '',
+    customCore: JSON.stringify([...(p.customCoreSpaceOptions ?? [])].sort()),
+    child: p.childGrowth ?? '',
+    guest: p.guestStay ?? '',
+    future: p.futureChanges ?? '',
+    members: JSON.stringify(
+      (p.requirementsMembers ?? []).map((m) => ({
+        id: m.id,
+        n: m.name,
+        age: m.age ?? '',
+        prof: m.profession ?? '',
+        o: m.otherActivityNote ?? '',
+        sp: (m.spaces ?? []).map((s) => ({ n: s.name, d: s.description ?? '' })),
+      })),
+    ),
+    fpMeta: `${(p.floorPlanImages ?? []).length}\u0002${[...(p.floorPlanImages ?? []).map((x) => x.name)].sort().join('\u0001')}`,
+    smMeta: `${(p.siteMedia ?? []).length}\u0002${[...(p.siteMedia ?? []).map((x) => x.name)].sort().join('\u0001')}`,
+    customSpaces: JSON.stringify(
+      (p.customSpaceItems ?? []).map((x) => ({ n: x.name, d: x.description ?? '' })),
+    ),
+  }
+}
+
+const REQUIREMENT_DOC_FINGERPRINT_LABELS: Record<string, string> = {
+  smartHome: '智能家居',
+  devices: '全屋设备',
+  otherNeeds: '其他需求说明',
+  comfort: '系统设备',
+  fengshui: '风水与禁忌',
+  storage: '收纳重点',
+  spaceOther: '空间其他说明',
+  living: '客厅需求',
+  dining: '餐厅需求',
+  kitchen: '厨房需求',
+  bath: '卫生间需求',
+  coreSpaces: '核心空间配置',
+  customCore: '自定义核心空间',
+  child: '儿童成长',
+  guest: '访客留宿',
+  future: '未来变动',
+  members: '成员画像',
+  fpMeta: '户型图',
+  smMeta: '现场照片/视频',
+  customSpaces: '自定义空间需求',
+}
+
+function diffRequirementDocFingerprints(
+  before: Record<string, string> | null,
+  after: Record<string, string>,
+): string[] {
+  const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after)])
+  const out: string[] = []
+  for (const k of keys) {
+    if ((before?.[k] ?? '') !== (after[k] ?? '')) {
+      const lb = REQUIREMENT_DOC_FINGERPRINT_LABELS[k]
+      if (lb) out.push(lb)
+    }
+  }
+  return out
+}
+
+function formatAutoRevisionSummary(changedLabels: string[]): string {
+  if (changedLabels.length === 0) {
+    return '本次编辑相对进入编辑时未检测到字段差异（若刚保存过，可能已与基准一致）'
+  }
+  if (changedLabels.length >= 12) return '大范围更新项目需求书（多项模块均有调整）'
+  if (changedLabels.length <= 6) return `更新：${changedLabels.join('、')}`
+  return `更新：${changedLabels.slice(0, 6).join('、')}等共${changedLabels.length}处`
+}
+
+const BASELINE_ROLE_LABELS: Record<string, string> = { A: '男主人', B: '女主人', C: '长辈/长住家属' }
+const BASELINE_MEMBER_LABELS: Record<string, string> = { daughter: '女儿', son: '儿子', cat: '猫猫', dog: '狗狗' }
+
+/** 与进入编辑时保存的数据一致，用于生成对比基准指纹（成员空间与测评字段 daughterSpaces 等一致） */
+function fingerprintFromSavedFormData(d: import('../types').FormData): Record<string, string> {
+  const memberSpaces: Record<string, string[]> = {
+    daughter: d.daughterSpaces ?? [],
+    son: d.sonSpaces ?? [],
+    cat: d.catSpaces ?? [],
+    dog: d.dogSpaces ?? [],
+  }
+  let requirementsMembers: RequirementsMember[]
+  if (d.requirementsMembers?.length) {
+    requirementsMembers = d.requirementsMembers
+  } else {
+    const list: RequirementsMember[] = []
+    if (d.role) {
+      list.push({
+        id: 'role',
+        name: BASELINE_ROLE_LABELS[d.role] || d.role,
+        age: '',
+        profession: '',
+        spaces: (d.favoriteSpace ?? []).map((name) => ({ name, description: '' })),
+      })
+    }
+    ;(d.additionalMembers ?? []).forEach((memberId) => {
+      list.push({
+        id: memberId,
+        name: BASELINE_MEMBER_LABELS[memberId] ?? memberId,
+        age: '',
+        profession: '',
+        spaces: (memberSpaces[memberId] ?? []).map((name) => ({ name, description: '' })),
+      })
+    })
+    requirementsMembers = list
+  }
+  return fingerprintRequirementDocPayload({
+    smartHomeOptions: d.smartHomeOptions ?? [],
+    devices: d.devices ?? [],
+    otherNeeds: d.otherNeeds ?? '',
+    comfortSystems: d.comfortSystems ?? [],
+    fengshui: (d.fengshui ?? '').trim(),
+    storageFocus: d.storageFocus ?? [],
+    spaceOtherNote: d.spaceOtherNote ?? '',
+    livingRoomNote: d.livingRoomNote ?? '',
+    diningNote: d.diningNote ?? '',
+    kitchenNote: d.kitchenNote ?? '',
+    bathroomNote: d.bathroomNote ?? '',
+    coreSpaces: d.coreSpaces ?? '',
+    customCoreSpaceOptions: d.customCoreSpaceOptions ?? [],
+    childGrowth: d.childGrowth ?? '',
+    guestStay: d.guestStay ?? '',
+    futureChanges: d.futureChanges ?? '',
+    requirementsMembers,
+    floorPlanImages: d.floorPlanImages ?? [],
+    siteMedia: d.siteMedia ?? [],
+    customSpaceItems: d.customSpaceItems ?? [],
+  })
+}
+
 export function RequirementsDoc({
   projectName,
   ownerDisplayName,
@@ -808,7 +1004,7 @@ export function RequirementsDoc({
   isShowcase?: boolean
   onBackHome: () => void
   onShowShowcase?: () => void
-  /** 需求书为空时，引导用户从风格测评开始（风格测评→线索收集→转为项目→项目中心） */
+  /** 需求书为空时：风格测评 → 深度测评（线索已在入项时采集，不经过线索/合同页） */
   onGoToStyleEval?: () => void
 }) {
   const useMock = isShowcase === true
@@ -820,6 +1016,10 @@ export function RequirementsDoc({
   const [editHint, setEditHint] = React.useState<string | null>(null)
   const [hasSubmitted, setHasSubmitted] = React.useState(false)
   const [showSubmitModal, setShowSubmitModal] = React.useState(false)
+  const [showFinishRevisionModal, setShowFinishRevisionModal] = React.useState(false)
+  const [revisionUpdaterInput, setRevisionUpdaterInput] = React.useState('')
+  const [revisionSummaryInput, setRevisionSummaryInput] = React.useState('')
+  const [revisionSectionNoteInput, setRevisionSectionNoteInput] = React.useState('')
   const [spaceTab, setSpaceTab] = React.useState<string>('living')
 
   /** 与 Q2-9 核心空间一致，用于自定义空间名称选项 */
@@ -1118,6 +1318,8 @@ export function RequirementsDoc({
     if (d.siteMedia) setMediaFiles(d.siteMedia)
   }, [d?.floorPlanImages, d?.siteMedia, isEditing])
 
+  const baselineFingerprintRef = React.useRef<Record<string, string> | null>(null)
+
   const prevEditingRef = React.useRef(false)
   React.useEffect(() => {
     const justEnteredEdit = isEditing && !prevEditingRef.current
@@ -1208,6 +1410,88 @@ export function RequirementsDoc({
   const displayDeviceOptions = specialDeviceOptions.filter((o) => displayDeviceLabels.includes(o.label))
   const displayComfortEquipments = systemEquipments.filter((x) => displayComfortLabels.includes(x.title))
 
+  const showcaseRevisions: RequirementDocRevisionEntry[] = [
+    {
+      id: 'demo-1',
+      date: '2025-03-12',
+      updater: '张雅雯',
+      summary: '补充主卫干湿分离与全屋收纳重点说明',
+      sectionNote: '卫生间、收纳',
+    },
+    {
+      id: 'demo-2',
+      date: '2025-03-08',
+      updater: '设计师·李工',
+      summary: '根据沟通调整客厅活动与动线描述',
+      sectionNote: '客厅',
+    },
+  ]
+  const revisions: RequirementDocRevisionEntry[] = useMock
+    ? showcaseRevisions
+    : (d?.requirementDocRevisions ?? [])
+
+  const buildRequirementDocEditsPayload = (): Partial<import('../types').FormData> => {
+    const smartLabels = smartHomeOptions.filter((o) => smartHomeSelected[o.key]).map((o) => o.label)
+    const deviceLabels = specialDeviceOptions.filter((o) => specialDeviceSelected[o.key]).map((o) => o.label)
+    return {
+      smartHomeOptions: smartLabels,
+      devices: deviceLabels,
+      otherNeeds: customNeedsNote.trim() || (d?.otherNeeds ?? ''),
+      comfortSystems: comfortSystemsEdit,
+      fengshui: fengshuiEdit.trim(),
+      storageFocus: storageFocusEdit,
+      spaceOtherNote: spaceOtherNote.trim(),
+      livingRoomNote: d?.livingRoomNote ?? '',
+      diningNote: d?.diningNote ?? '',
+      kitchenNote: d?.kitchenNote ?? '',
+      bathroomNote: d?.bathroomNote ?? '',
+      coreSpaces: d?.coreSpaces ?? '',
+      customCoreSpaceOptions: d?.customCoreSpaceOptions ?? [],
+      childGrowth: d?.childGrowth ?? '',
+      guestStay: d?.guestStay ?? '',
+      futureChanges: d?.futureChanges ?? '',
+      requirementsMembers: membersEdit,
+      floorPlanImages: planImages,
+      siteMedia: mediaFiles,
+      customSpaceItems: customSpaceItemsEdit,
+    }
+  }
+
+  const completeRequirementEditing = (recordRevision: boolean) => {
+    if (!updateData || useMock) {
+      setShowFinishRevisionModal(false)
+      setIsEditing(false)
+      return
+    }
+    if (recordRevision) {
+      const fpAfter = fingerprintRequirementDocPayload(buildRequirementDocEditsPayload() as RequirementDocPayloadShape)
+      const beforeFp =
+        baselineFingerprintRef.current ?? (d ? fingerprintFromSavedFormData(d) : null)
+      const labels = diffRequirementDocFingerprints(beforeFp, fpAfter)
+      const autoSummary = formatAutoRevisionSummary(labels)
+      const summary = revisionSummaryInput.trim() || autoSummary
+      const sectionFromLabels = labels.length ? labels.join('、') : undefined
+      const sectionNote = revisionSectionNoteInput.trim() || sectionFromLabels
+      const now = new Date()
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const entry: RequirementDocRevisionEntry = {
+        id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rev-${Date.now()}`,
+        date: dateStr,
+        updater: revisionUpdaterInput.trim() || ownerDisplayName,
+        summary,
+        sectionNote: sectionNote || undefined,
+      }
+      updateData({
+        ...buildRequirementDocEditsPayload(),
+        requirementDocRevisions: [entry, ...(d?.requirementDocRevisions ?? [])],
+      })
+    } else {
+      updateData(buildRequirementDocEditsPayload())
+    }
+    setShowFinishRevisionModal(false)
+    setIsEditing(false)
+  }
+
   const isRequirementsEmpty =
     !useMock &&
     !hasMemberData &&
@@ -1226,8 +1510,8 @@ export function RequirementsDoc({
       <div className="space-y-8 pb-24">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="text-xs text-gray-500">项目交付 · 需求书</div>
-            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">项目需求书</h1>
+            <div className="text-xs text-gray-500">项目交付 · 用户需求</div>
+            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">用户需求</h1>
             <div className="mt-2 text-sm text-gray-600">
               <span className="font-medium text-gray-900">{projectName}</span>
               <span className="mx-2 text-gray-300">/</span>
@@ -1243,7 +1527,7 @@ export function RequirementsDoc({
           </button>
         </div>
         <div className="rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-2 text-sm text-amber-800">
-          以下为示例效果，完成风格测评与线索收集、转为项目后，您将看到基于真实数据的项目需求书。
+          以下为示例效果，完成风格测评与线索收集、转为项目后，您将看到基于真实数据的用户需求文档。
         </div>
         <RequirementsDoc
           isShowcase
@@ -1260,8 +1544,8 @@ export function RequirementsDoc({
       <div className="space-y-8 pb-24">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="text-xs text-gray-500">项目交付 · 需求书</div>
-            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">项目需求书</h1>
+            <div className="text-xs text-gray-500">项目交付 · 用户需求</div>
+            <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">用户需求</h1>
             <div className="mt-2 text-sm text-gray-600">
               <span className="font-medium text-gray-900">{projectName}</span>
               <span className="mx-2 text-gray-300">/</span>
@@ -1285,7 +1569,7 @@ export function RequirementsDoc({
             </div>
             <h2 className="mt-6 text-xl font-semibold text-gray-900">暂无需求内容</h2>
             <p className="mt-3 text-sm text-gray-600 leading-relaxed">
-              项目需求书需基于风格测评与线索收集生成。原则上需先完成家居风格测评、项目线索收集，线索转换为项目后才会进入项目中心。若您已在项目中心但需求书为空，请从风格测评开始补齐流程。
+              您已进入项目中心，项目概况与联系信息已由顾问录入。请依次完成<strong className="text-gray-800">家居风格测评</strong>与<strong className="text-gray-800">深度需求测评</strong>，即可生成并完善项目需求书（无需再填写线索或合同环节）。
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
               {onGoToStyleEval && (
@@ -1316,8 +1600,8 @@ export function RequirementsDoc({
     <div className="space-y-8 pb-24">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xs text-gray-500">项目交付 · 需求书</div>
-          <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">项目需求书</h1>
+          <div className="text-xs text-gray-500">项目交付 · 用户需求</div>
+          <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">用户需求</h1>
           <div className="mt-2 text-sm text-gray-600">
             <span className="font-medium text-gray-900">{projectName}</span>
             <span className="mx-2 text-gray-300">/</span>
@@ -2481,6 +2765,43 @@ export function RequirementsDoc({
         </div>
       </section>
 
+      <section className="rounded-3xl border border-gray-100 bg-white shadow-sm p-6 md:p-8">
+        <SectionTitle title="需求变更与修订记录" />
+        <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+          按时间追溯「谁在何时改了什么」，与项目需求文档 §8 约定一致；<strong>最新记录在上</strong>。
+        </p>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-gray-100">
+          <table className="w-full text-sm text-left border-collapse min-w-[520px]">
+            <thead>
+              <tr className="text-xs text-gray-500 bg-gray-50/80 border-b border-gray-100">
+                <th className="py-2.5 px-3 font-semibold w-[100px]">日期</th>
+                <th className="py-2.5 px-3 font-semibold w-[100px]">更新人</th>
+                <th className="py-2.5 px-3 font-semibold">变更概要</th>
+                <th className="py-2.5 px-3 font-semibold w-[min(28%,160px)]">涉及章节/备注</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revisions.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-10 px-4 text-center text-gray-400 text-sm">
+                    暂无修订记录。完成编辑时可选择「保存并记录修订」登记本次变更。
+                  </td>
+                </tr>
+              ) : (
+                revisions.map((r) => (
+                  <tr key={r.id} className="border-b border-gray-50 last:border-0 align-top hover:bg-gray-50/50">
+                    <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{r.date}</td>
+                    <td className="py-3 px-3 text-gray-800">{r.updater}</td>
+                    <td className="py-3 px-3 text-gray-700 leading-relaxed">{r.summary}</td>
+                    <td className="py-3 px-3 text-gray-500 text-xs leading-relaxed">{r.sectionNote?.trim() ? r.sectionNote : '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {showSubmitModal && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
           <div
@@ -2491,7 +2812,7 @@ export function RequirementsDoc({
             <div className="space-y-2">
               <h3 className="text-base font-semibold text-gray-900">感谢您的配合</h3>
               <p className="text-sm text-gray-600 leading-relaxed">
-                您的项目需求书已提交，我们会根据这份信息为您生成后续方案与服务建议。
+                您的用户需求已提交，我们会根据这份信息为您生成后续方案与服务建议。
               </p>
             </div>
             <div className="pt-2 flex justify-end">
@@ -2510,10 +2831,111 @@ export function RequirementsDoc({
         </div>
       )}
 
+      {showFinishRevisionModal && (
+        <div className="fixed inset-0 z-[145] flex items-center justify-center px-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40 cursor-default"
+            aria-label="关闭"
+            onClick={() => setShowFinishRevisionModal(false)}
+          />
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-gray-100">
+            <h3 className="text-base font-semibold text-gray-900">完成编辑</h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              需求内容将保存。变更纪要已自动识别；选择「保存并记录修订」即可写入修订表。
+            </p>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-xs text-gray-500 block mb-1">日期（自动）</span>
+                <span className="font-medium text-gray-800">
+                  {(() => {
+                    const n = new Date()
+                    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`
+                  })()}
+                </span>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-updater">
+                  更新人
+                </label>
+                <input
+                  id="rev-updater"
+                  value={revisionUpdaterInput}
+                  onChange={(e) => setRevisionUpdaterInput(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="姓名或角色"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-summary">
+                  变更概要（已根据本次修改自动识别）
+                </label>
+                <p className="text-[11px] text-gray-400 mb-1.5 leading-snug">
+                  对比「点击编辑时」已保存内容与当前内容，列出变更模块；可微调下方文字。
+                </p>
+                <textarea
+                  id="rev-summary"
+                  value={revisionSummaryInput}
+                  onChange={(e) => setRevisionSummaryInput(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-y min-h-[72px] bg-[#FAFAF9]"
+                  readOnly={false}
+                  placeholder="自动生成中…"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-section">
+                  涉及章节 / 备注（已自动填入变更模块，可改）
+                </label>
+                <input
+                  id="rev-section"
+                  value={revisionSectionNoteInput}
+                  onChange={(e) => setRevisionSectionNoteInput(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
+                  placeholder="自动根据变更模块生成"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => completeRequirementEditing(true)}
+                className="w-full py-3 rounded-2xl bg-[#EF6B00] text-white text-sm font-semibold hover:bg-[#D85F00] transition-colors"
+              >
+                保存并记录修订
+              </button>
+              <button
+                type="button"
+                onClick={() => completeRequirementEditing(false)}
+                className="w-full py-3 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
+              >
+                仅保存，不记入修订表
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFinishRevisionModal(false)}
+                className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-800"
+              >
+                取消，继续编辑
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100">
         <div className="max-w-6xl mx-auto px-5 md:px-10 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div className="text-xs text-gray-500">
-            最后更新：刚刚 · 需求书为示例结构，可接入真实测评数据后自动生成。
+          <div className="text-xs text-gray-500 line-clamp-2">
+            {revisions[0] ? (
+              <>
+                最后修订：<span className="text-gray-700">{revisions[0].date}</span> · {revisions[0].updater} ·{' '}
+                {revisions[0].summary.length > 36 ? `${revisions[0].summary.slice(0, 36)}…` : revisions[0].summary}
+              </>
+            ) : useMock ? (
+              <>示例数据 · 修订记录见上文表格</>
+            ) : (
+              <>完成编辑时可登记修订记录，最新信息将显示在此处。</>
+            )}
           </div>
           <div className="flex gap-3">
             <button
@@ -2527,32 +2949,22 @@ export function RequirementsDoc({
               type="button"
               onClick={() => {
                 if (isEditing && updateData && !useMock) {
-                  const smartLabels = smartHomeOptions.filter((o) => smartHomeSelected[o.key]).map((o) => o.label)
-                  const deviceLabels = specialDeviceOptions.filter((o) => specialDeviceSelected[o.key]).map((o) => o.label)
-                  updateData({
-                    smartHomeOptions: smartLabels,
-                    devices: deviceLabels,
-                    otherNeeds: customNeedsNote.trim() || (d?.otherNeeds ?? ''),
-                    comfortSystems: comfortSystemsEdit,
-                    fengshui: fengshuiEdit.trim(),
-                    storageFocus: storageFocusEdit,
-                    spaceOtherNote: spaceOtherNote.trim(),
-                    livingRoomNote: d?.livingRoomNote ?? '',
-                    diningNote: d?.diningNote ?? '',
-                    kitchenNote: d?.kitchenNote ?? '',
-                    bathroomNote: d?.bathroomNote ?? '',
-                    coreSpaces: d?.coreSpaces ?? '',
-                    customCoreSpaceOptions: d?.customCoreSpaceOptions ?? [],
-                    childGrowth: d?.childGrowth ?? '',
-                    guestStay: d?.guestStay ?? '',
-                    futureChanges: d?.futureChanges ?? '',
-                    requirementsMembers: membersEdit,
-                    floorPlanImages: planImages,
-                    siteMedia: mediaFiles,
-                    customSpaceItems: customSpaceItemsEdit,
-                  })
+                  const fpAfter = fingerprintRequirementDocPayload(
+                    buildRequirementDocEditsPayload() as RequirementDocPayloadShape,
+                  )
+                  const beforeFp =
+                    baselineFingerprintRef.current ?? (d ? fingerprintFromSavedFormData(d) : null)
+                  const labels = diffRequirementDocFingerprints(beforeFp, fpAfter)
+                  setRevisionUpdaterInput(ownerDisplayName)
+                  setRevisionSummaryInput(formatAutoRevisionSummary(labels))
+                  setRevisionSectionNoteInput(labels.length ? labels.join('、') : '')
+                  setShowFinishRevisionModal(true)
+                } else {
+                  if (!isEditing && updateData && !useMock && d) {
+                    baselineFingerprintRef.current = fingerprintFromSavedFormData(d)
+                  }
+                  setIsEditing((v) => !v)
                 }
-                setIsEditing((v) => !v)
               }}
               className={`flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
                 isEditing ? 'bg-[#EF6B00] text-white hover:bg-[#D85F00]' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'

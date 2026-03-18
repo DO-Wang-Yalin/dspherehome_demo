@@ -2,27 +2,60 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { List, X, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { NAVIGATION_STEPS } from '../utils/navigationConfig';
+import {
+  getNavigationStepsForFlow,
+  isRequirementsSupplementFlow,
+} from '../utils/navigationConfig';
+import { useGlobal } from '../context/GlobalContext';
 
 export function NavigationMenu() {
   const [showMenu, setShowMenu] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { activeProjectLeadId } = useGlobal();
 
-  // Find current step index based on path and search
-  const currentStepIndex = NAVIGATION_STEPS.findIndex(step => {
-    if (step.path !== location.pathname) return false;
-    if (step.search) {
-      // Simple check: if step defines a search, current location must include it
-      // Note: This is a bit fragile if params order changes, but sufficient for ?step=X
-      return location.search.includes(step.search);
+  const reqFlow =
+    (location.pathname === '/style-eval' || location.pathname === '/deep-eval') &&
+    isRequirementsSupplementFlow(location.search);
+  const stepsList = getNavigationStepsForFlow(reqFlow);
+  const leadIdForNav =
+    new URLSearchParams(location.search).get('leadId') || activeProjectLeadId || null;
+
+  const buildStepHref = (step: (typeof stepsList)[0]) => {
+    if (step.path === '/deep-eval' && reqFlow) {
+      const p = new URLSearchParams((step.search || '').replace(/^\?/, ''));
+      p.set('from', 'requirements');
+      if (leadIdForNav) p.set('leadId', leadIdForNav);
+      return `/deep-eval?${p.toString()}`;
     }
-    return true;
-  });
+    if (step.path === '/style-eval' && reqFlow) {
+      return '/style-eval?from=requirements';
+    }
+    return `${step.path}${step.search || ''}`;
+  };
 
-  // If not found, maybe default to the first step of the path?
-  // Or just don't highlight.
-  const displayIndex = currentStepIndex !== -1 ? currentStepIndex : 0;
+  const deepStepParam = location.pathname === '/deep-eval' ? new URLSearchParams(location.search).get('step') ?? '0' : null;
+  let resolvedCurrentIndex = -1;
+  if (location.pathname === '/style-eval') {
+    resolvedCurrentIndex = stepsList.findIndex((s) => s.id === 'style-eval');
+  } else if (location.pathname === '/deep-eval' && deepStepParam !== null) {
+    resolvedCurrentIndex = stepsList.findIndex((s) => {
+      if (s.path !== '/deep-eval' || !s.search) return false;
+      return (new URLSearchParams(s.search).get('step') ?? '0') === deepStepParam;
+    });
+  } else {
+    resolvedCurrentIndex = stepsList.findIndex((step) => {
+      if (step.path !== location.pathname) return false;
+      if (!step.search) return true;
+      const want = new URLSearchParams(step.search.replace(/^\?/, ''));
+      const have = new URLSearchParams(location.search.replace(/^\?/, ''));
+      for (const key of want.keys()) {
+        if (want.get(key) !== have.get(key)) return false;
+      }
+      return true;
+    });
+  }
+  const displayIndex = resolvedCurrentIndex !== -1 ? resolvedCurrentIndex : 0;
 
   return (
     <>
@@ -32,7 +65,7 @@ export function NavigationMenu() {
       >
         <List size={14} className="text-gray-400" />
         <span className="text-sm font-medium text-gray-500">
-          <span className="text-[#EF6B00]">{displayIndex + 1}</span> / {NAVIGATION_STEPS.length}
+          <span className="text-[#EF6B00]">{displayIndex + 1}</span> / {stepsList.length}
         </span>
       </button>
 
@@ -60,8 +93,8 @@ export function NavigationMenu() {
               </div>
               <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 <div className="grid grid-cols-1 gap-2">
-                  {NAVIGATION_STEPS.map((step, index) => {
-                    const isCurrent = index === currentStepIndex;
+                  {stepsList.map((step, index) => {
+                    const isCurrent = index === resolvedCurrentIndex;
                     return (
                       <div
                         key={step.id}
@@ -74,7 +107,7 @@ export function NavigationMenu() {
                         <button
                           type="button"
                           onClick={() => {
-                            navigate(`${step.path}${step.search || ''}`);
+                            navigate(buildStepHref(step));
                             setShowMenu(false);
                           }}
                           className="flex items-center gap-3 flex-1 min-w-0 text-left"

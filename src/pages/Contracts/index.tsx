@@ -1,51 +1,133 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StepContract, StepPayment } from '../../components/steps';
 import { useGlobal } from '../../context/GlobalContext';
 import { NavigationMenu } from '../../components/NavigationMenu';
 import { ChevronLeft } from 'lucide-react';
+import { getLeadById } from '../../services/leads/savedLeadsStorage';
+import { enterProjectWorkbenchFromLead } from '../../services/leads/enterProjectFromLead';
 
 export default function ContractsPage() {
   const [searchParams] = useSearchParams();
   const initialStep = Number(searchParams.get('step')) || 1;
   const [step, setStep] = useState(initialStep);
   const navigate = useNavigate();
-  const { data, updateData } = useGlobal();
+  const { data, updateData, setActiveProjectLeadId } = useGlobal();
   const fromHome = searchParams.get('from') === 'home';
+  const contractLeadId = searchParams.get('leadId');
 
-  React.useEffect(() => {
+  const lead = contractLeadId ? getLeadById(contractLeadId) : undefined;
+
+  useEffect(() => {
     const s = Number(searchParams.get('step')) || 1;
     setStep(s);
   }, [searchParams]);
 
-  // 已签署的合同不再要求重新签署，直接进入付款信息步骤
-  const hasSigned = !!(data.contractAccepted && data.contractSignatureData);
-  React.useEffect(() => {
-    if (step === 1 && hasSigned) {
+  /** 已废弃 step=3：合并进步骤 2 付款页，旧链接统一回到步骤 2 */
+  useEffect(() => {
+    const s = Number(searchParams.get('step')) || 1;
+    if (s !== 3) return;
+    const p = new URLSearchParams({ step: '2' });
+    if (contractLeadId) p.set('leadId', contractLeadId);
+    if (fromHome) p.set('from', 'home');
+    navigate(`/contracts?${p}`, { replace: true });
+  }, [searchParams, contractLeadId, fromHome, navigate]);
+
+  /** 将线索信息带入合同页展示 */
+  useEffect(() => {
+    if (!contractLeadId || !lead || lead.status !== 'pending_contract') return;
+    updateData({
+      userName: lead.name,
+      userTitle: lead.salutation,
+      userPhone: lead.phone,
+      userCity: lead.city,
+      userAgeRange: lead.ageGroup,
+      userIndustry: lead.industry,
+      projectName: lead.projectName,
+      projectLocation: lead.projectPosition,
+      projectArea: lead.area,
+      projectType: lead.projectType,
+      houseCondition: lead.handoverStatus,
+      budgetStandard: lead.budget,
+    });
+  }, [contractLeadId, lead?.id, lead?.status]);
+
+  const hasSignedGlobal = !!(data.contractAccepted && data.contractSignatureData);
+
+  useEffect(() => {
+    if (step !== 1) return;
+    if (contractLeadId) {
+      if (!lead) {
+        navigate('/projects', { replace: true });
+        return;
+      }
+      if (lead.status === 'project') {
+        const p = new URLSearchParams({ step: '2', leadId: contractLeadId });
+        if (fromHome) p.set('from', 'home');
+        navigate(`/contracts?${p}`, { replace: true });
+      }
+      return;
+    }
+    if (hasSignedGlobal) {
       navigate(fromHome ? '/contracts?step=2&from=home' : '/contracts?step=2', { replace: true });
     }
-  }, [step, hasSigned, fromHome, navigate]);
+  }, [
+    step,
+    contractLeadId,
+    lead?.id,
+    lead?.status,
+    hasSignedGlobal,
+    fromHome,
+    navigate,
+  ]);
+
+  const contractsQuery = (s: number) => {
+    const p = new URLSearchParams({ step: String(s) });
+    if (contractLeadId) p.set('leadId', contractLeadId);
+    if (fromHome) p.set('from', 'home');
+    return `/contracts?${p.toString()}`;
+  };
 
   const nextStep = () => {
     if (step === 1) {
-      navigate(fromHome ? '/contracts?step=2&from=home' : '/contracts?step=2');
-    } else {
-      navigate(fromHome ? '/home' : '/deep-eval');
+      navigate(contractsQuery(2));
+    } else if (step === 2) {
+      if (fromHome) navigate('/home');
+      else if (contractLeadId) {
+        setActiveProjectLeadId(contractLeadId);
+        navigate(`/deep-eval?leadId=${encodeURIComponent(contractLeadId)}`);
+      } else navigate('/deep-eval');
     }
   };
 
   const prevStep = () => {
     if (step === 2) {
-      // 从项目中心进入且已签署时，返回直接回项目中心（无需再进步骤1）
-      if (fromHome && hasSigned) {
+      if (fromHome && hasSignedGlobal && !contractLeadId) {
         navigate('/home');
       } else {
-        navigate(fromHome ? '/contracts?step=1&from=home' : '/contracts?step=1');
+        navigate(contractsQuery(1));
       }
     } else {
-      navigate(fromHome ? '/home' : '/register');
+      if (fromHome) navigate('/home');
+      else if (contractLeadId) navigate('/projects');
+      else navigate('/register');
     }
   };
+
+  const handleEnterProject = () => {
+    if (!contractLeadId) return;
+    enterProjectWorkbenchFromLead(contractLeadId, updateData, setActiveProjectLeadId);
+    navigate('/home');
+  };
+
+  const handleContinueDeepEval = () => {
+    if (!contractLeadId) return;
+    setActiveProjectLeadId(contractLeadId);
+    navigate(`/deep-eval?leadId=${encodeURIComponent(contractLeadId)}`);
+  };
+
+  /** 带线索进合同：付款页复制后出现「进项目 / 深度测评」双选项 */
+  const showLeadChoiceOnPayment = !!contractLeadId && !!lead;
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col relative">
@@ -63,8 +145,34 @@ export default function ContractsPage() {
       </header>
 
       <main className="flex-1 relative overflow-x-hidden">
-        {step === 1 && <StepContract data={data} updateData={updateData} nextStep={nextStep} prevStep={prevStep} />}
-        {step === 2 && <StepPayment data={data} updateData={updateData} nextStep={nextStep} prevStep={prevStep} onBackToHome={() => navigate(fromHome ? '/home' : '/')} primaryActionLabel={fromHome ? '进入我的项目' : '完成支付进入深度测评'} />}
+        {step === 1 && (
+          <StepContract
+            data={data}
+            updateData={updateData}
+            nextStep={nextStep}
+            prevStep={prevStep}
+            contractLeadId={contractLeadId}
+          />
+        )}
+        {step === 2 && (
+          <StepPayment
+            data={data}
+            updateData={updateData}
+            nextStep={nextStep}
+            prevStep={prevStep}
+            onBackToHome={() => navigate(fromHome ? '/home' : contractLeadId ? '/projects' : '/')}
+            primaryActionLabel={fromHome ? '进入我的项目' : '完成支付进入深度测评'}
+            leadChoiceActions={
+              showLeadChoiceOnPayment
+                ? {
+                    projectName: lead?.projectName || lead?.projectPosition || '项目',
+                    onEnterWorkbench: handleEnterProject,
+                    onContinueDeepEval: handleContinueDeepEval,
+                  }
+                : undefined
+            }
+          />
+        )}
       </main>
     </div>
   );

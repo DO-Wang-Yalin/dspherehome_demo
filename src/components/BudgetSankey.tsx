@@ -297,9 +297,13 @@ interface BudgetSankeyProps {
   data?: BudgetSankeyData | null
   /** Optional subtitle (e.g. project name). */
   subtitle?: string
+  /** Override main heading (e.g. 订单预算树). */
+  title?: string
+  /** 外层已由面板包卡片时去掉内层白底卡片 */
+  unstyled?: boolean
 }
 
-function BudgetSankey({ data, subtitle }: BudgetSankeyProps = {}) {
+function BudgetSankey({ data, subtitle, title, unstyled }: BudgetSankeyProps = {}) {
   const incomeEntries = data?.incomeEntries ?? INCOME_ENTRIES
   const milestones = data?.milestones ?? MILESTONES
   const orders = data?.orders ?? ORDERS
@@ -410,12 +414,22 @@ function BudgetSankey({ data, subtitle }: BudgetSankeyProps = {}) {
     })
   }, [msLayout, msPrimaryStatus, layoutTotalBudget])
 
+  const outerCls = unstyled
+    ? 'w-full overflow-hidden'
+    : 'w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden'
+  const headCls = unstyled
+    ? 'flex flex-wrap items-center justify-between gap-3 pb-3 mb-1'
+    : 'flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100'
+  const footCls = unstyled
+    ? 'px-0 pt-3 mt-2 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2'
+    : 'px-5 py-2.5 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2'
+
   return (
-    <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className={outerCls}>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+      <div className={headCls}>
         <div>
-          <h2 className="text-gray-800 leading-tight">项目预算桑基图</h2>
+          <h2 className="text-gray-800 leading-tight">{title ?? '项目预算桑基图'}</h2>
           <p className="text-gray-400 leading-snug mt-0.5" style={{ fontSize: 12 }}>
             {subtitle ?? 'LHJCF 家装工程'} · 总预算 {layoutTotalBudget}w
           </p>
@@ -901,7 +915,7 @@ function BudgetSankey({ data, subtitle }: BudgetSankeyProps = {}) {
         </div>
       </div>
 
-      <div className="px-5 py-2.5 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+      <div className={footCls}>
         <span className="text-gray-400" style={{ fontSize: 11 }}>
           横向滑动查看完整图表 · 点击节点查看详情
         </span>

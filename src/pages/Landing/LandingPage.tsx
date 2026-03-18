@@ -3,29 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Settings, ChevronRight, Sparkles } from 'lucide-react';
 import { useGlobal } from '../../context/GlobalContext';
-import { getProjects } from '../../services/projects';
 
 export default function LandingPage() {
   const navigate = useNavigate();
   const { isLoggedIn } = useGlobal();
 
-  const handleEnterProjects = async () => {
+  /** 已登录 → 项目与线索列表；未登录 → 登录页，登录后回到该页 */
+  const handleEnterProjects = () => {
     if (!isLoggedIn) {
-      navigate('/login');
+      navigate('/login', {
+        state: { redirectTo: '/projects', from: 'landing' },
+      });
       return;
     }
-
-    try {
-      const projects = await getProjects();
-      if (projects.length === 1) {
-        navigate('/home');
-      } else {
-        navigate('/projects');
-      }
-    } catch (error) {
-      console.error('Failed to fetch projects:', error);
-      navigate('/projects');
-    }
+    navigate('/projects');
   };
 
   return (

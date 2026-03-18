@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGlobal } from '../../context/GlobalContext';
 import { AnimatePresence } from 'motion/react';
@@ -25,6 +25,12 @@ import {
   Step20,
   Step21,
 } from '../../components/steps';
+import { initialFormData, type FormData } from '../../types';
+import {
+  DEEP_EVAL_FORM_KEYS,
+  getDeepEvalDraft,
+  saveDeepEvalDraftMerge,
+} from '../../services/leads/deepEvalByLeadStorage';
 
 const steps = [
   { id: 'q2-4', component: Step4 },
@@ -48,12 +54,41 @@ const steps = [
   { id: 'q2-21', component: Step21 },
 ];
 
+function buildDeepEvalPath(step: number, leadId: string | null, fromRequirements: boolean) {
+  const p = new URLSearchParams({ step: String(step) });
+  if (leadId) p.set('leadId', leadId);
+  if (fromRequirements) p.set('from', 'requirements');
+  return `/deep-eval?${p.toString()}`;
+}
+
 export default function DeepEvalPage() {
   const [searchParams] = useSearchParams();
+  const leadId = searchParams.get('leadId');
+  const fromRequirements = searchParams.get('from') === 'requirements';
   const initialStep = Number(searchParams.get('step')) || 0;
   const [currentIndex, setCurrentIndex] = useState(initialStep);
   const navigate = useNavigate();
   const { data, updateData } = useGlobal();
+
+  /** 切换线索时：重置深度测评字段再载入该线索草稿 */
+  useEffect(() => {
+    if (!leadId) return;
+    const reset: Partial<FormData> = {};
+    const init = initialFormData as unknown as Record<string, unknown>;
+    for (const k of DEEP_EVAL_FORM_KEYS) {
+      (reset as unknown as Record<string, unknown>)[k] = init[k as string];
+    }
+    const draft = getDeepEvalDraft(leadId);
+    updateData({ ...reset, ...draft });
+  }, [leadId]);
+
+  const updateDataScoped = useCallback(
+    (fields: Partial<FormData>) => {
+      updateData(fields);
+      if (leadId) saveDeepEvalDraftMerge(leadId, fields);
+    },
+    [leadId, updateData]
+  );
 
   React.useEffect(() => {
     const s = Number(searchParams.get('step')) || 0;
@@ -64,17 +99,23 @@ export default function DeepEvalPage() {
 
   const nextStep = () => {
     if (currentIndex < steps.length - 1) {
-      navigate(`/deep-eval?step=${currentIndex + 1}`);
+      navigate(buildDeepEvalPath(currentIndex + 1, leadId, fromRequirements));
       window.scrollTo(0, 0);
+    } else if (fromRequirements) {
+      navigate('/home', { state: { activeTab: 'requirements' } });
     } else {
-      navigate('/projects');
+      navigate(leadId ? `/projects?highlight=${encodeURIComponent(leadId)}` : '/projects');
     }
   };
 
   const prevStep = () => {
     if (currentIndex > 0) {
-      navigate(`/deep-eval?step=${currentIndex - 1}`);
+      navigate(buildDeepEvalPath(currentIndex - 1, leadId, fromRequirements));
       window.scrollTo(0, 0);
+    } else if (fromRequirements) {
+      navigate('/style-eval?from=requirements&showResult=true');
+    } else if (leadId) {
+      navigate(`/contracts?step=2&leadId=${encodeURIComponent(leadId)}`);
     } else {
       navigate('/');
     }
@@ -85,35 +126,50 @@ export default function DeepEvalPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col pb-24">
-       {/* Simple Header for Deep Eval */}
-       <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
-          <div className="w-full max-w-[800px] flex items-center justify-center relative">
-            <button
-              onClick={prevStep}
-              className="absolute left-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <h1 className="text-2xl font-medium text-gray-900">深度测评 ({currentIndex + 1}/{steps.length})</h1>
-            <NavigationMenu />
+      <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
+        <div className="w-full max-w-[800px] flex items-center justify-center relative">
+          <button
+            onClick={prevStep}
+            className="absolute left-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="text-center">
+            <h1 className="text-2xl font-medium text-gray-900">
+              深度测评 ({currentIndex + 1}/{steps.length})
+            </h1>
+            {leadId && (
+              <p className="text-xs text-amber-700 mt-1">本测评进度已与此条线索绑定保存</p>
+            )}
           </div>
-       </header>
+          <NavigationMenu />
+        </div>
+      </header>
 
-       <main className="flex-1 relative overflow-x-hidden">
+      <main className="flex-1 relative overflow-x-hidden">
         <AnimatePresence mode="wait">
           <CurrentComponent
             key={steps[currentIndex].id}
             data={data}
-            updateData={updateData}
+            updateData={leadId ? updateDataScoped : updateData}
             nextStep={nextStep}
             prevStep={prevStep}
-            goToWorkbench={() => navigate('/home')}
-            goToLogin={() => navigate('/home')}
+            goToWorkbench={() =>
+              navigate(
+                '/home',
+                fromRequirements ? { state: { activeTab: 'requirements' } } : undefined
+              )
+            }
+            goToLogin={() =>
+              navigate(
+                '/home',
+                fromRequirements ? { state: { activeTab: 'requirements' } } : undefined
+              )
+            }
           />
         </AnimatePresence>
       </main>
 
-      {/* Bottom Navigation - Hide on last step because Step21 has its own submit button */}
       {!isLastStep && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-50">
           <div className="max-w-[800px] mx-auto">

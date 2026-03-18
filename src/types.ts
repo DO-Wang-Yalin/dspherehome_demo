@@ -6,6 +6,19 @@ export interface MemberSpaceItem {
   description?: string;
 }
 
+/** 项目需求书「变更与修订记录」单条（与 docs/PROJECT_REQUIREMENTS.md §8 字段一致） */
+export interface RequirementDocRevisionEntry {
+  id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** 更新人 */
+  updater: string;
+  /** 变更概要 */
+  summary: string;
+  /** 涉及章节 / 备注 */
+  sectionNote?: string;
+}
+
 /** 需求书成员画像：可添加/编辑成员，每个成员下可添加/编辑空间及描述 */
 export interface RequirementsMember {
   id: string;
@@ -121,6 +134,33 @@ export interface FormData {
   contractSignatureData?: string;
   contractCustomText?: string;
   orders?: any[];
+  /** 需求书修订历史，最新在前 */
+  requirementDocRevisions?: RequirementDocRevisionEntry[];
+  /** 项目中心「预算资金」：EPC/订单拆解指标与确认状态 */
+  projectBudget?: ProjectBudgetData;
+}
+
+/** 预算资金确认状态与拆解数值（万元） */
+export interface ProjectBudgetData {
+  status: 'unconfirmed' | 'confirmed';
+  /** 最近一次确认时间 ISO */
+  confirmedAt?: string;
+  /** 确认时备注 */
+  lastConfirmNote?: string;
+  /** EPC：预算区间下限、上限 */
+  epcRangeMin: number;
+  epcRangeMax: number;
+  /** 项目入金金额（万元） */
+  epcDeposit: number;
+  /** 已成交金额（万元） */
+  epcWon: number;
+  /** 订单维度 */
+  orderTotalBudget: number;
+  orderDeliveryTotal: number;
+  orderAcceptanceTotal: number;
+  orderSettledTotal: number;
+  /** 用户「修改预算分配」提交说明 */
+  adjustmentHistory?: Array<{ at: string; text: string }>;
 }
 
 export const initialFormData: FormData = {
@@ -187,4 +227,17 @@ export const initialFormData: FormData = {
   contractSignatureData: '',
   contractCustomText: '',
   orders: INITIAL_ORDERS,
+  requirementDocRevisions: [],
+  projectBudget: {
+    status: 'unconfirmed',
+    epcRangeMin: 45,
+    epcRangeMax: 50,
+    epcDeposit: 26,
+    epcWon: 15.5,
+    orderTotalBudget: 50,
+    orderDeliveryTotal: 12,
+    orderAcceptanceTotal: 8,
+    orderSettledTotal: 15.5,
+    adjustmentHistory: [],
+  },
 };

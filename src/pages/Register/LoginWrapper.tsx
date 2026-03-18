@@ -1,23 +1,15 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LoginPage } from './LoginPage';
-import { getProjects } from '../../services/projects';
 
 export default function LoginWrapper() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo =
+    (location.state as { redirectTo?: string } | null)?.redirectTo || '/projects';
 
-  const handleLoginSuccess = async () => {
-    try {
-      const projects = await getProjects();
-      if (projects.length === 1) {
-        navigate('/home');
-      } else {
-        navigate('/projects');
-      }
-    } catch (error) {
-      console.error('Failed to fetch projects after login:', error);
-      navigate('/projects');
-    }
+  const handleLoginSuccess = () => {
+    navigate(redirectTo, { replace: true });
   };
 
   return (

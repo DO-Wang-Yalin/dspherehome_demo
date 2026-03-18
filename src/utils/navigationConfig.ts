@@ -35,3 +35,23 @@ export const NAVIGATION_STEPS: NavStep[] = [
   { id: 'q2-20', title: '旧物处理', path: '/deep-eval', search: '?step=17', qId: 'Q2-20' },
   { id: 'q2-21', title: '其他需求', path: '/deep-eval', search: '?step=18', qId: 'Q2-21' },
 ];
+
+/** 从项目需求书进入的用户已具备线索，流程仅保留：风格测评 → 深度测评 */
+const REQUIREMENTS_FLOW_EXCLUDED_STEP_IDS = new Set([
+  'welcome',
+  'leads-1',
+  'leads-2',
+  'budget',
+  'register',
+  'contract-1',
+  'contract-2',
+]);
+
+export function isRequirementsSupplementFlow(search: string): boolean {
+  return new URLSearchParams(search).get('from') === 'requirements';
+}
+
+export function getNavigationStepsForFlow(fromRequirementsFlow: boolean): NavStep[] {
+  if (!fromRequirementsFlow) return NAVIGATION_STEPS;
+  return NAVIGATION_STEPS.filter((s) => !REQUIREMENTS_FLOW_EXCLUDED_STEP_IDS.has(s.id));
+}

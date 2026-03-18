@@ -12,11 +12,14 @@ import {
   Wifi, Zap, Lightbulb, Music, ShieldCheck, Cpu, AirVent, Droplets, Thermometer,
   Lock, Waves, Trash2, Bath, Flame, Bot, Palette, Archive,
   Phone, Briefcase, ChevronDown, Copy, LocateFixed, Loader2, ChevronRight, Wallet, Home, Download, X,
+  FolderOpen, ListChecks,
 } from 'lucide-react';
 // @ts-ignore: static image asset import
 import contractFlowImg from '../assets/contract-flow.png';
 import { HomeStyleEval } from '../pages/StyleEval/HomeStyleEval';
 import { CONTRACT_TEXT } from '../constants/contract';
+import { useGlobal } from '../context/GlobalContext';
+import { getLeadById, convertLeadOnContractSign } from '../services/leads/savedLeadsStorage';
 
 // Re-export for backwards compatibility
 export { CONTRACT_TEXT };
@@ -469,13 +472,44 @@ export const StepDeepEval1 = ({ data, updateData, nextStep, prevStep }: StepProp
 };
 
 /** 深度测评-2：您的信息（独立步骤，目录显示「深度测评-2 您的信息」）— 页面设计对齐 Q2-0 */
-export const StepDeepEval2 = ({ data, updateData, nextStep, prevStep }: StepProps & { prevStep?: () => void }) => {
+export const StepDeepEval2 = ({
+  data,
+  updateData,
+  nextStep,
+  prevStep,
+  returnToProjects,
+  onSubmittedToProjects,
+}: StepProps & {
+  prevStep?: () => void
+  /** 从项目页进入：填完后提交线索并回调（如返回 /projects） */
+  returnToProjects?: boolean
+  onSubmittedToProjects?: () => void
+}) => {
   const ctx = useDeepEvalForm();
-  const { formData, handleChange, errors, validateStep2, titleOptions, ageOptions, industryOptions, isLocating, handleGetCityLocation, budgetDisplayLabel } = ctx;
+  const {
+    formData,
+    handleChange,
+    errors,
+    validateStep2,
+    validateStep3,
+    titleOptions,
+    ageOptions,
+    industryOptions,
+    isLocating,
+    handleGetCityLocation,
+    budgetDisplayLabel,
+    submit,
+    isSubmitting,
+    submitError,
+  } = ctx;
 
-  const handleNext = () => {
-    if (!validateStep2()) return;
-    // 同步线索收集 DeepEvalForm → GlobalContext FormData
+  React.useEffect(() => {
+    if (!returnToProjects || !data?.userPhone || formData.phone) return;
+    const p = data.userPhone.replace(/[^\d]/g, '');
+    if (p.length === 11) handleChange('phone', p);
+  }, [returnToProjects, data?.userPhone, formData.phone, handleChange]);
+
+  const syncToGlobal = () => {
     updateData({
       projectLocation: (formData.projectPosition || data?.projectLocation) ?? '',
       projectType: (formData.projectType || data?.projectType) ?? '',
@@ -487,12 +521,34 @@ export const StepDeepEval2 = ({ data, updateData, nextStep, prevStep }: StepProp
       userCity: (formData.city || data?.userCity) ?? '',
       userAgeRange: (formData.ageGroup || data?.userAgeRange) ?? '',
       userIndustry: (formData.industry || data?.userIndustry) ?? '',
+      userPhone: (formData.phone || data?.userPhone) ?? '',
     });
+  };
+
+  const handleNext = async () => {
+    if (!validateStep2()) return;
+    syncToGlobal();
+    if (returnToProjects) {
+      if (!validateStep3()) return;
+      await submit({
+        onSuccess: () => onSubmittedToProjects?.(),
+        skipSuccessModal: true,
+        saveLocalOnFailure: true,
+      });
+      return;
+    }
     nextStep();
   };
 
   return (
-    <StepWrapper title="您的信息" subtitle="这是一份「画像校准」。填完后，你的喜好与档案会一起被保存，后续在产品里自动续上。">
+    <StepWrapper
+      title="您的信息"
+      subtitle={
+        returnToProjects
+          ? '您已登录，提交后无需再注册，将前往结果页并可返回「线索与项目」。'
+          : '这是一份「画像校准」。填完后，你的喜好与档案会一起被保存，后续在产品里自动续上。'
+      }
+    >
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-3 sm:items-end">
           <div className="flex-1 min-w-0">
@@ -577,13 +633,46 @@ export const StepDeepEval2 = ({ data, updateData, nextStep, prevStep }: StepProp
           </div>
           {errors.industry && <p className="text-red-500 text-xs mt-1">{errors.industry}</p>}
         </div>
+        {returnToProjects && (
+          <div className="flex flex-col gap-3">
+            <label className="text-sm font-bold text-gray-800">手机号码</label>
+            <div className="relative flex items-center">
+              <Phone size={18} className="absolute left-4 text-gray-400" />
+              <input
+                type="tel"
+                inputMode="numeric"
+                maxLength={11}
+                value={formData.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
+                placeholder="11 位手机号，用于提交线索"
+                className="w-full py-4 bg-[#FFF9E8] rounded-xl border-none focus:ring-2 focus:ring-[#EF6B00]/20 outline-none transition-all text-gray-800 pl-11 pr-4 placeholder:text-gray-400"
+              />
+            </div>
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+          </div>
+        )}
+        {submitError && returnToProjects && (
+          <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-4 py-2">{submitError}</p>
+        )}
         <button
           type="button"
-          onClick={handleNext}
-          className="w-full bg-[#FF9C3E] text-white py-4 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-[#EF6B00] transition-colors active:scale-[0.99] mt-2"
+          onClick={() => void handleNext()}
+          disabled={isSubmitting}
+          className="w-full bg-[#FF9C3E] text-white py-4 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-[#EF6B00] transition-colors active:scale-[0.99] mt-2 disabled:opacity-60"
         >
-          下一步
-          <ChevronRight size={18} />
+          {isSubmitting && returnToProjects ? (
+            '提交中…'
+          ) : returnToProjects ? (
+            <>
+              提交线索
+              <ChevronRight size={18} />
+            </>
+          ) : (
+            <>
+              下一步
+              <ChevronRight size={18} />
+            </>
+          )}
         </button>
       </div>
     </StepWrapper>
@@ -2092,7 +2181,18 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps
   );
 };
 
-export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
+export const StepContract = ({
+  data,
+  updateData,
+  nextStep,
+  contractLeadId,
+}: StepProps & { contractLeadId?: string | null }) => {
+  const { setActiveProjectLeadId } = useGlobal();
+  const lead = contractLeadId ? getLeadById(contractLeadId) : undefined;
+  const signedForFlow = contractLeadId
+    ? !!(lead && (lead.contractSignatureData || lead.status === 'project'))
+    : !!data.contractSignatureData;
+
   const [showSignature, setShowSignature] = React.useState(false);
   const [hasDrawn, setHasDrawn] = React.useState(false);
   const [showFullscreen, setShowFullscreen] = React.useState(false);
@@ -2331,7 +2431,31 @@ export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawn) return;
     const dataUrl = canvas.toDataURL('image/png');
-    updateData({ contractSignatureData: dataUrl as any, contractAccepted: true as any });
+    if (contractLeadId) {
+      convertLeadOnContractSign(contractLeadId, dataUrl);
+      const L = getLeadById(contractLeadId);
+      if (L) {
+        updateData({
+          contractSignatureData: dataUrl as any,
+          contractAccepted: true as any,
+          userName: L.name,
+          userTitle: L.salutation,
+          userPhone: L.phone,
+          userCity: L.city,
+          userAgeRange: L.ageGroup,
+          userIndustry: L.industry,
+          projectName: L.projectName,
+          projectLocation: L.projectPosition,
+          projectArea: L.area,
+          projectType: L.projectType,
+          houseCondition: L.handoverStatus,
+          budgetStandard: L.budget,
+        });
+      }
+      setActiveProjectLeadId(contractLeadId);
+    } else {
+      updateData({ contractSignatureData: dataUrl as any, contractAccepted: true as any });
+    }
     setShowSignature(false);
     setShowFullscreen(false);
     nextStep();
@@ -2447,16 +2571,16 @@ export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
             <div className="px-5 py-4 border-t border-gray-100 space-y-3">
               <button
                 type="button"
-                disabled={!canSign && !data.contractSignatureData}
-                onClick={data.contractSignatureData ? nextStep : handleOpenSignature}
+                disabled={!canSign && !signedForFlow}
+                onClick={signedForFlow ? nextStep : handleOpenSignature}
                 className={`w-full rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors active:scale-[0.99] ${
-                  canSign || data.contractSignatureData ? 'bg-[#FF9C3E] hover:bg-[#EF6B00]' : 'bg-gray-300 cursor-not-allowed'
+                  canSign || signedForFlow ? 'bg-[#FF9C3E] hover:bg-[#EF6B00]' : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
-                {data.contractSignatureData ? '已签署，查看付款信息' : '已阅读至底部，前往签署'}
+                {signedForFlow ? '已签署，查看付款信息' : '已阅读至底部，前往签署'}
               </button>
               <p className="text-[11px] text-gray-500 text-center">
-                {data.contractSignatureData
+                {signedForFlow
                   ? '您已完成签署，可点击上方按钮查看付款信息。'
                   : !canSign
                     ? '请先滚动阅读至合同最底部后，再进行签署。'
@@ -2527,8 +2651,24 @@ export const StepContract = ({ data, updateData, nextStep }: StepProps) => {
   );
 };
 
-export const StepPayment = ({ nextStep, onBackToHome, primaryActionLabel = '完成支付进入深度测评' }: StepProps & { onBackToHome?: () => void; primaryActionLabel?: string }) => {
+export const StepPayment = ({
+  nextStep,
+  onBackToHome,
+  primaryActionLabel = '完成支付进入深度测评',
+  leadChoiceActions,
+}: StepProps & {
+  onBackToHome?: () => void;
+  primaryActionLabel?: string;
+  /** 线索合同流：复制解锁后在同页展示「进工作台 / 深度测评」，不再单独开一页 */
+  leadChoiceActions?: {
+    projectName: string;
+    onEnterWorkbench: () => void;
+    onContinueDeepEval: () => void;
+  };
+}) => {
   const [copied, setCopied] = React.useState(false);
+  /** 复制成功后保持显示主操作区 */
+  const [actionsUnlocked, setActionsUnlocked] = React.useState(false);
   const accountName = '上海某某空间设计有限公司';
   const bankName = '中国工商银行 上海某某支行';
   const bankAccount = '6222 0000 1234 5678 888';
@@ -2537,6 +2677,7 @@ export const StepPayment = ({ nextStep, onBackToHome, primaryActionLabel = '完�
     try {
       await navigator.clipboard.writeText(`${accountName} ${bankName} ${bankAccount}`);
       setCopied(true);
+      setActionsUnlocked(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setCopied(false);
@@ -2573,7 +2714,55 @@ export const StepPayment = ({ nextStep, onBackToHome, primaryActionLabel = '完�
           转账完成后，顾问将尽快与您确认到账情况并安排后续服务。
         </p>
 
-        {copied && (
+        {actionsUnlocked && leadChoiceActions && (
+          <div className="space-y-3 pt-2 border-t border-gray-100">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">合同与意向金信息已确认</p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                请选择下一步：进入项目工作台查看订单与需求书，或先完成深度测评（可随时再进入项目）。
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={leadChoiceActions.onEnterWorkbench}
+                className="rounded-2xl border-2 border-[#EF6B00]/25 bg-white p-4 text-left shadow-sm hover:shadow-md hover:border-[#EF6B00]/50 transition-all active:scale-[0.99] group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-[#EF6B00]/10 flex items-center justify-center text-[#EF6B00] mb-3 group-hover:bg-[#EF6B00]/15">
+                  <FolderOpen className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">进入我的项目</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  进入「{leadChoiceActions.projectName || '项目'}」工作台，查看合同、订单与项目需求书等。
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={leadChoiceActions.onContinueDeepEval}
+                className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/40 p-4 text-left shadow-sm hover:shadow-md hover:border-emerald-400/60 transition-all active:scale-[0.99] group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 mb-3 group-hover:bg-emerald-200/80">
+                  <ListChecks className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-1">继续深度测评</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  填写深度需求测评，进度与当前项目绑定，完成后可随时从项目页进入工作台。
+                </p>
+              </button>
+            </div>
+            {onBackToHome && (
+              <button
+                type="button"
+                onClick={onBackToHome}
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors active:scale-[0.99]"
+              >
+                返回主页
+              </button>
+            )}
+          </div>
+        )}
+
+        {actionsUnlocked && !leadChoiceActions && (
           <div className="flex flex-col gap-3 pt-2">
             <button
               type="button"

@@ -17,6 +17,8 @@ interface ResultPageProps {
   textAnswers: Record<string, string>;
   onRestart: () => void;
   onGoDeepEval?: () => void;
+  /** 自定义「下一步」主按钮文案（如从需求书进入时直达深度测评） */
+  deepEvalButtonLabel?: string;
   /** 风格测评结果就绪时回调，用于写入 FormData */
   onStyleResult?: (result: { styleId: string; styleName: string; colorGene: string; styleSuggestions: string }) => void;
 }
@@ -86,7 +88,14 @@ function parseHardSoft(suggestions: string): { hardDecor: string; softDecor: str
   return { hardDecor, softDecor };
 }
 
-export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval, onStyleResult }: ResultPageProps) {
+export function ResultPage({
+  answers,
+  textAnswers,
+  onRestart,
+  onGoDeepEval,
+  deepEvalButtonLabel,
+  onStyleResult,
+}: ResultPageProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -267,7 +276,9 @@ export function ResultPage({ answers, textAnswers, onRestart, onGoDeepEval, onSt
             className="w-full bg-[#EF6B00] text-white py-4 px-5 rounded-xl shadow-lg shadow-[#EF6B00]/20 hover:bg-[#CC5B00] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles size={16} fill="currentColor" className="opacity-80" />
-            <span className="font-bold text-sm tracking-widest uppercase">填写线索信息获取项目预算分配图</span>
+            <span className="font-bold text-sm tracking-widest uppercase">
+              {deepEvalButtonLabel ?? '填写线索信息获取项目预算分配图'}
+            </span>
           </button>
           <button
             type="button"

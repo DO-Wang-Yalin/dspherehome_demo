@@ -396,6 +396,20 @@ export function getDesignVersionInfo(orderNumber: string | undefined): {
   };
 }
 
+/** 当前版本按 order 排序后的第一页，供订单详情预览（与设计反馈详情第一页一致） */
+export function getDesignFirstPagePreview(orderNumber: string | undefined): {
+  imageUrl: string;
+  pageTitle: string;
+} | null {
+  const order = orderNumber === 'PSO-OD_LHJCF-00584' ? DESIGN_FEEDBACK_ORDER_00584 : DESIGN_FEEDBACK_ORDER;
+  const currentId = order.currentVersionId;
+  const version = order.versions.find((v) => v.id === currentId) || order.versions[0];
+  if (!version?.pages?.length) return null;
+  const sorted = [...version.pages].sort((a, b) => a.order - b.order);
+  const first = sorted[0];
+  return { imageUrl: String(first.imageUrl), pageTitle: first.title };
+}
+
 const ORDER_VERSIONS = DESIGN_FEEDBACK_ORDER.versions;
 
 // --- History Snapshot Viewer Component (simplified from original) ---
@@ -1700,10 +1714,30 @@ function DesignOverview({
 }
 
 // 4. 对外暴露的主组件：供 Step 中直接使用（完整沿用原项目 App 逻辑）
-export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => void, orderNumber?: string }) {
-  const [currentView, setCurrentView] = useState<'overview' | 'viewer'>('overview');
-  const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
+export function DesignFeedbackApp({
+  onGoHome,
+  orderNumber,
+  openViewerDirectly = false,
+}: {
+  onGoHome?: () => void;
+  orderNumber?: string;
+  /** 为 true 时直接进入当前版本的图纸浏览（第一页），无需在概览再点「查看回顾」 */
+  openViewerDirectly?: boolean;
+}) {
+  const designOrder =
+    orderNumber === 'PSO-OD_LHJCF-00584' ? DESIGN_FEEDBACK_ORDER_00584 : DESIGN_FEEDBACK_ORDER;
+  const initialVersionId =
+    designOrder.currentVersionId || designOrder.versions[0]?.id || null;
+
+  const [currentView, setCurrentView] = useState<'overview' | 'viewer'>(() =>
+    openViewerDirectly && initialVersionId ? 'viewer' : 'overview',
+  );
+  const [activeVersionId, setActiveVersionId] = useState<string | null>(() =>
+    openViewerDirectly && initialVersionId ? initialVersionId : null,
+  );
   const [isViewerReadOnly, setIsViewerReadOnly] = useState(false);
+  /** 从设计反馈总览点「继续查看」进入图纸页时为 true；从订单详情直达图纸页时为 false，此时返回应回订单详情 */
+  const [enteredViewerViaOverview, setEnteredViewerViaOverview] = useState(false);
   const { data, updateData } = useGlobal();
 
   // 全局评论状态：Record<versionId, Record<pageId, Comment[]>>
@@ -1719,15 +1753,25 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
   }, []);
 
   const handleSelectVersion = useCallback((versionId: string, readOnly: boolean) => {
+    setEnteredViewerViaOverview(true);
     setActiveVersionId(versionId);
     setIsViewerReadOnly(readOnly);
     setCurrentView('viewer');
   }, []);
 
   const handleBackToOverview = useCallback(() => {
+    setEnteredViewerViaOverview(false);
     setCurrentView('overview');
     setActiveVersionId(null);
   }, []);
+
+  const handleViewerBack = useCallback(() => {
+    if (orderNumber && onGoHome && !enteredViewerViaOverview) {
+      onGoHome();
+      return;
+    }
+    handleBackToOverview();
+  }, [orderNumber, onGoHome, enteredViewerViaOverview, handleBackToOverview]);
 
   const handleUpdateComments = useCallback((versionId: string, pageId: string, comments: Comment[]) => {
     setAllComments((prev) => ({
@@ -1750,7 +1794,6 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
     });
   }, []);
 
-  const designOrder = orderNumber === 'PSO-OD_LHJCF-00584' ? DESIGN_FEEDBACK_ORDER_00584 : DESIGN_FEEDBACK_ORDER;
   const orderVersions = designOrder.versions;
 
   return (
@@ -1769,7 +1812,7 @@ export function DesignFeedbackApp({ onGoHome, orderNumber }: { onGoHome?: () => 
           order={designOrder}
           version={orderVersions.find((v) => v.id === activeVersionId)!}
           initialPageIndex={0}
-          onBack={handleBackToOverview}
+          onBack={handleViewerBack}
           readOnly={isViewerReadOnly}
           globalComments={allComments[activeVersionId] || {}}
           onUpdateComments={(pageId, comments) => handleUpdateComments(activeVersionId, pageId, comments)}

@@ -110,9 +110,11 @@ function bandPath(
 interface BudgetSankeyByEPEProps {
   data?: BudgetSankeyData | null
   subtitle?: string
+  /** 外层已由面板包一层卡片时，去掉内层白底圆角边框，避免双卡片 */
+  unstyled?: boolean
 }
 
-function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
+function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps = {}) {
   const incomeEntries = data?.incomeEntries ?? INCOME_ENTRIES
   const orders = data?.orders ?? ORDERS
   const totalBudget = data?.totalBudget ?? TOTAL_BUDGET
@@ -319,13 +321,25 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
   const todayIncome = incomeLayout.find((inc) => inc.isToday)
   const todayY = todayIncome ? todayIncome.actualY : null
 
+  const outer = unstyled
+    ? 'w-full overflow-hidden'
+    : 'w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden'
+  const headPad = unstyled
+    ? 'pb-3 mb-1'
+    : 'px-5 py-4 border-b border-gray-100'
+  const footPad = unstyled
+    ? 'px-0 pt-3 mt-2 border-t border-gray-100'
+    : 'px-5 py-2.5 border-t border-gray-100'
+
   return (
-    <div className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+    <div className={outer}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 ${headPad}`}>
         <div>
-          <h2 className="text-gray-800 leading-tight">按 E/P/C 与成交状态</h2>
+          <h2 className="text-gray-800 leading-tight text-sm font-semibold sm:text-base">
+            {unstyled ? 'EPC预算拆解 · 按 E/P/C 与成交状态' : '按 E/P/C 与成交状态'}
+          </h2>
           <p className="text-gray-400 leading-snug mt-0.5" style={{ fontSize: 12 }}>
-            {subtitle ?? 'LHJCF 家装工程'} · 总预算 {layoutTotalBudget}w · 入金→总预算→E/P/C 阶段→已成交/未成交
+            {subtitle ?? 'LHJCF 家装工程'} · 总预算 {layoutTotalBudget}w · 入金→总预算→E/P/C→已成交/未成交
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -561,8 +575,8 @@ function BudgetSankeyByEPE({ data, subtitle }: BudgetSankeyByEPEProps = {}) {
         </div>
       </div>
 
-      <div className="px-5 py-2.5 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
-        <span className="text-gray-400" style={{ fontSize: 11 }}>入金→总预算→E/P/C 阶段→已成交/未成交</span>
+      <div className={`${footPad} flex items-center justify-between flex-wrap gap-2`}>
+        <span className="text-gray-400" style={{ fontSize: 11 }}>入金→总预算→E/P/C→已成交/未成交</span>
         <span className="text-gray-400" style={{ fontSize: 11 }}>已入金 ¥{paidSoFar}w / 总预算 ¥{layoutTotalBudget}w</span>
       </div>
     </div>

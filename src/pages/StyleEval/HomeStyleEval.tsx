@@ -8,6 +8,8 @@ import { ResultPage } from './components/ResultPage';
 
 type HomeStyleEvalProps = {
   onGoDeepEval?: () => void;
+  /** 需求书补齐流程：结果页主按钮文案（默认引导去线索页） */
+  deepEvalButtonLabel?: string;
   onGoHome?: () => void;
   /** 受控子页：0..questions.length-1 为题目，questions.length 为结果页；与 onPageChange 一起由目录跳转使用 */
   controlledPageIndex?: number;
@@ -16,7 +18,14 @@ type HomeStyleEvalProps = {
   onStyleResult?: (result: { styleId: string; styleName: string; colorGene: string; styleSuggestions: string }) => void;
 };
 
-export function HomeStyleEval({ onGoDeepEval, onGoHome, controlledPageIndex, onPageChange, onStyleResult }: HomeStyleEvalProps) {
+export function HomeStyleEval({
+  onGoDeepEval,
+  deepEvalButtonLabel,
+  onGoHome,
+  controlledPageIndex,
+  onPageChange,
+  onStyleResult,
+}: HomeStyleEvalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const [quantities, setQuantities] = useState<Record<string, Record<string, number>>>({});
@@ -126,6 +135,7 @@ export function HomeStyleEval({ onGoDeepEval, onGoHome, controlledPageIndex, onP
                 textAnswers={textAnswers}
                 onRestart={handleRestart}
                 onGoDeepEval={onGoDeepEval}
+                deepEvalButtonLabel={deepEvalButtonLabel}
                 onStyleResult={onStyleResult}
               />
             </div>
