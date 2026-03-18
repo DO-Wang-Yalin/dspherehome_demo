@@ -4,6 +4,10 @@
 import type { FormData } from '../../types';
 import { initialFormData } from '../../types';
 import { DEEP_EVAL_FORM_KEYS, getDeepEvalDraft } from './deepEvalByLeadStorage';
+import {
+  getLonghuJingchenfuFullFormData,
+  LONGHU_JINGCHENFU_DEMO_LEAD_ID,
+} from './longhuJingchenfuDemo';
 import { getLeadById } from './savedLeadsStorage';
 
 export function enterProjectWorkbenchFromLead(
@@ -12,6 +16,11 @@ export function enterProjectWorkbenchFromLead(
   setActiveProjectLeadId: (id: string | null) => void
 ) {
   setActiveProjectLeadId(leadId);
+  if (leadId === LONGHU_JINGCHENFU_DEMO_LEAD_ID) {
+    const draft = getDeepEvalDraft(leadId);
+    updateData({ ...getLonghuJingchenfuFullFormData(), ...draft });
+    return;
+  }
   const lead = getLeadById(leadId);
   const resetDeep: Partial<FormData> = {};
   const init = initialFormData as unknown as Record<string, unknown>;

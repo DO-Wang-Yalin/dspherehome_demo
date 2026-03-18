@@ -12,8 +12,9 @@ import {
 import { PROJECT_COVER_PLACEHOLDERS } from '../../services/projects';
 import {
   getPendingLeads,
-  getConvertedLeads,
+  getConvertedLeadsForProjectPage,
   deleteUserLead,
+  LONGHU_JINGCHENFU_DEMO_LEAD_ID,
   type UserLead,
 } from '../../services/leads/savedLeadsStorage';
 import { LeadEditModal } from './LeadEditModal';
@@ -75,7 +76,7 @@ export function ProjectPage({
 
   const refresh = useCallback(() => {
     setPending(getPendingLeads());
-    setConverted(getConvertedLeads());
+    setConverted(getConvertedLeadsForProjectPage());
   }, []);
 
   useEffect(() => {
@@ -301,9 +302,16 @@ export function ProjectPage({
                           ))}
                         </div>
                         <div className="px-5 sm:px-7 py-5 sm:py-6 bg-white border-t border-[#F0EBE3]">
-                          <h3 className="text-xl sm:text-2xl font-semibold text-[#2C2825] tracking-tight">
-                            {title}
-                          </h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-xl sm:text-2xl font-semibold text-[#2C2825] tracking-tight">
+                              {title}
+                            </h3>
+                            {lead.id === LONGHU_JINGCHENFU_DEMO_LEAD_ID ? (
+                              <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-100">
+                                资料完整示例
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="flex items-center gap-2 text-sm sm:text-base text-gray-500 mt-2">
                             <MapPin className="w-4 h-4 shrink-0 text-gray-400" />
                             {loc}

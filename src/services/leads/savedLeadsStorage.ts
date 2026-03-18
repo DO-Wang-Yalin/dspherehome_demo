@@ -2,6 +2,13 @@
  * 本地「我的线索」：待签约 → 签署合同后转为项目；深度测评按 leadId 绑定
  */
 
+import {
+  getLonghuJingchenfuDemoLead,
+  LONGHU_JINGCHENFU_DEMO_LEAD_ID,
+} from './longhuJingchenfuDemo'
+
+export { LONGHU_JINGCHENFU_DEMO_LEAD_ID }
+
 export type LeadStatus = 'pending_contract' | 'project'
 
 export interface LeadFormSnapshot {
@@ -95,6 +102,7 @@ export function getUserLeads(): UserLead[] {
 }
 
 export function getLeadById(id: string): UserLead | undefined {
+  if (id === LONGHU_JINGCHENFU_DEMO_LEAD_ID) return getLonghuJingchenfuDemoLead()
   return load().find((l) => l.id === id)
 }
 
@@ -131,6 +139,7 @@ export function updateUserLead(
 }
 
 export function deleteUserLead(id: string): boolean {
+  if (id === LONGHU_JINGCHENFU_DEMO_LEAD_ID) return false
   const list = load()
   const next = list.filter((l) => l.id !== id)
   if (next.length === list.length) return false
@@ -175,4 +184,21 @@ export function getPendingLeads(): UserLead[] {
 
 export function getConvertedLeads(): UserLead[] {
   return getUserLeads().filter((l) => l.status === 'project' && l.projectId)
+}
+
+/** 项目页「已签约」列表：首位固定展示演示项目龙湖璟宸府（完整数据，不落库） */
+export function getConvertedLeadsForProjectPage(): UserLead[] {
+  const demo = getLonghuJingchenfuDemoLead()
+  const rest = load()
+    .filter(
+      (l) =>
+        l.status === 'project' &&
+        l.projectId &&
+        l.id !== LONGHU_JINGCHENFU_DEMO_LEAD_ID
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+  return [demo, ...rest]
 }

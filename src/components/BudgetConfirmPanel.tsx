@@ -170,7 +170,7 @@ export function BudgetConfirmPanel() {
   const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '—')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-28 sm:pb-24">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span
@@ -223,24 +223,8 @@ export function BudgetConfirmPanel() {
         <BudgetSankey unstyled title="订单预算拆解" subtitle="按里程碑与订单维度的预算流动" />
       </section>
 
-      {/* 底部操作 */}
+      {/* 记录与说明（按钮固定在视口右下角） */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => setConfirmOpen(true)}
-            className="inline-flex justify-center items-center rounded-xl bg-[#EF6B00] text-white text-sm font-medium px-5 py-2.5 hover:bg-[#D85F00] transition-colors"
-          >
-            确认当前预算
-          </button>
-          <button
-            type="button"
-            onClick={() => setModifyOpen(true)}
-            className="inline-flex justify-center items-center rounded-xl bg-white text-sm font-medium px-5 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            修改预算分配
-          </button>
-        </div>
         {b.lastConfirmNote ? (
           <p className="text-xs text-gray-500">
             <span className="font-medium text-gray-600">最近确认说明：</span>
@@ -260,6 +244,35 @@ export function BudgetConfirmPanel() {
             </ul>
           </div>
         ) : null}
+        {!b.lastConfirmNote && (!b.adjustmentHistory || b.adjustmentHistory.length === 0) ? (
+          <p className="text-xs text-gray-400">确认或修改预算后，说明与记录将显示在此处。</p>
+        ) : null}
+      </div>
+
+      {/* 常显：右下角固定操作 */}
+      <div
+        className="fixed z-[70] flex flex-col sm:flex-row gap-2 sm:items-center pointer-events-none"
+        style={{
+          bottom: 'max(1.25rem, env(safe-area-inset-bottom, 0px))',
+          right: 'max(1rem, env(safe-area-inset-right, 0px))',
+        }}
+      >
+        <div className="pointer-events-auto flex flex-col sm:flex-row gap-2 rounded-2xl border border-gray-200/90 bg-white/95 backdrop-blur-md p-2 shadow-lg shadow-gray-900/10">
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            className="inline-flex justify-center items-center rounded-xl bg-[#EF6B00] text-white text-sm font-medium px-5 py-2.5 hover:bg-[#D85F00] transition-colors min-w-[8.5rem]"
+          >
+            确认当前预算
+          </button>
+          <button
+            type="button"
+            onClick={() => setModifyOpen(true)}
+            className="inline-flex justify-center items-center rounded-xl bg-white text-sm font-medium px-5 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors min-w-[8.5rem]"
+          >
+            修改预算分配
+          </button>
+        </div>
       </div>
 
       <p className="text-center text-xs text-gray-400">
