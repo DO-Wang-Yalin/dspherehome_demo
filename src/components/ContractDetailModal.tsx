@@ -1,8 +1,7 @@
 import React from 'react'
 import { X, ChevronRight } from 'lucide-react'
 import { CONTRACT_TEXT } from '../constants/contract'
-// @ts-ignore
-import contractFlowImg from '../assets/contract-flow.png'
+const contractFlowImg = '/img/contract-flow.png'
 
 export function ContractDetailModal({
   open,

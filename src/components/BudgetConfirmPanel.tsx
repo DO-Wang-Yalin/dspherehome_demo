@@ -5,6 +5,13 @@ import BudgetSankeyByEPE from './BudgetSankeyByEPE'
 import { useGlobal } from '../context/GlobalContext'
 import type { ProjectBudgetData } from '../types'
 import { LONGHU_JINGCHENFU_DEMO_LEAD_ID } from '../services/leads/savedLeadsStorage'
+import { FileText } from 'lucide-react'
+import { copyTextToClipboard } from '../utils/copyText'
+import {
+  buildBudgetSankeyFromProjectBudget,
+  buildEpcPiePaths,
+  getEpcAllocationFromProjectBudget,
+} from '../utils/ordersToBudgetSankey'
 
 function defaultProjectBudget(): ProjectBudgetData {
   return {
@@ -41,87 +48,87 @@ const DEPOSIT_PAYMENT_INFO = {
   remark: '转账请备注：项目入金 + 您的合同编号或项目名称',
 } as const
 
-function copyToClipboard(text: string, okMsg = '已复制到剪贴板') {
-  void navigator.clipboard.writeText(text).then(
-    () => toast.success(okMsg),
-    () => toast.error('复制失败，请手动长按选择复制')
-  )
-}
-
 function DepositPaymentModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [copied, setCopied] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!open) setCopied(false)
+  }, [open])
+
   if (!open) return null
 
+  const { payeeName, bankName, accountNo, remark } = DEPOSIT_PAYMENT_INFO
   const fullText = [
-    `收款户名：${DEPOSIT_PAYMENT_INFO.payeeName}`,
-    `开户银行：${DEPOSIT_PAYMENT_INFO.bankName}`,
-    `银行账号：${DEPOSIT_PAYMENT_INFO.accountNo}`,
-    DEPOSIT_PAYMENT_INFO.remark,
+    `账户名称：${payeeName}`,
+    `开户银行：${bankName}`,
+    `银行账号：${accountNo}`,
+    remark,
   ].join('\n')
 
-  const Row = ({
-    label,
-    value,
-  }: {
-    label: string
-    value: string
-  }) => (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/80 px-3 py-2.5">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs text-gray-500 mb-0.5">{label}</div>
-          <div className="text-sm text-gray-900 font-medium break-all select-all">{value}</div>
-        </div>
-        <button
-          type="button"
-          onClick={() => copyToClipboard(value, `已复制${label}`)}
-          className="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-        >
-          复制
-        </button>
-      </div>
-    </div>
-  )
+  const handleCopy = () => {
+    void copyTextToClipboard(fullText).then((ok) => {
+      if (ok) {
+        setCopied(true)
+        toast.success('已复制全部付款信息')
+        window.setTimeout(() => setCopied(false), 2000)
+      } else {
+        toast.error('复制失败，请长按文字手动复制')
+      }
+    })
+  }
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="deposit-payment-title"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden max-h-[90vh] flex flex-col"
+        className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="px-5 pt-5 pb-3 border-b border-gray-100 shrink-0">
-          <h3 id="deposit-payment-title" className="text-base font-semibold text-gray-900">
+        <div className="px-5 pt-5 pb-2 shrink-0 border-b border-gray-100">
+          <h3 id="deposit-payment-title" className="text-lg font-semibold text-gray-900">
             增加入金 · 付款账号
           </h3>
           <p className="mt-1.5 text-sm text-gray-500 leading-relaxed">
-            请向以下对公账户转账完成入金。可复制单项或一键复制全部信息，转账后请保留凭证并联系项目顾问核对。
+            请根据以下信息进行转账完成入金。
           </p>
         </div>
-        <div className="px-5 py-4 space-y-3 overflow-y-auto flex-1">
-          <Row label="收款户名" value={DEPOSIT_PAYMENT_INFO.payeeName} />
-          <Row label="开户银行" value={DEPOSIT_PAYMENT_INFO.bankName} />
-          <Row label="银行账号" value={DEPOSIT_PAYMENT_INFO.accountNo} />
-          <Row label="转账备注" value={DEPOSIT_PAYMENT_INFO.remark} />
-        </div>
-        <div className="px-5 py-4 bg-gray-50/80 border-t border-gray-100 flex flex-col-reverse sm:flex-row justify-end gap-2 shrink-0">
+        <div className="px-5 py-5 overflow-y-auto flex-1 space-y-5">
+          {/* 与 StepPayment「意向金支付账号信息」卡片同风格 */}
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText size={18} className="text-[#EF6B00]" />
+              <span className="text-sm font-semibold text-gray-900">对公转账信息</span>
+            </div>
+            <div className="space-y-1.5 text-sm text-gray-800">
+              <p>账户名称：{payeeName}</p>
+              <p>开户银行：{bankName}</p>
+              <p>银行账号：{accountNo}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="mt-2 w-full rounded-xl bg-[#FF9C3E] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#EF6B00] transition-colors active:scale-[0.99]"
+            >
+              {copied ? '已复制账号信息' : '一键复制全部信息'}
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500 leading-relaxed">{remark}</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            转账完成后请保留凭证并联系项目顾问核对到账；如有疑问可随时咨询顾问。
+          </p>
+
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
             关闭
-          </button>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(fullText, '已复制全部付款信息')}
-            className="rounded-xl bg-[#EF6B00] text-white px-4 py-2.5 text-sm font-medium hover:bg-[#D85F00]"
-          >
-            一键复制全部
           </button>
         </div>
       </div>
@@ -129,23 +136,65 @@ function DepositPaymentModal({ open, onClose }: { open: boolean; onClose: () => 
   )
 }
 
-function StatCell({
+/** 桑基图上方：独立指标卡片（语义色条 + 轻层次） */
+function BudgetMetricCard({
   label,
   value,
   suffix = '万',
   valueClass = 'text-gray-900',
+  accent = 'slate',
+  hint,
+  action,
 }: {
   label: string
   value: string
   suffix?: string
   valueClass?: string
+  accent?: 'slate' | 'amber' | 'blue' | 'orange' | 'violet' | 'emerald' | 'rose'
+  hint?: string
+  action?: React.ReactNode
 }) {
+  const bar: Record<string, string> = {
+    slate: 'from-slate-500 to-slate-400',
+    amber: 'from-amber-500 to-amber-400',
+    blue: 'from-blue-500 to-blue-400',
+    orange: 'from-orange-500 to-orange-400',
+    violet: 'from-violet-500 to-violet-400',
+    emerald: 'from-emerald-500 to-emerald-400',
+    rose: 'from-rose-500 to-rose-400',
+  }
   return (
-    <div className="space-y-1 min-w-0">
-      <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{label}</div>
-      <div className="flex items-baseline gap-1 flex-wrap">
-        <span className={`text-lg sm:text-xl font-bold tabular-nums ${valueClass}`}>{value}</span>
-        {suffix ? <span className="text-xs text-gray-500 shrink-0">{suffix}</span> : null}
+    <div
+      className={[
+        'group relative flex flex-col min-h-[5.5rem] rounded-2xl border border-gray-100/90 bg-white',
+        'shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.04)]',
+        'hover:shadow-[0_2px_8px_rgba(15,23,42,0.06)] hover:border-gray-200/90 transition-all duration-200',
+        'overflow-hidden',
+      ].join(' ')}
+    >
+      <div className={`h-1 w-full shrink-0 bg-gradient-to-r ${bar[accent]}`} aria-hidden />
+      <div className="flex flex-1 flex-col justify-between p-3.5 sm:p-4 pt-3 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-gray-400 leading-tight">
+            {label}
+          </span>
+          {action ? <div className="shrink-0 -mr-0.5 -mt-0.5">{action}</div> : null}
+        </div>
+        <div className="mt-2 flex items-baseline gap-1 flex-wrap">
+          <span
+            className={`text-xl sm:text-2xl font-semibold tabular-nums tracking-tight ${valueClass}`}
+          >
+            {value}
+          </span>
+          {suffix ? (
+            <span className="text-xs font-medium text-gray-400 shrink-0 translate-y-0.5">{suffix}</span>
+          ) : null}
+        </div>
+        {hint ? (
+          <p className="mt-2 text-[10px] leading-snug text-gray-400 border-t border-gray-100/80 pt-2">
+            {hint}
+          </p>
+        ) : null}
       </div>
     </div>
   )
@@ -236,6 +285,99 @@ function BudgetModal({
   )
 }
 
+/** EPC 页签：卡片与桑基图之间的饼图 + E/P/C 金额，配色与 BudgetSankeyByEPE 一致 */
+function EpcBudgetPieSection({ budget }: { budget: ProjectBudgetData }) {
+  const alloc = React.useMemo(() => getEpcAllocationFromProjectBudget(budget), [budget])
+  if (!alloc) {
+    return (
+      <div
+        className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 px-4 py-8 text-center"
+        role="status"
+      >
+        <p className="text-sm text-gray-500">完善项目预算区间后，将展示 E / P / C 预算拆解饼图</p>
+        <p className="text-xs text-gray-400 mt-1.5">与线索阶段预算分配口径一致</p>
+      </div>
+    )
+  }
+  const paths = buildEpcPiePaths(alloc.segments, alloc.totalWan)
+  return (
+    <div
+      className="rounded-2xl border border-gray-100 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.04)] overflow-hidden"
+      aria-label="EPC 预算拆解饼图"
+    >
+      <div className="px-4 sm:px-5 py-3.5 border-b border-gray-100/90 bg-gradient-to-r from-gray-50/80 to-white">
+        <h3 className="text-sm font-semibold text-gray-800 tracking-tight">预算拆解 · E / P / C</h3>
+        <p className="text-[11px] text-gray-400 mt-0.5 leading-snug">
+          按预算区间中值 <span className="text-gray-500 font-medium tabular-nums">{alloc.totalWan}</span>{' '}
+          万拆分，与下方桑基图口径一致
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 sm:gap-8 px-4 sm:px-6 py-5 sm:py-6">
+        <div className="flex justify-center shrink-0 mx-auto sm:mx-0 w-[min(100%,220px)] max-w-[220px] aspect-square">
+          <svg viewBox="0 0 200 200" className="w-full h-full" aria-hidden>
+            {paths.map(
+              (p) =>
+                p.d && p.sweep > 0.2 ? (
+                  <path
+                    key={p.key}
+                    d={p.d}
+                    fill={p.color}
+                    stroke="#fff"
+                    strokeWidth={2}
+                    className="transition-opacity duration-200 hover:opacity-90"
+                  />
+                ) : null,
+            )}
+            <circle cx={100} cy={100} r={46} fill="#F9FAFB" stroke="#E5E7EB" strokeWidth={1} />
+            <text
+              x={100}
+              y={92}
+              textAnchor="middle"
+              fill="#9CA3AF"
+              fontSize={10}
+              fontWeight={600}
+              style={{ letterSpacing: '0.06em' }}
+            >
+              参考总预算
+            </text>
+            <text x={100} y={114} textAnchor="middle" fill="#1F2937" fontSize={17} fontWeight={700}>
+              {alloc.totalWan}
+              <tspan fontSize={11} fontWeight={600} fill="#6B7280">
+                {' '}
+                万
+              </tspan>
+            </text>
+          </svg>
+        </div>
+        <ul className="flex-1 min-w-0 space-y-2 sm:space-y-2.5">
+          {alloc.segments.map((s) => (
+            <li
+              key={s.key}
+              className="flex items-center justify-between gap-3 rounded-xl border border-gray-100/90 bg-gradient-to-r from-white to-gray-50/40 px-3.5 py-2.5 sm:py-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="shrink-0 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm"
+                  style={{ backgroundColor: s.color }}
+                  aria-hidden
+                />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-gray-800 leading-tight">{s.label}</div>
+                  <div className="text-[11px] text-gray-400 mt-0.5 tabular-nums">占比 {s.pct.toFixed(0)}%</div>
+                </div>
+              </div>
+              <div className="text-right shrink-0 tabular-nums">
+                <span className="text-base sm:text-lg font-semibold text-gray-900">{s.wan.toFixed(1)}</span>
+                <span className="text-xs font-medium text-gray-400 ml-0.5">万</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
 export function BudgetConfirmPanel() {
   const { data, updateData, activeProjectLeadId } = useGlobal()
   const b = mergeBudget(data.projectBudget)
@@ -290,6 +432,11 @@ export function BudgetConfirmPanel() {
 
   const fmt = (n: number) => (Number.isFinite(n) ? n.toFixed(1) : '—')
 
+  const epcSankeyData = React.useMemo(
+    () => buildBudgetSankeyFromProjectBudget(b),
+    [b],
+  )
+
   return (
     <div className="space-y-8 pb-28 sm:pb-24">
       {budgetUnset ? (
@@ -300,24 +447,6 @@ export function BudgetConfirmPanel() {
           </p>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border ${
-              b.status === 'confirmed'
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : 'bg-amber-50 text-amber-800 border-amber-200'
-            }`}
-          >
-            {b.status === 'confirmed' ? '已确认' : '未确认'}
-          </span>
-          {b.status === 'confirmed' && b.confirmedAt ? (
-            <span className="text-xs text-gray-400">
-              确认于 {new Date(b.confirmedAt).toLocaleString('zh-CN')}
-            </span>
-          ) : null}
-        </div>
-      </div>
 
       {/* 预算拆解：分页（页签）切换 */}
       <section className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm space-y-4">
@@ -360,60 +489,105 @@ export function BudgetConfirmPanel() {
         </div>
 
         {budgetPage === 'epc' ? (
-          <div className="space-y-4 pt-1" role="tabpanel">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 pb-4 border-b border-gray-100">
-              <StatCell
+          <div className="space-y-5 pt-1" role="tabpanel">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <BudgetMetricCard
+                accent="slate"
                 label="项目预算区间"
                 value={`${fmt(b.epcRangeMin)} ~ ${fmt(b.epcRangeMax)}`}
                 suffix="万"
+                valueClass="text-slate-800"
+                hint="EPC 合理区间，可在顾问协助下微调"
               />
-              <StatCell label="项目入金金额" value={fmt(b.epcDeposit)} valueClass="text-[#FBBF24]" />
-              <StatCell label="已成交金额" value={fmt(b.epcWon)} valueClass="text-[#4887FF]" />
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
-                    入金剩余金额
-                  </div>
+              <BudgetMetricCard
+                accent="amber"
+                label="项目入金金额"
+                value={fmt(b.epcDeposit)}
+                valueClass="text-amber-600"
+                hint="已到账入金合计"
+              />
+              <BudgetMetricCard
+                accent="blue"
+                label="已成交金额"
+                value={fmt(b.epcWon)}
+                valueClass="text-blue-600"
+                hint="已签约成交对应金额"
+              />
+              <BudgetMetricCard
+                accent={epcRemainingDeposit < 0 ? 'rose' : 'orange'}
+                label="入金剩余金额"
+                value={fmt(epcRemainingDeposit)}
+                valueClass={
+                  epcRemainingDeposit < 0
+                    ? 'text-rose-600'
+                    : epcRemainingDeposit > 0
+                      ? 'text-orange-600'
+                      : 'text-gray-600'
+                }
+                hint="项目入金 − 已成交金额，可为负"
+                action={
                   <button
                     type="button"
                     onClick={() => setDepositPaymentOpen(true)}
-                    className="shrink-0 rounded-lg border border-[#EF6B00]/30 bg-orange-50 px-2.5 py-1 text-xs font-medium text-[#D85F00] hover:bg-orange-100"
+                    className="rounded-lg bg-gradient-to-b from-[#FF9C3E] to-[#EF6B00] px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm hover:brightness-105 active:scale-[0.98] transition"
                   >
                     增加入金
                   </button>
-                </div>
-                <div className="flex items-baseline gap-1 flex-wrap">
-                  <span
-                    className={`text-lg sm:text-xl font-bold tabular-nums ${
-                      epcRemainingDeposit < 0
-                        ? 'text-red-600'
-                        : epcRemainingDeposit > 0
-                          ? 'text-[#F97316]'
-                          : 'text-gray-600'
-                    }`}
-                  >
-                    {fmt(epcRemainingDeposit)}
-                  </span>
-                  <span className="text-xs text-gray-500 shrink-0">万</span>
-                </div>
-                <p className="text-[10px] text-gray-400 leading-snug">项目入金 − 已成交金额</p>
-              </div>
-            </div>
-            <BudgetSankeyByEPE unstyled />
-          </div>
-        ) : (
-          <div className="space-y-4 pt-1" role="tabpanel">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5 pb-4 border-b border-gray-100">
-              <StatCell label="项目总预算" value={fmt(b.orderTotalBudget)} />
-              <StatCell label="交付期订单总额" value={fmt(b.orderDeliveryTotal)} valueClass="text-violet-700" />
-              <StatCell label="验收期订单总额" value={fmt(b.orderAcceptanceTotal)} valueClass="text-orange-700" />
-              <StatCell label="已结算订单总额" value={fmt(b.orderSettledTotal)} valueClass="text-blue-700" />
-              <StatCell
-                label="预算剩余金额"
-                value={fmt(orderRemainingBudget)}
-                valueClass={orderRemainingBudget >= 0 ? 'text-emerald-700' : 'text-red-600'}
+                }
               />
             </div>
+            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" aria-hidden />
+            <EpcBudgetPieSection budget={b} />
+            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" aria-hidden />
+            <BudgetSankeyByEPE unstyled chartBleed data={epcSankeyData} />
+          </div>
+        ) : (
+          <div className="space-y-5 pt-1" role="tabpanel">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              <BudgetMetricCard
+                accent="slate"
+                label="项目总预算"
+                value={fmt(b.orderTotalBudget)}
+                valueClass="text-slate-800"
+                hint="订单维度总包预算"
+              />
+              <BudgetMetricCard
+                accent="violet"
+                label="交付期订单总额"
+                value={fmt(b.orderDeliveryTotal)}
+                valueClass="text-violet-600"
+                hint="交付阶段订单合计"
+              />
+              <BudgetMetricCard
+                accent="orange"
+                label="验收期订单总额"
+                value={fmt(b.orderAcceptanceTotal)}
+                valueClass="text-orange-600"
+                hint="验收阶段订单合计"
+              />
+              <BudgetMetricCard
+                accent="blue"
+                label="已结算订单总额"
+                value={fmt(b.orderSettledTotal)}
+                valueClass="text-blue-600"
+                hint="已走完结算流程"
+              />
+              <BudgetMetricCard
+                accent={orderRemainingBudget < 0 ? 'rose' : 'emerald'}
+                label="预算剩余金额"
+                value={fmt(orderRemainingBudget)}
+                valueClass={orderRemainingBudget >= 0 ? 'text-emerald-600' : 'text-rose-600'}
+                hint="总预算扣减各期占用"
+                action={
+                  orderRemainingBudget < 0 ? (
+                    <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700 ring-1 ring-rose-100">
+                      超支
+                    </span>
+                  ) : null
+                }
+              />
+            </div>
+            <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" aria-hidden />
             <BudgetSankey unstyled title="订单预算拆解" subtitle="按里程碑与订单维度的预算流动" />
           </div>
         )}

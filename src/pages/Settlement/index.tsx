@@ -18,6 +18,7 @@ import { FeedbackModal } from "../../components/FeedbackModal";
 import { ThankYouModal } from "../Quotation/components/ThankYouModal";
 import { useGlobal } from "../../context/GlobalContext";
 import { handleOrderAction } from "../../utils/orderStateMachine";
+import { addResolvedPendingKey } from "../../utils/pendingDecisionResolvedStorage";
 
 // --- Mock Data ---
 const settlementData = {
@@ -147,8 +148,9 @@ const settlementData = {
 export default function SettlementPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { data, updateData } = useGlobal();
+  const { data, updateData, activeProjectLeadId } = useGlobal();
   const state = location.state || {};
+  const pendingResolveKey = (state as { pendingResolveKey?: string }).pendingResolveKey;
   const orderNumber = state.orderNumber || settlementData.orderNumber;
   const orderTitle = state.orderTitle || "EPC 项目结算单";
   const settlementTitle = state.settlementTitle || "EPC 项目最终结算单";
@@ -195,6 +197,9 @@ export default function SettlementPage() {
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E85_SIGN_SETTLEMENT', data.orders || [], updateData);
     }
+    if (pendingResolveKey && activeProjectLeadId) {
+      addResolvedPendingKey(activeProjectLeadId, pendingResolveKey);
+    }
   };
 
   const handleFeedbackSubmit = (feedback: string) => {
@@ -206,6 +211,9 @@ export default function SettlementPage() {
 
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+    }
+    if (pendingResolveKey && activeProjectLeadId) {
+      addResolvedPendingKey(activeProjectLeadId, pendingResolveKey);
     }
   };
 

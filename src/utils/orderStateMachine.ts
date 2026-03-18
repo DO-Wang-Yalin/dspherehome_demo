@@ -50,14 +50,26 @@ export function handleOrderAction(
     return false;
   }
 
+  /** 设计反馈完成：无论当前状态是否可流转，都标记已处理（如 S01 无 E86 流转但仍需清空「待定决策」） */
+  if (actionCode === 'E86_FEEDBACK') {
+    const nextState = ORDER_TRANSITIONS['E86_FEEDBACK']?.[order.status];
+    const updatedOrders = [...orders];
+    updatedOrders[orderIndex] = {
+      ...order,
+      ...(nextState ? { status: nextState } : {}),
+      feedbackSubmitted: true,
+    };
+    updateData({ orders: updatedOrders });
+    return nextState || order.status;
+  }
+
   const nextState = ORDER_TRANSITIONS[actionCode]?.[order.status];
 
   if (nextState) {
     const updatedOrders = [...orders];
-    updatedOrders[orderIndex] = { 
-      ...order, 
+    updatedOrders[orderIndex] = {
+      ...order,
       status: nextState,
-      feedbackSubmitted: actionCode === 'E86_FEEDBACK' ? true : order.feedbackSubmitted
     };
     updateData({ orders: updatedOrders });
     return nextState;

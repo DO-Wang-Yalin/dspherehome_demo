@@ -1,11 +1,9 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import type {
-  RequirementsMember,
-  MemberSpaceItem,
-  RequirementDocRevisionEntry,
-  RequirementDocSnapshotStored,
-} from '../../types'
+import type { RequirementsMember, MemberSpaceItem, RequirementDocRevisionEntry } from '../../types'
+import { initialFormData } from '../../types'
+import { buildRevisionSnapshotFormData, parseDocSnapshotJson } from '../../utils/requirementDocRevisionSnapshot'
 import {
   Home,
   FileText,
@@ -14,6 +12,8 @@ import {
   ScrollText,
   Settings,
   ChevronRight,
+  ChevronLeft,
+  History,
   Wrench,
   BarChart3,
   Package,
@@ -58,19 +58,6 @@ import {
   Plus,
   Eye,
 } from 'lucide-react'
-/** 与订单详情「进入设计反馈」一致的订单号（00584 待定项） */
-const PENDING_DESIGN_FEEDBACK_ORDER_ID = 'PSO-OD_LHJCF-00584'
-
-const DEMO_PENDING_FEEDBACK_ORDER_ID = 'PSO-OD_LHJCF-00584'
-
-/** 仅当订单列表中存在演示订单时展示「设计反馈待办」（避免空项目仍出现璟宸府演示待办） */
-function getPendingDecisionItemIds(orders: unknown[]): string[] {
-  const hasDemoPending = orders.some(
-    (o) => o && typeof o === 'object' && (o as { id?: string }).id === DEMO_PENDING_FEEDBACK_ORDER_ID
-  )
-  return hasDemoPending ? ['design-feedback-unread-00584'] : []
-}
-
 /** 可添加的空间类型选项（下拉选择，与核心空间及常见扩展一致） */
 const ADDABLE_SPACE_TYPE_OPTIONS = [
   '客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园',
@@ -133,6 +120,28 @@ import { getOrderStatusColor, STATUS_BAR_COLORS, STATUS_BADGE_COLORS } from '../
 import { INITIAL_ORDERS } from '../../data/mockOrders'
 import { useGlobal } from '../../context/GlobalContext'
 import { LONGHU_JINGCHENFU_DEMO_LEAD_ID } from '../../services/leads/savedLeadsStorage'
+import {
+  computePendingDecisionsFromOrders,
+  type PendingDecisionItem,
+  type PendingDecisionKind,
+} from '../../utils/pendingDecisionsFromOrders'
+import {
+  getResolvedPendingKeys,
+  PENDING_RESOLVED_EVENT,
+  addResolvedPendingKey,
+} from '../../utils/pendingDecisionResolvedStorage'
+
+const LEGACY_PENDING_DISMISSED = 'workbench:pendingDismissed:v2'
+
+const PENDING_DECISION_TABS: {
+  kind: PendingDecisionKind
+  label: string
+  description: string
+}[] = [
+  { kind: 'scheme_feedback', label: '方案待反馈', description: '走完全部反馈页并提交后自动完成' },
+  { kind: 'quotation_pending', label: '报价待确认', description: '订购/交付报价单：签字确认或提交调整反馈后即完成' },
+  { kind: 'settlement_confirm', label: '结算待确认', description: '结算单签字确认或意见反馈后即完成' },
+]
 
 export function WorkbenchPage({
   userDisplayName,
@@ -167,6 +176,38 @@ export function WorkbenchPage({
         ? data.orders ?? []
         : []
 
+  const [pendingResolvedVersion, setPendingResolvedVersion] = React.useState(0)
+  React.useEffect(() => {
+    const fn = () => setPendingResolvedVersion((v) => v + 1)
+    window.addEventListener(PENDING_RESOLVED_EVENT, fn)
+    return () => window.removeEventListener(PENDING_RESOLVED_EVENT, fn)
+  }, [])
+
+  React.useEffect(() => {
+    if (activeProjectLeadId !== LONGHU_JINGCHENFU_DEMO_LEAD_ID) return
+    try {
+      const raw = localStorage.getItem(`${LEGACY_PENDING_DISMISSED}:${activeProjectLeadId}`)
+      if (!raw) return
+      const arr = JSON.parse(raw) as string[]
+      if (Array.isArray(arr)) {
+        for (const k of arr) addResolvedPendingKey(activeProjectLeadId, k)
+      }
+      localStorage.removeItem(`${LEGACY_PENDING_DISMISSED}:${activeProjectLeadId}`)
+    } catch {
+      /* ignore */
+    }
+  }, [activeProjectLeadId])
+
+  const effectiveResolvedPendingKeys = React.useMemo(
+    () => getResolvedPendingKeys(activeProjectLeadId),
+    [activeProjectLeadId, pendingResolvedVersion],
+  )
+
+  const sidebarPendingDecisionCount = React.useMemo(() => {
+    if (activeProjectLeadId !== LONGHU_JINGCHENFU_DEMO_LEAD_ID) return 0
+    return computePendingDecisionsFromOrders(ordersToDisplay, effectiveResolvedPendingKeys).length
+  }, [activeProjectLeadId, ordersToDisplay, effectiveResolvedPendingKeys])
+
   const navigate = useNavigate()
   const normalizeWorkbenchTab = (t?: NavKey | 'home' | 'designFeedback'): NavKey => {
     if (!t || t === 'home' || t === 'designFeedback') return 'orders'
@@ -176,6 +217,27 @@ export function WorkbenchPage({
   React.useEffect(() => {
     if (initialTab !== undefined) setActive(normalizeWorkbenchTab(initialTab))
   }, [initialTab])
+
+  const projectBudgetRaw = data.projectBudget
+  const budgetStatus = React.useMemo(() => {
+    const status = projectBudgetRaw?.status ?? 'unconfirmed'
+    const confirmedAt = projectBudgetRaw?.confirmedAt
+    const adjustmentHistory = projectBudgetRaw?.adjustmentHistory ?? []
+
+    if (status === 'confirmed' && confirmedAt && adjustmentHistory.length > 0) {
+      const confirmedMs = new Date(confirmedAt).getTime()
+      const hasNewerAdjustment = adjustmentHistory.some(
+        (h) => new Date(h.at).getTime() > confirmedMs,
+      )
+      if (hasNewerAdjustment) {
+        return { status: 'unconfirmed' as const, confirmedAt, adjustmentHistory }
+      }
+    }
+
+    return { status, confirmedAt, adjustmentHistory }
+  }, [projectBudgetRaw])
+
+  const isBudgetConfirmed = budgetStatus.status === 'confirmed'
   const SIDEBAR_WIDTH_KEY = 'ai-studio:workbench:sidebarWidth:v1'
   const SIDEBAR_COLLAPSED_KEY = 'ai-studio:workbench:sidebarCollapsed:v1'
   const MIN_SIDEBAR_WIDTH = 220
@@ -280,18 +342,45 @@ export function WorkbenchPage({
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = active === item.key
+            const showPendingBadge =
+              item.key === 'orders' && sidebarPendingDecisionCount > 0
             return (
               <button
                 key={item.key}
                 type="button"
                 onClick={() => setActive(item.key)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm transition-colors ${
+                className={`relative w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-sm transition-colors ${
                   isActive ? 'bg-[#FF9C3E]/10 text-gray-900' : 'text-gray-600 hover:bg-black/5'
                 }`}
-                title={sidebarCollapsed ? item.label : undefined}
+                title={
+                  sidebarCollapsed
+                    ? showPendingBadge
+                      ? `${item.label}（${sidebarPendingDecisionCount} 项待定决策）`
+                      : item.label
+                    : undefined
+                }
               >
-                <Icon size={18} className={isActive ? 'text-[#FF9C3E]' : 'text-gray-400'} />
-                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+                <span className="relative shrink-0">
+                  <Icon size={18} className={isActive ? 'text-[#FF9C3E]' : 'text-gray-400'} />
+                  {showPendingBadge && sidebarCollapsed ? (
+                    <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold leading-none text-white">
+                      {sidebarPendingDecisionCount > 9 ? '9+' : sidebarPendingDecisionCount}
+                    </span>
+                  ) : null}
+                </span>
+                {!sidebarCollapsed && (
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2 font-medium">
+                    <span className="truncate">{item.label}</span>
+                    {showPendingBadge ? (
+                      <span
+                        className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white tabular-nums"
+                        aria-label={`${sidebarPendingDecisionCount} 项待定决策`}
+                      >
+                        {sidebarPendingDecisionCount > 99 ? '99+' : sidebarPendingDecisionCount}
+                      </span>
+                    ) : null}
+                  </span>
+                )}
               </button>
             )
           })}
@@ -415,6 +504,8 @@ export function WorkbenchPage({
             ) : active === 'orders' ? (
               <OrderManagementSection
                 orders={ordersToDisplay}
+                effectiveResolvedPendingKeys={effectiveResolvedPendingKeys}
+                isDemoLonghuProject={activeProjectLeadId === LONGHU_JINGCHENFU_DEMO_LEAD_ID}
                 deepEvalPath={
                   activeProjectLeadId &&
                   activeProjectLeadId !== LONGHU_JINGCHENFU_DEMO_LEAD_ID
@@ -422,20 +513,68 @@ export function WorkbenchPage({
                     : undefined
                 }
                 onSelectOrder={(id) => navigate(`/order/${id}`)}
-                onOpenPendingDesignFeedback={() => {
-                  navigate('/feedback', {
-                    state: {
-                      orderNumber: PENDING_DESIGN_FEEDBACK_ORDER_ID,
-                      openViewerDirectly: true,
-                    },
-                  })
+                onPendingDecisionItemAction={(item: PendingDecisionItem) => {
+                  const orderTitle =
+                    ordersToDisplay.find((o: { id: string }) => o.id === item.orderId)?.title ?? ''
+                  if (item.action === 'feedback') {
+                    navigate('/feedback', {
+                      state: {
+                        orderNumber: item.orderId,
+                        openViewerDirectly: true,
+                        fromPendingDecision: true,
+                        pendingItemKeyOnReturnHome: item.key.endsWith('-scheme-s01')
+                          ? item.key
+                          : undefined,
+                      },
+                    })
+                  } else if (item.action === 'quotation') {
+                    navigate('/quotation', {
+                      state: {
+                        orderNumber: item.orderId,
+                        orderTitle,
+                        ver: item.quotationVer ?? 'V2',
+                        quotationTitle:
+                          item.quotationVer === 'V3' ? '交付报价单' : '订购报价单',
+                        pendingResolveKey: item.key,
+                      },
+                    })
+                  } else if (item.action === 'settlement') {
+                    navigate(`/settlement/${encodeURIComponent(item.orderId)}`, {
+                      state: {
+                        orderNumber: item.orderId,
+                        orderTitle,
+                        settlementTitle: 'EPC 项目最终结算单',
+                        pendingResolveKey: item.key,
+                      },
+                    })
+                  } else {
+                    navigate(`/order/${item.orderId}`, {
+                      state: { acknowledgePendingKey: item.key },
+                    })
+                  }
                 }}
               />
             ) : active === 'budget' ? (
               <div className="space-y-5">
-                <div className="flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-                  <h2 className="text-lg font-semibold">预算资金</h2>
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-1 h-4 rounded-full bg-[#EF6B00] shrink-0" aria-hidden />
+                    <h2 className="text-lg font-semibold text-gray-900">预算资金</h2>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium border shrink-0 ${
+                      isBudgetConfirmed
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    {isBudgetConfirmed ? '已确认' : '未确认'}
+                  </span>
+                  {isBudgetConfirmed && budgetStatus.confirmedAt ? (
+                    <span className="text-xs text-gray-400 w-full sm:w-auto sm:ml-0">
+                      确认于 {new Date(budgetStatus.confirmedAt).toLocaleString('zh-CN')}
+                    </span>
+                  ) : null}
                 </div>
                 <BudgetConfirmPanel />
               </div>
@@ -460,15 +599,20 @@ export function WorkbenchPage({
 
 function OrderManagementSection({
   orders,
+  isDemoLonghuProject,
+  effectiveResolvedPendingKeys,
   deepEvalPath,
   onSelectOrder,
-  onOpenPendingDesignFeedback,
+  onPendingDecisionItemAction,
 }: {
   orders: any[]
+  /** 龙湖璟宸府演示：按产品规则从订单列表推导待定决策 */
+  isDemoLonghuProject: boolean
+  effectiveResolvedPendingKeys: Set<string>
   /** 非演示项目且无订单时，引导去深度测评或联系顾问 */
   deepEvalPath?: string
   onSelectOrder?: (id: string) => void
-  onOpenPendingDesignFeedback?: () => void
+  onPendingDecisionItemAction?: (item: PendingDecisionItem) => void
 }) {
   const navigateOrders = useNavigate()
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -520,58 +664,131 @@ function OrderManagementSection({
     [orders]
   )
 
-  const pendingItemIds = React.useMemo(() => getPendingDecisionItemIds(orders), [orders])
-  const pendingCount = pendingItemIds.length
+  const pendingItems = React.useMemo(() => {
+    if (!isDemoLonghuProject) return []
+    return computePendingDecisionsFromOrders(orders, effectiveResolvedPendingKeys)
+  }, [isDemoLonghuProject, orders, effectiveResolvedPendingKeys])
+  const pendingCount = pendingItems.length
+
+  const pendingByKind = React.useMemo(() => {
+    const m: Record<PendingDecisionKind, PendingDecisionItem[]> = {
+      scheme_feedback: [],
+      quotation_pending: [],
+      settlement_confirm: [],
+    }
+    for (const it of pendingItems) {
+      m[it.kind].push(it)
+    }
+    return m
+  }, [pendingItems])
+
+  const [pendingTab, setPendingTab] = React.useState<PendingDecisionKind>('scheme_feedback')
+  const pendingListSignature = pendingItems.map((i) => i.key).join('|')
+
+  /** 仅待办列表变化时：若当前类已空，自动切到首个仍有事项的类（不干预用户主动点的空类标签） */
+  React.useEffect(() => {
+    if (pendingItems.length === 0) return
+    if (pendingByKind[pendingTab].length > 0) return
+    const first = PENDING_DECISION_TABS.find((t) => pendingByKind[t.kind].length > 0)?.kind
+    if (first) setPendingTab(first)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅在列表变更时纠偏当前 tab
+  }, [pendingListSignature])
+
+  const tabItems = pendingByKind[pendingTab]
 
   return (
     <div className="space-y-6">
-      {/* 待定决策：顶部数字标识 + 待办卡片 */}
-      <section>
-        <div
-          className="mb-4 flex flex-wrap items-center gap-3"
-          role="status"
-          aria-live="polite"
-          aria-label={`当前共有 ${pendingCount} 项待处理事项`}
-        >
-          <span className="inline-flex h-14 min-w-[3.5rem] shrink-0 items-center justify-center rounded-2xl bg-[#EF6B00] px-4 text-2xl font-bold leading-none text-white shadow-md tabular-nums">
-            {pendingCount}
-          </span>
-          <div className="min-w-0">
-            <p className="text-base font-semibold text-gray-900">项待处理</p>
-            <p className="text-xs text-gray-500 mt-0.5">以下事项需要您尽快处理或确认</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-          <h2 className="text-lg font-semibold">待定决策</h2>
+      {/* 待定决策：3 类标签（方案 / 报价单 / 结算） */}
+      <section aria-live="polite">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="w-1 h-4 rounded-full bg-[#EF6B00] shrink-0" aria-hidden />
+          <h2 className="text-lg font-semibold text-gray-900">待定决策</h2>
         </div>
         {pendingCount > 0 ? (
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-              <div className="flex items-start gap-4 min-w-0">
-                <div className="w-12 h-12 rounded-2xl bg-[#FF9C3E]/10 flex items-center justify-center text-[#FF9C3E] shrink-0">
-                  <Wrench size={20} />
+          <p className="text-xs text-gray-500 -mt-2 mb-3 leading-relaxed">
+            方案：走完全部反馈页并提交后完成。报价单（订购/交付）：在报价单页<strong>签字确认</strong>或<strong>提交调整反馈</strong>后即完成。结算：在结算单页签字或反馈后即完成。
+          </p>
+        ) : null}
+        {pendingCount > 0 ? (
+          <div className="rounded-3xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+            <nav
+              className="flex overflow-x-auto scrollbar-thin border-b border-gray-100 bg-gray-50/80 px-1 sm:px-2"
+              aria-label="待定决策类型"
+            >
+              {PENDING_DECISION_TABS.map(({ kind, label, description }) => {
+                const n = pendingByKind[kind].length
+                const active = pendingTab === kind
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => setPendingTab(kind)}
+                    title={description}
+                    className={`relative shrink-0 flex items-center gap-2 px-3 sm:px-4 py-3 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
+                      active
+                        ? 'border-[#EF6B00] text-gray-900 bg-white'
+                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:bg-white/60'
+                    }`}
+                  >
+                    <span>{label}</span>
+                    {n > 0 ? (
+                      <span className="inline-flex min-h-[20px] min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white tabular-nums">
+                        {n > 99 ? '99+' : n}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium text-gray-300 tabular-nums">0</span>
+                    )}
+                  </button>
+                )
+              })}
+            </nav>
+            <div className="p-4 sm:p-6">
+              <p className="text-xs text-gray-500 mb-4">
+                {PENDING_DECISION_TABS.find((t) => t.kind === pendingTab)?.description}
+              </p>
+              {tabItems.length > 0 ? (
+                <div className="space-y-3">
+                  {tabItems.map((item) => (
+                    <div
+                      key={item.key}
+                      className="rounded-2xl border border-gray-100 bg-gray-50/40 p-5 sm:p-6"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div className="flex items-start gap-4 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-[#FF9C3E]/10 flex items-center justify-center text-[#FF9C3E] shrink-0">
+                            <Wrench size={18} />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-[#C87800] bg-[#FF9C3E]/10 px-2 py-0.5 rounded-full">
+                              {item.badgeLabel}
+                            </span>
+                            <div className="text-base font-semibold text-gray-900 mt-2">{item.title}</div>
+                            <p className="text-sm text-gray-600 mt-1 leading-relaxed">{item.description}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onPendingDecisionItemAction?.(item)}
+                          className="md:w-[200px] w-full shrink-0 inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] text-white font-semibold py-3 hover:brightness-95 active:scale-[0.99] transition"
+                        >
+                          {item.action === 'feedback'
+                            ? '去反馈'
+                            : item.action === 'quotation'
+                              ? '去报价单'
+                              : item.action === 'settlement'
+                                ? '去结算单'
+                                : '去处理'}
+                          <ChevronRight size={18} className="ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-[#C87800] bg-[#FF9C3E]/10 px-2 py-0.5 rounded-full">
-                      未查看
-                    </span>
-                  </div>
-                  <div className="text-base font-semibold truncate">00584#订单设计反馈未查看</div>
-                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">
-                    该订单的设计方案与效果图已更新，请查看并对关键空间逐条点评反馈。
-                  </p>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-12 text-center text-sm text-gray-500">
+                  该类型当前暂无待处理事项，可切换其他标签查看
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={onOpenPendingDesignFeedback}
-                className="md:w-[220px] w-full inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] text-white font-semibold py-3 hover:brightness-95 active:scale-[0.99] transition"
-              >
-                立即处理
-                <ChevronRight size={18} className="ml-1" />
-              </button>
+              )}
             </div>
           </div>
         ) : (
@@ -1016,258 +1233,6 @@ function formatAutoRevisionSummary(changedLabels: string[]): string {
   return `更新：${changedLabels.slice(0, 6).join('、')}等共${changedLabels.length}处`
 }
 
-function sanitizeDocSnapshotForStorage(p: RequirementDocPayloadShape): RequirementDocSnapshotStored {
-  return {
-    smartHomeOptions: [...(p.smartHomeOptions ?? [])],
-    devices: [...(p.devices ?? [])],
-    otherNeeds: String(p.otherNeeds ?? ''),
-    comfortSystems: [...(p.comfortSystems ?? [])],
-    fengshui: String(p.fengshui ?? ''),
-    storageFocus: [...(p.storageFocus ?? [])],
-    spaceOtherNote: String(p.spaceOtherNote ?? ''),
-    livingRoomNote: String(p.livingRoomNote ?? ''),
-    diningNote: String(p.diningNote ?? ''),
-    kitchenNote: String(p.kitchenNote ?? ''),
-    bathroomNote: String(p.bathroomNote ?? ''),
-    coreSpaces: String(p.coreSpaces ?? ''),
-    customCoreSpaceOptions: [...(p.customCoreSpaceOptions ?? [])],
-    childGrowth: String(p.childGrowth ?? ''),
-    guestStay: String(p.guestStay ?? ''),
-    futureChanges: String(p.futureChanges ?? ''),
-    requirementsMembers: JSON.parse(JSON.stringify(p.requirementsMembers ?? [])) as RequirementsMember[],
-    floorPlanImages: (p.floorPlanImages ?? []).map((x) => ({ name: x.name })),
-    siteMedia: (p.siteMedia ?? []).map((x) => ({ name: x.name, kind: x.kind ?? 'image' })),
-    customSpaceItems: JSON.parse(JSON.stringify(p.customSpaceItems ?? [])) as RequirementDocSnapshotStored['customSpaceItems'],
-  }
-}
-
-function SnapshotChipRow({ items }: { items: string[] }) {
-  if (!items?.length) return <span className="text-gray-400 text-sm">无</span>
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {items.map((x) => (
-        <span key={x} className="px-2 py-0.5 rounded-lg bg-white border border-gray-200 text-xs text-gray-800">
-          {x}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function SnapshotText({ v }: { v: string }) {
-  const s = (v ?? '').trim()
-  return s ? (
-    <p className="whitespace-pre-wrap leading-relaxed text-sm">{s}</p>
-  ) : (
-    <span className="text-gray-400 text-sm">未填写</span>
-  )
-}
-
-function SnapshotSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
-      <div className="text-xs font-semibold text-[#C87800] mb-2">{title}</div>
-      {children}
-    </div>
-  )
-}
-
-function RequirementDocSnapshotModal({
-  entry,
-  onClose,
-}: {
-  entry: RequirementDocRevisionEntry | null
-  onClose: () => void
-}) {
-  if (!entry) return null
-  let snap: RequirementDocSnapshotStored | null = null
-  try {
-    if (entry.docSnapshotJson) snap = JSON.parse(entry.docSnapshotJson) as RequirementDocSnapshotStored
-  } catch {
-    snap = null
-  }
-  const s = snap
-  return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center px-3 py-6">
-      <button type="button" className="absolute inset-0 bg-black/45" aria-label="关闭" onClick={onClose} />
-      <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
-        <div className="shrink-0 flex items-start justify-between gap-3 px-5 py-4 border-b border-gray-100 bg-white">
-          <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900">需求书快照</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              {entry.date} · {entry.updater}
-            </p>
-            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-              以下为<strong>该次保存后</strong>的需求书文本与选项；更早版本请看列表中<strong>下一条</strong>（更旧）修订的快照。
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="shrink-0 w-10 h-10 rounded-xl hover:bg-gray-100 text-gray-500 text-xl leading-none"
-            aria-label="关闭"
-          >
-            ×
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50/30">
-          {!s ? (
-            <p className="text-sm text-gray-600 leading-relaxed">
-              该条为历史记录，保存时尚未存档快照。此后新产生的修订会自动附带快照。
-            </p>
-          ) : (
-            <>
-              <SnapshotSection title="智能家居">
-                <SnapshotChipRow items={s.smartHomeOptions ?? []} />
-              </SnapshotSection>
-              <SnapshotSection title="全屋设备">
-                <SnapshotChipRow items={s.devices ?? []} />
-              </SnapshotSection>
-              <SnapshotSection title="系统设备">
-                <SnapshotChipRow items={s.comfortSystems ?? []} />
-              </SnapshotSection>
-              <SnapshotSection title="收纳重点">
-                <SnapshotChipRow items={s.storageFocus ?? []} />
-              </SnapshotSection>
-              <SnapshotSection title="风水与禁忌">
-                <SnapshotText v={s.fengshui} />
-              </SnapshotSection>
-              <SnapshotSection title="其他需求说明">
-                <SnapshotText v={s.otherNeeds} />
-              </SnapshotSection>
-              <SnapshotSection title="空间其他说明">
-                <SnapshotText v={s.spaceOtherNote} />
-              </SnapshotSection>
-              <SnapshotSection title="核心空间 / 儿童成长 / 访客 / 未来变动">
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-xs text-gray-500">核心空间</span>
-                    <SnapshotText v={s.coreSpaces} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">自定义核心空间</span>
-                    <SnapshotChipRow items={s.customCoreSpaceOptions ?? []} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">儿童成长</span>
-                    <SnapshotText v={s.childGrowth} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">访客留宿</span>
-                    <SnapshotText v={s.guestStay} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">未来变动</span>
-                    <SnapshotText v={s.futureChanges} />
-                  </div>
-                </div>
-              </SnapshotSection>
-              <SnapshotSection title="客厅 / 餐厅 / 厨房 / 卫生间需求">
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-xs text-gray-500">客厅</span>
-                    <SnapshotText v={s.livingRoomNote} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">餐厅</span>
-                    <SnapshotText v={s.diningNote} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">厨房</span>
-                    <SnapshotText v={s.kitchenNote} />
-                  </div>
-                  <div>
-                    <span className="text-xs text-gray-500">卫生间</span>
-                    <SnapshotText v={s.bathroomNote} />
-                  </div>
-                </div>
-              </SnapshotSection>
-              <SnapshotSection title="成员画像">
-                {(s.requirementsMembers ?? []).length ? (
-                  <div className="space-y-3">
-                    {(s.requirementsMembers ?? []).map((m) => (
-                      <div key={m.id} className="rounded-xl bg-white border border-gray-100 p-3 text-sm">
-                        <div className="font-semibold text-gray-900">{m.name}</div>
-                        {(m.age || m.profession) ? (
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {[m.age, m.profession].filter(Boolean).join(' · ')}
-                          </div>
-                        ) : null}
-                        <div className="mt-2 space-y-1">
-                          {(m.spaces ?? []).map((sp, i) => (
-                            <div key={`${m.id}-${i}`} className="text-xs text-gray-700">
-                              <span className="font-medium">{sp.name}</span>
-                              {sp.description?.trim() ? `：${sp.description}` : ''}
-                            </div>
-                          ))}
-                        </div>
-                        {m.otherActivityNote?.trim() ? (
-                          <p className="mt-2 text-xs text-gray-600 border-t border-gray-50 pt-2">{m.otherActivityNote}</p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">无</span>
-                )}
-              </SnapshotSection>
-              <SnapshotSection title="户型图（仅文件名）">
-                {(s.floorPlanImages ?? []).length ? (
-                  <ul className="text-sm text-gray-700 list-disc pl-4">
-                    {(s.floorPlanImages ?? []).map((f, i) => (
-                      <li key={i}>{f.name}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="text-gray-400 text-sm">无</span>
-                )}
-              </SnapshotSection>
-              <SnapshotSection title="现场照片/视频（仅文件名）">
-                {(s.siteMedia ?? []).length ? (
-                  <ul className="text-sm text-gray-700 list-disc pl-4">
-                    {(s.siteMedia ?? []).map((f, i) => (
-                      <li key={i}>
-                        {f.name} {f.kind === 'video' ? '（视频）' : '（图片）'}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span className="text-gray-400 text-sm">无</span>
-                )}
-              </SnapshotSection>
-              <SnapshotSection title="自定义空间需求">
-                {(s.customSpaceItems ?? []).length ? (
-                  <div className="space-y-2">
-                    {(s.customSpaceItems ?? []).map((c, i) => (
-                      <div key={i} className="text-sm rounded-xl bg-white border border-gray-100 p-2">
-                        <span className="font-medium">{c.name}</span>
-                        {c.description?.trim() ? (
-                          <p className="text-xs text-gray-600 mt-1 whitespace-pre-wrap">{c.description}</p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm">无</span>
-                )}
-              </SnapshotSection>
-            </>
-          )}
-        </div>
-        <div className="shrink-0 px-5 py-3 border-t border-gray-100 bg-white">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2.5 rounded-2xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800"
-          >
-            关闭
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 const BASELINE_ROLE_LABELS: Record<string, string> = { A: '男主人', B: '女主人', C: '长辈/长住家属' }
 const BASELINE_MEMBER_LABELS: Record<string, string> = { daughter: '女儿', son: '儿子', cat: '猫猫', dog: '狗狗' }
 
@@ -1338,6 +1303,9 @@ export function RequirementsDoc({
   onBackHome,
   onGoToStyleEval,
   supplementDeepEvalPath,
+  snapshotEmbedded,
+  snapshotOnClose,
+  snapshotRevisionLabel,
 }: {
   projectName: string
   ownerDisplayName: string
@@ -1351,10 +1319,26 @@ export function RequirementsDoc({
   onGoToStyleEval?: () => void
   /** 非演示项目：跳转深度测评（带 leadId）以补充需求 */
   supplementDeepEvalPath?: string
+  /** 修订快照弹窗内：与主需求书同版式只读展示 */
+  snapshotEmbedded?: boolean
+  snapshotOnClose?: () => void
+  snapshotRevisionLabel?: string
 }) {
   const navigateReq = useNavigate()
-  const useMock = isShowcase === true
-  const d = useMock ? null : data
+  const useMock = isShowcase === true && !snapshotEmbedded
+  const d = snapshotEmbedded ? data ?? null : useMock ? null : data
+
+  React.useEffect(() => {
+    if (snapshotEmbedded) setIsEditing(false)
+  }, [snapshotEmbedded])
+
+  if (snapshotEmbedded && !data) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-center text-sm text-red-800">
+        无法加载需求书快照
+      </div>
+    )
+  }
   const empty = (v: string) => !v || !String(v).trim()
   const val = (v: string, fallback = '未填写') => (empty(v) ? fallback : String(v).trim())
 
@@ -1372,6 +1356,9 @@ export function RequirementsDoc({
   /** 需求书正文 vs 变更记录 */
   const [requirementsDocPage, setRequirementsDocPage] = React.useState<'content' | 'revisions'>('content')
   const [revisionTablePage, setRevisionTablePage] = React.useState(1)
+  /** 弹窗内快照：仅展示该版需求书正文，不提供「变更记录」 */
+  const showRevisionTabs = !snapshotEmbedded
+  const showDocContent = snapshotEmbedded || requirementsDocPage !== 'revisions'
 
   /** 与 Q2-9 核心空间一致，用于自定义空间名称选项 */
   const CORE_SPACE_OPTIONS = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
@@ -1472,7 +1459,20 @@ export function RequirementsDoc({
     dog: d?.dogSpaces ?? [],
   }
 
-  type PersonaRow = { name: string; age: string; profession: string; height: string; stylePersona: string | null; mainActivitiesAndSpaces: string[]; otherActivityNote?: string; accent: 'amber' | 'slate'; isStyleTaker?: boolean }
+  type PersonaRow = {
+    name: string
+    age: string
+    profession: string
+    height: string
+    stylePersona: string | null
+    mainActivitiesAndSpaces: string[]
+    otherActivityNote?: string
+    accent: 'amber' | 'slate'
+    isStyleTaker?: boolean
+    /** 有姓名时展示「角色 · xxx」 */
+    roleTag?: string
+    personaKey?: string
+  }
   const displayPersonas = useMock
     ? [
         { name: '父亲', age: '42岁', profession: '金融从业', height: '178cm', stylePersona: '理性秩序派' as string | null, mainActivitiesAndSpaces: ['高效办公（书房/办公角）', '家庭放松（客厅）', '收纳管理（玄关/衣柜系统）'], accent: 'amber' as const, isStyleTaker: true },
@@ -1482,17 +1482,29 @@ export function RequirementsDoc({
       ]
     : (() => {
         if (d?.requirementsMembers?.length) {
-          return d.requirementsMembers.map((m, i) => ({
-            name: m.name,
-            age: m.age ?? '',
-            profession: m.profession ?? '',
-            height: '',
-            stylePersona: null,
-            mainActivitiesAndSpaces: (m.spaces ?? []).map((s) => (s.description?.trim() ? `${s.name}：${s.description}` : s.name)),
-            otherActivityNote: m.otherActivityNote ?? '',
-            accent: (i % 2 === 0 ? 'amber' : 'slate') as const,
-            isStyleTaker: m.id === 'role',
-          })) as PersonaRow[]
+          return d.requirementsMembers.map((m, i) => {
+            const isRole = MEMBER_ROLE_OPTIONS.includes(m.name)
+            const role = isRole ? m.name : ''
+            const dn = (m.displayName ?? '').trim()
+            const legacy = !isRole && m.name?.trim() ? m.name.trim() : ''
+            const displayTitle = dn || legacy || role || '成员'
+            const roleTag = dn && role ? role : undefined
+            return {
+              name: displayTitle,
+              roleTag,
+              age: m.age ?? '',
+              profession: m.profession ?? '',
+              height: '',
+              stylePersona: null,
+              mainActivitiesAndSpaces: (m.spaces ?? []).map((s) =>
+                s.description?.trim() ? `${s.name}：${s.description}` : s.name,
+              ),
+              otherActivityNote: m.otherActivityNote ?? '',
+              accent: (i % 2 === 0 ? 'amber' : 'slate') as const,
+              isStyleTaker: m.id === 'role',
+              personaKey: m.id,
+            }
+          }) as PersonaRow[]
         }
         const list: PersonaRow[] = []
         if (d?.role) {
@@ -1694,22 +1706,40 @@ export function RequirementsDoc({
     setStorageFocusEdit(d.storageFocus ?? [])
     setSpaceOtherNote(d.spaceOtherNote ?? '')
     if (d.requirementsMembers?.length) {
-      setMembersEdit(d.requirementsMembers)
+      setMembersEdit(
+        d.requirementsMembers.map((m) => {
+          if (MEMBER_ROLE_OPTIONS.includes(m.name)) {
+            return { ...m, displayName: m.displayName ?? '' }
+          }
+          return {
+            ...m,
+            displayName: (m.displayName ?? m.name ?? '').trim(),
+            name: '',
+          }
+        }),
+      )
     } else {
       const list: RequirementsMember[] = []
       if (d.role) {
+        const r = ROLE_LABELS[d.role] || d.role
+        const roleName = MEMBER_ROLE_OPTIONS.includes(r) ? r : '男主人'
         list.push({
           id: 'role',
-          name: ROLE_LABELS[d.role] || d.role,
+          name: roleName,
+          displayName: d.userName?.trim()
+            ? `${d.userName.trim()}${d.userTitle?.trim() ? `（${d.userTitle.trim()}）` : ''}`
+            : '',
           age: '',
           profession: '',
           spaces: (d.favoriteSpace ?? []).map((name) => ({ name, description: '' })),
         })
       }
       ;(d.additionalMembers ?? []).forEach((memberId) => {
+        const roleNm = MEMBER_LABELS[memberId] ?? memberId
         list.push({
           id: memberId,
-          name: MEMBER_LABELS[memberId] ?? memberId,
+          name: MEMBER_ROLE_OPTIONS.includes(roleNm) ? roleNm : '其他',
+          displayName: '',
           age: '',
           profession: '',
           spaces: (MEMBER_SPACES[memberId] ?? []).map((name) => ({ name, description: '' })),
@@ -1768,38 +1798,36 @@ export function RequirementsDoc({
       updater: '张雅雯',
       summary: '补充主卫干湿分离与全屋收纳重点说明',
       sectionNote: '卫生间、收纳',
-      docSnapshotJson: JSON.stringify(
-        sanitizeDocSnapshotForStorage({
+      docSnapshotJson: JSON.stringify({
+        v: 2,
+        formData: buildRevisionSnapshotFormData(initialFormData, {
           smartHomeOptions: ['全屋网络覆盖', '遮阳自动系统'],
           devices: ['智能马桶盖', '洗碗机'],
           otherNeeds: '主卫需干湿分离，公卫保留浴缸。',
           comfortSystems: ['新风系统', '全屋地暖'],
           fengshui: '床头不靠窗',
           storageFocus: ['厨房餐储收纳', '衣帽间/衣柜系统'],
-          spaceOtherNote: '',
           livingRoomNote: '亲子活动区偏大',
           diningNote: '六人位圆桌',
           kitchenNote: '双冰箱位',
           bathroomNote: '主卫干湿分离，壁挂马桶',
           coreSpaces: '1客厅1餐厅1主卧室1主卫1公卫',
-          customCoreSpaceOptions: [],
-          childGrowth: '',
           guestStay: '偶尔',
-          futureChanges: '',
           requirementsMembers: [
             {
               id: 'role',
               name: '女主人',
-              age: '',
-              profession: '',
-              spaces: [{ name: '主卧', description: '衣帽间要通透' }],
+              displayName: '张雅雯',
+              age: '31-40岁',
+              profession: '金融从业',
+              spaces: [{ name: '梦幻衣帽间', description: '衣帽间要通透' }],
             },
           ],
           floorPlanImages: [{ name: '平面-202503.pdf' }],
           siteMedia: [{ name: '现场-客厅.jpg', kind: 'image' }],
           customSpaceItems: [{ name: '玄关', description: '鞋柜到顶' }],
         }),
-      ),
+      }),
     },
     {
       id: 'demo-2',
@@ -1807,43 +1835,35 @@ export function RequirementsDoc({
       updater: '设计师·李工',
       summary: '根据沟通调整客厅活动与动线描述',
       sectionNote: '客厅',
-      docSnapshotJson: JSON.stringify(
-        sanitizeDocSnapshotForStorage({
+      docSnapshotJson: JSON.stringify({
+        v: 2,
+        formData: buildRevisionSnapshotFormData(initialFormData, {
           smartHomeOptions: ['全屋网络覆盖'],
           devices: ['洗碗机'],
-          otherNeeds: '',
           comfortSystems: ['中央空调'],
-          fengshui: '',
           storageFocus: ['儿童玩具收纳'],
-          spaceOtherNote: '',
           livingRoomNote: '沙发围合式，预留投影墙',
-          diningNote: '',
-          kitchenNote: '',
-          bathroomNote: '',
           coreSpaces: '1客厅1餐厅1主卧室',
-          customCoreSpaceOptions: [],
           childGrowth: '预留学习角',
-          guestStay: '',
-          futureChanges: '',
           requirementsMembers: [
             {
               id: 'role',
               name: '女主人',
-              age: '',
-              profession: '',
-              spaces: [{ name: '客厅', description: '动线绕开儿童区' }],
+              displayName: '',
+              age: '31-40岁',
+              profession: '教育',
+              spaces: [{ name: '客厅影音中心', description: '动线绕开儿童区' }],
             },
           ],
-          floorPlanImages: [],
-          siteMedia: [],
-          customSpaceItems: [],
         }),
-      ),
+      }),
     },
   ]
-  const revisions: RequirementDocRevisionEntry[] = useMock
-    ? showcaseRevisions
-    : (d?.requirementDocRevisions ?? [])
+  const revisions: RequirementDocRevisionEntry[] = snapshotEmbedded
+    ? []
+    : useMock
+      ? showcaseRevisions
+      : (d?.requirementDocRevisions ?? [])
 
   const REVISIONS_PAGE_SIZE = 10
   const revisionTotalPages = Math.max(1, Math.ceil(revisions.length / REVISIONS_PAGE_SIZE))
@@ -1906,7 +1926,10 @@ export function RequirementsDoc({
       updater: revisionUpdaterInput.trim() || ownerDisplayName,
       summary,
       sectionNote: sectionNote || undefined,
-      docSnapshotJson: JSON.stringify(sanitizeDocSnapshotForStorage(payloadForSave)),
+      docSnapshotJson: JSON.stringify({
+        v: 2,
+        formData: buildRevisionSnapshotFormData(d!, payloadForSave),
+      }),
     }
     updateData({
       ...payloadForSave,
@@ -2023,11 +2046,100 @@ export function RequirementsDoc({
   }
 
   return (
-    <div className="space-y-8 pb-24">
+    <div className={snapshotEmbedded ? 'space-y-6 pb-4' : 'space-y-8 pb-24'}>
+      {snapshotEmbedded && snapshotOnClose ? (
+        <div className="sticky top-0 z-20 -mx-1 flex items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-[#FFF8ED] px-4 py-3 shadow-sm">
+          <div className="min-w-0 text-sm">
+            <span className="font-semibold text-amber-950">需求书快照</span>
+            {snapshotRevisionLabel ? (
+              <span className="block text-xs text-amber-800/80 mt-0.5 truncate">{snapshotRevisionLabel}</span>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={snapshotOnClose}
+            className="shrink-0 rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 transition-colors"
+          >
+            关闭
+          </button>
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="text-xs text-gray-500">项目交付 · 用户需求</div>
-          <h1 className="mt-1 text-xl md:text-2xl font-semibold tracking-tight">用户需求</h1>
+          <div className="text-xs text-gray-500">
+            {snapshotEmbedded ? (
+              <span>
+                修订快照（只读）
+                {snapshotRevisionLabel ? (
+                  <span className="text-gray-400 font-normal"> · {snapshotRevisionLabel}</span>
+                ) : null}
+              </span>
+            ) : (
+              <>项目交付 · {requirementsDocPage === 'revisions' ? '变更记录' : '用户需求'}</>
+            )}
+          </div>
+          {showRevisionTabs ? (
+            <div
+              className="mt-3 relative z-10 inline-flex rounded-2xl bg-gradient-to-b from-stone-100/90 to-stone-50/95 p-[3px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.04)] ring-1 ring-stone-200/70"
+              role="tablist"
+              aria-label="用户需求/变更记录切换"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={requirementsDocPage === 'content'}
+                onClick={() => {
+                  setSnapshotModalEntry(null)
+                  setRequirementsDocPage('content')
+                }}
+                className={`relative flex items-center justify-center gap-2 min-w-[7.5rem] sm:min-w-[8.5rem] px-4 py-2.5 rounded-[13px] text-sm font-semibold transition-all duration-200 ease-out ${
+                  requirementsDocPage === 'content'
+                    ? 'bg-white text-[#b45309] shadow-[0_2px_12px_rgba(239,107,0,0.14),0_0_0_1px_rgba(251,191,36,0.25)]'
+                    : 'text-stone-500 hover:text-stone-800 hover:bg-white/35 active:scale-[0.99]'
+                }`}
+              >
+                <FileText
+                  size={18}
+                  strokeWidth={requirementsDocPage === 'content' ? 2.25 : 2}
+                  className={
+                    requirementsDocPage === 'content' ? 'text-[#EF6B00]' : 'text-stone-400'
+                  }
+                />
+                <span>用户需求</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={requirementsDocPage === 'revisions'}
+                onClick={() => setRequirementsDocPage('revisions')}
+                className={`relative flex items-center justify-center gap-2 min-w-[7.5rem] sm:min-w-[8.5rem] px-4 py-2.5 rounded-[13px] text-sm font-semibold transition-all duration-200 ease-out ${
+                  requirementsDocPage === 'revisions'
+                    ? 'bg-white text-[#b45309] shadow-[0_2px_12px_rgba(239,107,0,0.14),0_0_0_1px_rgba(251,191,36,0.25)]'
+                    : 'text-stone-500 hover:text-stone-800 hover:bg-white/35 active:scale-[0.99]'
+                }`}
+              >
+                <History
+                  size={18}
+                  strokeWidth={requirementsDocPage === 'revisions' ? 2.25 : 2}
+                  className={
+                    requirementsDocPage === 'revisions' ? 'text-[#EF6B00]' : 'text-stone-400'
+                  }
+                />
+                <span>变更记录</span>
+                {revisions.length > 0 ? (
+                  <span
+                    className={`tabular-nums text-[11px] font-bold min-h-[1.375rem] min-w-[1.375rem] flex items-center justify-center rounded-full px-1.5 transition-colors ${
+                      requirementsDocPage === 'revisions'
+                        ? 'bg-gradient-to-br from-amber-400/90 to-orange-500/95 text-white shadow-sm'
+                        : 'bg-stone-200/80 text-stone-600'
+                    }`}
+                  >
+                    {revisions.length > 99 ? '99+' : revisions.length}
+                  </span>
+                ) : null}
+              </button>
+            </div>
+          ) : null}
           <div className="mt-2 text-sm text-gray-600">
             <span className="font-medium text-gray-900">{projectName}</span>
             <span className="mx-2 text-gray-300">/</span>
@@ -2072,52 +2184,11 @@ export function RequirementsDoc({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div
-          className="inline-flex rounded-2xl border border-gray-200 bg-white p-1 shadow-sm"
-          role="tablist"
-          aria-label="用户需求分页"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={requirementsDocPage === 'content'}
-            onClick={() => setRequirementsDocPage('content')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-              requirementsDocPage === 'content'
-                ? 'bg-[#EF6B00] text-white shadow-sm'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            需求书内容
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={requirementsDocPage === 'revisions'}
-            onClick={() => setRequirementsDocPage('revisions')}
-            className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors inline-flex items-center gap-1 ${
-              requirementsDocPage === 'revisions'
-                ? 'bg-[#EF6B00] text-white shadow-sm'
-                : 'text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            变更记录
-            {revisions.length > 0 ? (
-              <span
-                className={`min-w-[1.25rem] text-center text-xs font-bold rounded-md px-1.5 py-0.5 ${
-                  requirementsDocPage === 'revisions' ? 'bg-white/20' : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {revisions.length}
-              </span>
-            ) : null}
-          </button>
-        </div>
-      </div>
-
-      {requirementsDocPage === 'content' ? (
-        <>
+      {/* 用 hidden 切换而非条件卸载，避免切回「用户需求」时正文不渲染或视口异常 */}
+      <div
+        className={showDocContent ? 'space-y-8' : 'hidden'}
+        aria-hidden={!showDocContent}
+      >
       <section className="space-y-4">
         <SectionTitle title="项目概览" />
 
@@ -2489,7 +2560,7 @@ export function RequirementsDoc({
             {membersEdit.map((member, memberIdx) => (
               <div key={member.id} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1 min-w-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-w-0">
                     <div>
                       <label className="text-xs text-gray-500 block mb-1">角色</label>
                       <select
@@ -2497,71 +2568,45 @@ export function RequirementsDoc({
                         onChange={(e) => {
                           setMembersEdit((prev) => {
                             const next = [...prev]
-                            const newName = e.target.value
-                            const allowedSpaces = ROLE_TO_ACTIVITY_OPTIONS[newName] ?? MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK
-                            const allowedAges = ROLE_TO_AGE_OPTIONS[newName] ?? MEMBER_AGE_OPTIONS_FALLBACK
-                            const allowedProfs = ROLE_TO_PROFESSION_OPTIONS[newName] ?? MEMBER_PROFESSION_OPTIONS_FALLBACK
+                            const newRole = e.target.value
+                            const allowedSpaces =
+                              ROLE_TO_ACTIVITY_OPTIONS[newRole] ?? MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK
+                            const allowedAges = ROLE_TO_AGE_OPTIONS[newRole] ?? MEMBER_AGE_OPTIONS_FALLBACK
+                            const allowedProfs =
+                              ROLE_TO_PROFESSION_OPTIONS[newRole] ?? MEMBER_PROFESSION_OPTIONS_FALLBACK
                             const m = next[memberIdx]
                             const spaces = (m.spaces ?? []).filter((s) => allowedSpaces.includes(s.name))
-                            const age = (m.age && allowedAges.includes(m.age)) ? m.age : ''
-                            const profession = (m.profession && allowedProfs.includes(m.profession)) ? m.profession : ''
-                            next[memberIdx] = { ...m, name: newName, spaces, age, profession }
+                            const age = m.age && allowedAges.includes(m.age) ? m.age : ''
+                            const profession =
+                              m.profession && allowedProfs.includes(m.profession) ? m.profession : ''
+                            next[memberIdx] = { ...m, name: newRole, spaces, age, profession }
                             return next
                           })
                         }}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
                       >
                         <option value="">请选择角色</option>
-                        {[...MEMBER_ROLE_OPTIONS, (member.name?.trim() && !MEMBER_ROLE_OPTIONS.includes(member.name)) ? member.name : null].filter(Boolean).map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
+                        {MEMBER_ROLE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 block mb-1">年龄段</label>
-                      <select
-                        value={member.age ?? ''}
+                      <label className="text-xs text-gray-500 block mb-1">姓名（选填，展示用）</label>
+                      <input
+                        value={member.displayName ?? ''}
                         onChange={(e) => {
                           setMembersEdit((prev) => {
                             const next = [...prev]
-                            next[memberIdx] = { ...next[memberIdx], age: e.target.value }
+                            next[memberIdx] = { ...next[memberIdx], displayName: e.target.value }
                             return next
                           })
                         }}
+                        placeholder="如：张明远、二宝昵称等"
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                      >
-                        <option value="">请选择</option>
-                        {((): string[] => {
-                          const byRole = ROLE_TO_AGE_OPTIONS[member.name] ?? MEMBER_AGE_OPTIONS_FALLBACK
-                          const extra = (member.age?.trim() && !byRole.includes(member.age)) ? [member.age] : []
-                          return [...byRole, ...extra]
-                        })().map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 block mb-1">身份/职业</label>
-                      <select
-                        value={member.profession ?? ''}
-                        onChange={(e) => {
-                          setMembersEdit((prev) => {
-                            const next = [...prev]
-                            next[memberIdx] = { ...next[memberIdx], profession: e.target.value }
-                            return next
-                          })
-                        }}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                      >
-                        <option value="">请选择</option>
-                        {((): string[] => {
-                          const byRole = ROLE_TO_PROFESSION_OPTIONS[member.name] ?? MEMBER_PROFESSION_OPTIONS_FALLBACK
-                          const extra = (member.profession?.trim() && !byRole.includes(member.profession)) ? [member.profession] : []
-                          return [...byRole, ...extra]
-                        })().map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
                   </div>
                   <button
@@ -2574,6 +2619,62 @@ export function RequirementsDoc({
                     <Trash2 size={18} />
                   </button>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">年龄段</label>
+                    <select
+                      value={
+                        member.name &&
+                        (ROLE_TO_AGE_OPTIONS[member.name] ?? []).includes(member.age ?? '')
+                          ? (member.age ?? '')
+                          : ''
+                      }
+                      disabled={!member.name}
+                      onChange={(e) => {
+                        setMembersEdit((prev) => {
+                          const next = [...prev]
+                          next[memberIdx] = { ...next[memberIdx], age: e.target.value }
+                          return next
+                        })
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      <option value="">{member.name ? '请选择' : '请先选择角色'}</option>
+                      {(member.name ? ROLE_TO_AGE_OPTIONS[member.name] ?? [] : []).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">身份/职业</label>
+                    <select
+                      value={
+                        member.name &&
+                        (ROLE_TO_PROFESSION_OPTIONS[member.name] ?? []).includes(member.profession ?? '')
+                          ? (member.profession ?? '')
+                          : ''
+                      }
+                      disabled={!member.name}
+                      onChange={(e) => {
+                        setMembersEdit((prev) => {
+                          const next = [...prev]
+                          next[memberIdx] = { ...next[memberIdx], profession: e.target.value }
+                          return next
+                        })
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      <option value="">{member.name ? '请选择' : '请先选择角色'}</option>
+                      {(member.name ? ROLE_TO_PROFESSION_OPTIONS[member.name] ?? [] : []).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 {member.id === 'role' && (d?.styleName?.trim()) && (
                   <div className="mt-4 rounded-2xl border border-[#FF9C3E]/20 bg-[#FF9C3E]/5 p-4">
                     <div className="text-xs font-semibold text-gray-500 mb-1">风格人格（本人做的测评）</div>
@@ -2582,7 +2683,7 @@ export function RequirementsDoc({
                 )}
                 <div className="mt-4 rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4">
                   <div className="text-xs font-semibold text-gray-700 mb-2">
-                    主要活动及空间{member.name ? `（${member.name} 对应选项）` : '（请先选择角色）'}
+                    主要活动及空间{member.name ? `（与「${member.name}」匹配的选项）` : '（请先选择角色）'}
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {(ROLE_TO_ACTIVITY_OPTIONS[member.name] ?? MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK).map((spaceName) => {
@@ -2631,7 +2732,15 @@ export function RequirementsDoc({
               onClick={() => {
                 setMembersEdit((prev) => [
                   ...prev,
-                  { id: `custom-${Date.now()}`, name: '', age: '', profession: '', spaces: [], otherActivityNote: '' },
+                  {
+                    id: `custom-${Date.now()}`,
+                    name: '',
+                    displayName: '',
+                    age: '',
+                    profession: '',
+                    spaces: [],
+                    otherActivityNote: '',
+                  },
                 ])
               }}
               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 py-4 text-sm font-medium text-gray-600 hover:bg-[#FFFDF3] hover:border-[#FF9C3E]/30 transition-colors"
@@ -2643,40 +2752,51 @@ export function RequirementsDoc({
         ) : hasMemberData ? (
           <>
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
-              {personas.map((p) => (
+              {personas.map((p, pi) => (
                 <div
-                  key={`${p.name}-${p.age}`}
+                  key={p.personaKey ?? `chip-${pi}`}
                   className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white border border-gray-100 shadow-sm px-3 py-2 text-xs"
                 >
                   <span className="w-6 h-6 rounded-full bg-[#FF9C3E]/10 text-[#C87800] flex items-center justify-center font-bold">
                     {p.name.slice(0, 1)}
                   </span>
-                  <span className="font-semibold text-gray-800">{p.name}</span>
+                  <span className="flex flex-col items-start min-w-0">
+                    <span className="font-semibold text-gray-800 truncate max-w-[8rem]">{p.name}</span>
+                    {p.roleTag ? (
+                      <span className="text-[10px] text-amber-800/90 font-medium">{p.roleTag}</span>
+                    ) : null}
+                  </span>
                   <span className="text-gray-400">·</span>
-                  <span className="text-gray-600">{p.age}</span>
+                  <span className="text-gray-600 shrink-0">{p.age}</span>
                 </div>
               ))}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {personas.map((p) => (
-                <div key={`${p.name}-${p.age}`} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
+              {personas.map((p, pi) => (
+                <div key={p.personaKey ?? `card-${pi}`} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="text-base font-semibold truncate">{p.name}</div>
-                        <span className="text-xs text-gray-400">·</span>
+                      <div className="text-base font-semibold text-gray-900 truncate">{p.name}</div>
+                      {p.roleTag ? (
+                        <div className="mt-1 inline-flex items-center rounded-lg bg-amber-50 border border-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                          角色 · {p.roleTag}
+                        </div>
+                      ) : null}
+                      <div className="flex items-center gap-2 min-w-0 mt-2">
                         <div className="text-sm font-semibold text-gray-700 shrink-0">{p.age}</div>
-                      </div>
-                      <div className="mt-1 text-sm text-gray-600">
-                        {p.profession}
-                        {p.height ? (
+                        {p.profession ? (
                           <>
-                            <span className="mx-2 text-gray-300">/</span>
-                            身高 {p.height}
+                            <span className="text-xs text-gray-300">·</span>
+                            <div className="text-sm text-gray-600 truncate">{p.profession}</div>
                           </>
                         ) : null}
                       </div>
+                      {p.height ? (
+                        <div className="mt-1 text-sm text-gray-600">
+                          身高 {p.height}
+                        </div>
+                      ) : null}
 
                       {p.isStyleTaker && (useMock ? p.stylePersona : d?.styleName?.trim()) ? (
                         <div className="mt-2">
@@ -3243,15 +3363,20 @@ export function RequirementsDoc({
           </div>
         </div>
       </section>
-        </>
-      ) : (
-      <section className="rounded-3xl border border-gray-100 bg-white shadow-sm p-6 md:p-8 min-h-[280px]">
+      </div>
+
+      {showRevisionTabs ? (
+      <section
+        className={`rounded-3xl border border-gray-100 bg-white shadow-sm p-6 md:p-8 min-h-[280px] ${
+          requirementsDocPage === 'revisions' ? '' : 'hidden'
+        }`}
+      >
         <SectionTitle title="需求变更与修订记录" />
         <p className="mt-2 text-xs text-gray-500 leading-relaxed">
           按时间追溯「谁在何时改了什么」；每条可查看<strong>该次保存后</strong>的需求书快照（文本与选项；媒体仅存文件名）。<strong>最新在上</strong>。
           {revisions.length > REVISIONS_PAGE_SIZE ? (
-            <span className="block mt-1 text-gray-400">
-              共 {revisions.length} 条，每页 {REVISIONS_PAGE_SIZE} 条
+            <span className="block mt-1 text-stone-400">
+              共 {revisions.length} 条修订，下方可翻页浏览
             </span>
           ) : null}
         </p>
@@ -3297,32 +3422,23 @@ export function RequirementsDoc({
           </table>
         </div>
         {revisions.length > REVISIONS_PAGE_SIZE ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
-            <span className="text-xs text-gray-500">
-              第 {revisionTablePage} / {revisionTotalPages} 页
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={revisionTablePage <= 1}
-                onClick={() => setRevisionTablePage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                上一页
-              </button>
-              <button
-                type="button"
-                disabled={revisionTablePage >= revisionTotalPages}
-                onClick={() => setRevisionTablePage((p) => Math.min(revisionTotalPages, p + 1))}
-                className="px-3 py-1.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                下一页
-              </button>
-            </div>
-          </div>
+          <RevisionTablePagination
+            page={revisionTablePage}
+            totalPages={revisionTotalPages}
+            pageSize={REVISIONS_PAGE_SIZE}
+            total={revisions.length}
+            onPageChange={setRevisionTablePage}
+          />
         ) : null}
       </section>
-      )}
+      ) : null}
+
+      {!snapshotEmbedded ? (
+        <RequirementDocSnapshotModal
+          entry={snapshotModalEntry}
+          onClose={() => setSnapshotModalEntry(null)}
+        />
+      ) : null}
 
       {showSubmitModal && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center px-4">
@@ -3474,76 +3590,257 @@ export function RequirementsDoc({
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-5 md:px-10 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-          <div className="text-xs text-gray-500 line-clamp-2">
-            {revisions[0] ? (
-              <>
-                最后修订：<span className="text-gray-700">{revisions[0].date}</span> · {revisions[0].updater} ·{' '}
-                {revisions[0].summary.length > 36 ? `${revisions[0].summary.slice(0, 36)}…` : revisions[0].summary}
-              </>
-            ) : useMock ? (
-              <>示例数据 · 修订记录见上文表格</>
-            ) : (
-              <>有变更并完成编辑后，将自动记录修订，最新信息将显示在此处。</>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onBackHome}
-              className="flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              返回
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (isEditing && updateData && !useMock) {
-                  const fpAfter = fingerprintRequirementDocPayload(
-                    buildRequirementDocEditsPayload() as RequirementDocPayloadShape,
-                  )
-                  const beforeFp =
-                    baselineFingerprintRef.current ?? (d ? fingerprintFromSavedFormData(d) : null)
-                  const labels = diffRequirementDocFingerprints(beforeFp, fpAfter)
-                  if (labels.length === 0) {
-                    setShowNoChangesModal(true)
-                  } else {
-                    setRevisionUpdaterInput(ownerDisplayName)
-                    setRevisionSummaryInput(formatAutoRevisionSummary(labels))
-                    setRevisionSectionNoteInput(labels.join('、'))
-                    setShowFinishRevisionModal(true)
-                  }
-                } else {
-                  if (!isEditing && updateData && !useMock && d) {
-                    baselineFingerprintRef.current = fingerprintFromSavedFormData(d)
-                    setRequirementsDocPage('content')
-                  }
-                  setIsEditing((v) => !v)
-                }
-              }}
-              className={`flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
-                isEditing ? 'bg-[#EF6B00] text-white hover:bg-[#D85F00]' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-              }`}
-              title={isEditing ? '完成编辑' : '编辑需求书'}
-            >
-              {isEditing ? '完成编辑' : '编辑'}
-            </button>
-            {!isEditing && !hasSubmitted ? (
+      {!snapshotEmbedded ? (
+        <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/90 backdrop-blur border-t border-gray-100">
+          <div className="max-w-6xl mx-auto px-5 md:px-10 py-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <div className="text-xs text-gray-500 line-clamp-2">
+              {revisions[0] ? (
+                <>
+                  最后修订：<span className="text-gray-700">{revisions[0].date}</span> · {revisions[0].updater} ·{' '}
+                  {revisions[0].summary.length > 36 ? `${revisions[0].summary.slice(0, 36)}…` : revisions[0].summary}
+                </>
+              ) : useMock ? (
+                <>示例数据 · 修订记录见上文表格</>
+              ) : (
+                <>有变更并完成编辑后，将自动记录修订，最新信息将显示在此处。</>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onBackHome}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                返回
+              </button>
               <button
                 type="button"
                 onClick={() => {
-                  setHasSubmitted(true)
-                  setShowSubmitModal(true)
+                  if (isEditing && updateData && !useMock) {
+                    const fpAfter = fingerprintRequirementDocPayload(
+                      buildRequirementDocEditsPayload() as RequirementDocPayloadShape,
+                    )
+                    const beforeFp =
+                      baselineFingerprintRef.current ?? (d ? fingerprintFromSavedFormData(d) : null)
+                    const labels = diffRequirementDocFingerprints(beforeFp, fpAfter)
+                    if (labels.length === 0) {
+                      setShowNoChangesModal(true)
+                    } else {
+                      setRevisionUpdaterInput(ownerDisplayName)
+                      setRevisionSummaryInput(formatAutoRevisionSummary(labels))
+                      setRevisionSectionNoteInput(labels.join('、'))
+                      setShowFinishRevisionModal(true)
+                    }
+                  } else {
+                    if (!isEditing && updateData && !useMock && d) {
+                      baselineFingerprintRef.current = fingerprintFromSavedFormData(d)
+                      setRequirementsDocPage('content')
+                    }
+                    setIsEditing((v) => !v)
+                  }
                 }}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] px-5 py-3 text-sm font-semibold text-white hover:brightness-95 active:scale-[0.99] transition"
+                className={`flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition-colors ${
+                  isEditing ? 'bg-[#EF6B00] text-white hover:bg-[#D85F00]' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                }`}
+                title={isEditing ? '完成编辑' : '编辑需求书'}
               >
-                确认并提交
-                <ChevronRight size={18} className="ml-1" />
+                {isEditing ? '完成编辑' : '编辑'}
               </button>
-            ) : null}
+              {!isEditing && !hasSubmitted ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasSubmitted(true)
+                    setShowSubmitModal(true)
+                  }}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center rounded-2xl bg-[#FF9C3E] px-5 py-3 text-sm font-semibold text-white hover:brightness-95 active:scale-[0.99] transition"
+                >
+                  确认并提交
+                  <ChevronRight size={18} className="ml-1" />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
+      ) : null}
+    </div>
+  )
+}
+
+function RequirementDocSnapshotModal({
+  entry,
+  onClose,
+}: {
+  entry: RequirementDocRevisionEntry | null
+  onClose: () => void
+}) {
+  if (!entry) return null
+  const fd = parseDocSnapshotJson(entry.docSnapshotJson)
+  if (!fd) {
+    return createPortal(
+      <div className="fixed inset-0 z-[10050] flex items-center justify-center px-4">
+        <button
+          type="button"
+          className="absolute inset-0 bg-neutral-950/75 backdrop-blur-[3px]"
+          aria-label="关闭"
+          onClick={onClose}
+        />
+        <div className="relative z-[1] max-w-sm rounded-3xl bg-white p-6 shadow-2xl border border-gray-100">
+          <p className="text-sm text-gray-700 leading-relaxed">
+            该条为旧版存档，无完整版面快照。请在新修订保存后查看，或使用龙湖璟宸府演示数据体验。
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 w-full py-2.5 rounded-2xl bg-gray-900 text-white text-sm font-semibold"
+          >
+            关闭
+          </button>
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10050] flex justify-center overflow-y-auto overflow-x-hidden bg-neutral-950/72 backdrop-blur-[4px] py-4 px-2 sm:px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="需求书快照"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div
+        className="w-full max-w-6xl flex flex-col rounded-3xl bg-[#FFFDF3] shadow-[0_25px_80px_rgba(0,0,0,0.35)] border border-stone-200/90 overflow-hidden min-h-[min(88vh,820px)] max-h-[min(94vh,900px)] my-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-5 py-4">
+          <RequirementsDoc
+              key={entry.id}
+              snapshotEmbedded
+              snapshotOnClose={onClose}
+              snapshotRevisionLabel={`${entry.date} · ${entry.updater}`}
+              data={fd}
+              projectName={(fd.projectName || '项目').trim() || '项目'}
+              ownerDisplayName={(fd.userName || '业主').trim() || '业主'}
+              houseUsage={fd.houseUsage}
+              onBackHome={onClose}
+            />
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+/** 变更记录表分页：范围说明 + 页码胶囊 + 圆形前后导航 */
+function revisionPaginationSlots(current: number, total: number): (number | 'gap')[] {
+  if (total <= 1) return [1]
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const want = new Set(
+    [1, total, current, current - 1, current + 1].filter((p) => p >= 1 && p <= total),
+  )
+  const sorted = [...want].sort((a, b) => a - b)
+  const out: (number | 'gap')[] = []
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push('gap')
+    out.push(sorted[i])
+  }
+  return out
+}
+
+function RevisionTablePagination({
+  page,
+  totalPages,
+  pageSize,
+  total,
+  onPageChange,
+}: {
+  page: number
+  totalPages: number
+  pageSize: number
+  total: number
+  onPageChange: (p: number) => void
+}) {
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(page * pageSize, total)
+  const slots = revisionPaginationSlots(page, totalPages)
+
+  return (
+    <div className="mt-5 rounded-2xl border border-stone-100/90 bg-gradient-to-b from-[#FFFDF9] to-stone-50/50 px-3 py-3.5 sm:px-5 sm:py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5 text-[13px] leading-snug text-stone-500">
+          <span
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white text-amber-600/90 shadow-sm ring-1 ring-stone-100/80"
+            aria-hidden
+          >
+            <ListChecks size={16} strokeWidth={2.25} />
+          </span>
+          <span>
+            显示{' '}
+            <span className="font-semibold tabular-nums text-stone-800">{start}</span>
+            <span className="text-stone-400 mx-0.5">–</span>
+            <span className="font-semibold tabular-nums text-stone-800">{end}</span>
+            {' '}条，共{' '}
+            <span className="font-semibold tabular-nums text-stone-800">{total}</span>
+            {' '}条
+          </span>
+        </div>
+
+        <nav
+          className="flex flex-wrap items-center justify-center gap-1 sm:justify-end"
+          aria-label="修订记录分页"
+        >
+          <button
+            type="button"
+            aria-label="上一页"
+            disabled={page <= 1}
+            onClick={() => onPageChange(Math.max(1, page - 1))}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/90 bg-white text-stone-600 shadow-sm transition-all hover:border-amber-300/70 hover:bg-amber-50/90 hover:text-amber-950 hover:shadow-md disabled:pointer-events-none disabled:opacity-30 disabled:shadow-none disabled:hover:bg-white disabled:hover:border-stone-200"
+          >
+            <ChevronLeft size={18} strokeWidth={2.25} />
+          </button>
+
+          <div className="flex items-center gap-0.5 px-1">
+            {slots.map((item, idx) =>
+              item === 'gap' ? (
+                <span
+                  key={`gap-${idx}`}
+                  className="px-1.5 text-[10px] font-medium tracking-widest text-stone-300 select-none"
+                  aria-hidden
+                >
+                  ···
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  aria-label={`第 ${item} 页`}
+                  aria-current={page === item ? 'page' : undefined}
+                  onClick={() => onPageChange(item)}
+                  className={`min-w-[2.125rem] h-9 rounded-xl px-2 text-sm font-semibold tabular-nums transition-all ${
+                    page === item
+                      ? 'bg-gradient-to-b from-[#FF9C3E] to-[#EF6B00] text-white shadow-[0_3px_10px_rgba(239,107,0,0.32)] ring-1 ring-orange-300/40 scale-[1.02]'
+                      : 'text-stone-600 hover:bg-white hover:text-stone-900 hover:shadow-sm hover:ring-1 hover:ring-stone-100/90 active:scale-[0.97]'
+                  }`}
+                >
+                  {item}
+                </button>
+              ),
+            )}
+          </div>
+
+          <button
+            type="button"
+            aria-label="下一页"
+            disabled={page >= totalPages}
+            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200/90 bg-white text-stone-600 shadow-sm transition-all hover:border-amber-300/70 hover:bg-amber-50/90 hover:text-amber-950 hover:shadow-md disabled:pointer-events-none disabled:opacity-30 disabled:shadow-none disabled:hover:bg-white disabled:hover:border-stone-200"
+          >
+            <ChevronRight size={18} strokeWidth={2.25} />
+          </button>
+        </nav>
       </div>
     </div>
   )

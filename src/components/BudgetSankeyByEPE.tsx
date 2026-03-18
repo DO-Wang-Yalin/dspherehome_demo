@@ -65,12 +65,14 @@ function milestoneToEPE(milestoneId: string): EPECategory {
 }
 
 const VB_W = 950
-const CHART_TOP_MARGIN = 72
-const CHART_BOTTOM_MARGIN = 50
-const EPE_GAP = 20
-const DEAL_GAP = 12
-const DEAL_ZERO_LINE_H = 4
-const INCOME_MIN_GAP = 16
+/** 纵向约为原 SCALE=18 时的 1/3，金额→像素比例不变（同比例缩放） */
+const CHART_TOP_MARGIN = 40
+const CHART_BOTTOM_MARGIN = 26
+const EPE_GAP = 7
+const DEAL_GAP = 4
+const DEAL_PAIR_GAP = 7
+const DEAL_ZERO_LINE_H = 3
+const INCOME_MIN_GAP = 6
 const INCOME_COLOR = '#FBBF24'
 const TODAY_COLOR = '#F97316'
 
@@ -112,9 +114,11 @@ interface BudgetSankeyByEPEProps {
   subtitle?: string
   /** 外层已由面板包一层卡片时，去掉内层白底圆角边框，避免双卡片 */
   unstyled?: boolean
+  /** 桑基图区域左右顶满外层白卡片内边距 */
+  chartBleed?: boolean
 }
 
-function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps = {}) {
+function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSankeyByEPEProps = {}) {
   const incomeEntries = data?.incomeEntries ?? INCOME_ENTRIES
   const orders = data?.orders ?? ORDERS
   const totalBudget = data?.totalBudget ?? TOTAL_BUDGET
@@ -122,7 +126,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
   const [hovered, setHovered] = useState<string | null>(null)
 
   const layout = useMemo(() => {
-    const SCALE = 18
+    const SCALE = 6
 
     const sortedPaidIncome = [...incomeEntries]
       .filter((inc) => !inc.isFuture)
@@ -178,14 +182,14 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
     })
 
     const paidSoFar = incomeEntries
-      .filter((i) => !i.isFuture && !i.isToday)
+      .filter((i) => !i.isFuture && !i.isUnpaid)
       .reduce((s, i) => s + i.amount, 0)
 
     let epeY = (availableHeight - budgetH) / 2 + CHART_TOP_MARGIN
     const epeLayout: { key: EPECategory; y: number; h: number; closed: number; open: number }[] = []
     ;(['E', 'P', 'C'] as const).forEach((key) => {
       const total = epeTotal(key)
-      const height = Math.max(24, total * SCALE)
+      const height = Math.max(22, total * SCALE)
       epeLayout.push({
         key,
         y: epeY,
@@ -196,14 +200,13 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
       epeY += height + EPE_GAP
     })
 
-    const DEAL_PAIR_GAP = 16
     const dealNodes: { id: string; y: number; h: number; label: string; epe: EPECategory; closed: boolean; amount: number; isZeroLine: boolean }[] = []
     let dealY = (availableHeight - budgetH) / 2 + CHART_TOP_MARGIN
     ;(['E', 'P', 'C'] as const).forEach((epe) => {
       const closedAmount = epeBuckets[epe].closed
       const openAmount = epeBuckets[epe].open
-      const closedH = closedAmount > 0 ? Math.max(18, closedAmount * SCALE) : DEAL_ZERO_LINE_H
-      const openH = openAmount > 0 ? Math.max(18, openAmount * SCALE) : DEAL_ZERO_LINE_H
+      const closedH = closedAmount > 0 ? Math.max(12, closedAmount * SCALE) : DEAL_ZERO_LINE_H
+      const openH = openAmount > 0 ? Math.max(12, openAmount * SCALE) : DEAL_ZERO_LINE_H
       dealNodes.push({ id: `${epe}-closed`, y: dealY, h: closedH, label: '已成交', epe, closed: true, amount: closedAmount, isZeroLine: closedAmount === 0 })
       dealY += closedH + DEAL_GAP
       dealNodes.push({ id: `${epe}-open`, y: dealY, h: openH, label: '未成交', epe, closed: false, amount: openAmount, isZeroLine: openAmount === 0 })
@@ -353,12 +356,19 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
         </div>
       </div>
 
-      <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: VB_W }}>
+      <div
+        className={[
+          'w-full',
+          chartBleed ? '-mx-4 w-[calc(100%+2rem)] max-w-none sm:-mx-5 sm:w-[calc(100%+2.5rem)]' : 'overflow-x-auto',
+        ].join(' ')}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className={chartBleed ? 'w-full min-w-0' : ''} style={chartBleed ? undefined : { minWidth: VB_W }}>
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
-            width={VB_W}
-            style={{ display: 'block' }}
+            width="100%"
+            className="block h-auto max-w-none"
+            preserveAspectRatio="xMidYMid meet"
             onMouseLeave={() => setHovered(null)}
           >
             <defs>
@@ -422,7 +432,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
               { cx: (X.epeLeft + X.epeRight) / 2, label: 'E/P/C 阶段' },
               { cx: (X.dealLeft + X.dealRight) / 2, label: '已成交 / 未成交' },
             ].map(({ cx, label }) => (
-              <text key={label} x={cx} y={50} textAnchor="middle" fill="#6B7280" fontSize={15} fontWeight={500}>
+              <text key={label} x={cx} y={26} textAnchor="middle" fill="#6B7280" fontSize={12} fontWeight={600}>
                 {label}
               </text>
             ))}
@@ -502,17 +512,25 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
                   {!inc.isUnpaid && (
                     <>
                       <line x1={X.dateDot + 6} y1={y} x2={X.incomeLeft - 2} y2={y} stroke={isPast ? INCOME_COLOR : '#CBD5E1'} strokeWidth={1} strokeDasharray="3 3" opacity={0.55} />
-                      <circle cx={X.dateDot} cy={y} r={4.5} fill={dotColor} stroke="white" strokeWidth={1.5} />
+                      <circle cx={X.dateDot} cy={y} r={3.5} fill={dotColor} stroke="white" strokeWidth={1.2} />
                     </>
                   )}
                   {inc.amount > 0 && (
                     <>
                       <rect x={X.incomeLeft} y={y - barH / 2} width={X.incomeRight - X.incomeLeft} height={barH} rx={3} fill={barColor} opacity={0.88} />
-                      <text x={(X.incomeLeft + X.incomeRight) / 2} y={y + 5} textAnchor="middle" fill={textColor} fontSize={14} fontWeight={600}>¥{inc.amount}w</text>
+                      <text x={(X.incomeLeft + X.incomeRight) / 2} y={y + 4} textAnchor="middle" fill={textColor} fontSize={11} fontWeight={600}>¥{inc.amount}w</text>
                     </>
                   )}
-                  {!inc.isToday && !inc.isUnpaid && <text x={12} y={y + 5} fill={isPast ? '#374151' : '#94A3B8'} fontSize={13}>{inc.displayDate}</text>}
-                  {inc.isUnpaid && <text x={12} y={y + 5} fill="#64748B" fontSize={13}>{inc.displayDate}</text>}
+                  {!inc.isUnpaid && inc.amount > 0 && (
+                    <text x={8} y={y + 4} fill={isPast ? '#374151' : '#94A3B8'} fontSize={11}>
+                      {inc.displayDate}
+                    </text>
+                  )}
+                  {inc.isUnpaid && (
+                    <text x={8} y={y + 4} fill="#64748B" fontSize={11}>
+                      {inc.displayDate}
+                    </text>
+                  )}
                 </g>
               )
             })}
@@ -520,7 +538,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
             <g style={{ cursor: 'pointer' }} onMouseEnter={() => setHovered('budget')} onMouseLeave={() => setHovered(null)}>
               <rect x={X.budgetLeft + 2} y={budgetTop + 2} width={X.budgetRight - X.budgetLeft} height={budgetH} rx={7} fill="rgba(0,0,0,0.06)" />
               <rect x={X.budgetLeft} y={budgetTop} width={X.budgetRight - X.budgetLeft} height={budgetH} rx={7} fill="url(#bep-gradBudget)" />
-              <text x={(X.budgetLeft + X.budgetRight) / 2} y={budgetTop - 8} textAnchor="middle" fill="#6B7280" fontSize={11} fontWeight={600}>¥{layoutTotalBudget}w</text>
+              <text x={(X.budgetLeft + X.budgetRight) / 2} y={budgetTop - 5} textAnchor="middle" fill="#6B7280" fontSize={10} fontWeight={600}>¥{layoutTotalBudget}w</text>
             </g>
 
             {epeLayout.map((epe) => {
@@ -528,7 +546,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
               const total = bucket.closed + bucket.open
               const ratio = total > 0 ? bucket.closed / total : 0.5
               // 动态调整文字位置：如果成交多，文字往上走；未成交多，文字往下走
-              const labelYOffset = ratio > 0.6 ? -10 : ratio < 0.4 ? 10 : 4
+              const labelYOffset = ratio > 0.6 ? -6 : ratio < 0.4 ? 6 : 2
               
               return (
                 <g
@@ -538,8 +556,16 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
                 >
                   <rect x={X.epeLeft} y={epe.y} width={X.epeRight - X.epeLeft} height={epe.h} rx={5} fill={`url(#bep-epe-block-${epe.key})`} stroke={rgba(UNWON_GRAY, 0.2)} strokeWidth={1} />
                   <rect x={X.epeLeft} y={epe.y} width={4} height={epe.h} rx={2} fill={EPE_COLORS[epe.key]} opacity={0.8} />
-                  <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + labelYOffset} fill="#1F2937" fontSize={12} fontWeight={600}>{EPE_LABELS[epe.key]}</text>
-                  <text x={X.epeLeft + 10} y={epe.y + epe.h / 2 + labelYOffset + 14} fill="#6B7280" fontSize={11}>已成交 ¥{epe.closed}w / 未成交 ¥{epe.open}w</text>
+                  {epe.h >= 34 ? (
+                    <>
+                      <text x={X.epeLeft + 8} y={epe.y + epe.h / 2 + labelYOffset - 5} fill="#1F2937" fontSize={10} fontWeight={600}>{EPE_LABELS[epe.key]}</text>
+                      <text x={X.epeLeft + 8} y={epe.y + epe.h / 2 + labelYOffset + 10} fill="#6B7280" fontSize={9}>已成交 ¥{epe.closed}w / 未成交 ¥{epe.open}w</text>
+                    </>
+                  ) : (
+                    <text x={X.epeLeft + 8} y={epe.y + epe.h / 2 + 3} fill="#1F2937" fontSize={9} fontWeight={600}>
+                      {EPE_LABELS[epe.key]} · 已¥{epe.closed}w / 未¥{epe.open}w
+                    </text>
+                  )}
                 </g>
               )
             })}
@@ -560,8 +586,8 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled }: BudgetSankeyByEPEProps 
                     <>
                       <rect x={X.dealLeft} y={d.y} width={X.dealRight - X.dealLeft} height={d.h} rx={4} fill={dealFill} stroke={dealColor} strokeWidth={1} />
                       <rect x={X.dealLeft} y={d.y} width={4} height={d.h} rx={2} fill={baseColor} opacity={d.closed ? 0.85 : 0.7} />
-                      <text x={X.dealLabelLeft} y={d.y + d.h / 2 - 2} fill="#374151" fontSize={11} fontWeight={500}>{d.label}</text>
-                      <text x={X.dealLabelLeft} y={d.y + d.h / 2 + 12} fill="#6B7280" fontSize={10}>{EPE_LABELS[d.epe].slice(0, 2)} · ¥{d.amount}w</text>
+                      <text x={X.dealLabelLeft} y={d.y + d.h / 2 - 1} fill="#374151" fontSize={10} fontWeight={500}>{d.label}</text>
+                      <text x={X.dealLabelLeft} y={d.y + d.h / 2 + 9} fill="#6B7280" fontSize={9}>{EPE_LABELS[d.epe].slice(0, 2)} · ¥{d.amount}w</text>
                     </>
                   )}
                 </g>

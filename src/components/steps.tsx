@@ -14,8 +14,7 @@ import {
   Phone, Briefcase, ChevronDown, Copy, LocateFixed, Loader2, ChevronRight, Wallet, Home, Download, X,
   FolderOpen, ListChecks,
 } from 'lucide-react';
-// @ts-ignore: static image asset import
-import contractFlowImg from '../assets/contract-flow.png';
+const contractFlowImg = '/img/contract-flow.png';
 import { HomeStyleEval } from '../pages/StyleEval/HomeStyleEval';
 import { CONTRACT_TEXT } from '../constants/contract';
 import { useGlobal } from '../context/GlobalContext';
@@ -2241,7 +2240,7 @@ export const StepContract = ({
     '2.2 服务流程',
     '  1. 状态图解:',
     '[图片]',
-    '  2. 意向期：收集甲方需求后，乙方生成意向报价单供甲方决策。',
+    '  2. 意向期：收集甲方需求后，乙方提供方案与沟通供甲方确认，确认后进入订购报价。',
     '  3. 订购期：甲乙双方明确订单服务事项与详细报价，乙方发送订购报价单与甲方成交订单。',
     '  4. 交付期：',
     '    - 甲方确保用于支付订单的资金充足，乙方按甲方最后确认的订购报价单约定，交付成果；',

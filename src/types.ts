@@ -24,7 +24,10 @@ export interface RequirementDocRevisionEntry {
 /** 需求书成员画像：可添加/编辑成员，每个成员下可添加/编辑空间及描述 */
 export interface RequirementsMember {
   id: string;
+  /** 角色（男主人、女主人、女儿等），决定年龄段/职业/活动空间可选项 */
   name: string;
+  /** 姓名或称呼，仅展示用，可与角色分开填写 */
+  displayName?: string;
   age?: string;
   profession?: string;
   spaces: MemberSpaceItem[];
@@ -178,6 +181,8 @@ export interface ProjectBudgetData {
   epcRangeMax: number;
   /** 项目入金金额（万元） */
   epcDeposit: number;
+  /** 入金分笔记录（日期 YYYY-MM-DD、万元）；无则按一笔展示，日期取 confirmedAt */
+  epcDepositEntries?: Array<{ date: string; amount: number }>;
   /** 已成交金额（万元） */
   epcWon: number;
   /** 订单维度 */
@@ -259,6 +264,11 @@ export const initialFormData: FormData = {
     epcRangeMin: 45,
     epcRangeMax: 50,
     epcDeposit: 26,
+    epcDepositEntries: [
+      { date: '2025-09-08', amount: 8 },
+      { date: '2025-10-22', amount: 10 },
+      { date: '2025-11-25', amount: 8 },
+    ],
     epcWon: 15.5,
     orderTotalBudget: 50,
     orderDeliveryTotal: 12,

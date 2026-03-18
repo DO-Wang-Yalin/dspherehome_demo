@@ -18,6 +18,7 @@ import { ThankYouModal } from "./components/ThankYouModal";
 import { toast } from "sonner";
 import { useGlobal } from "../../context/GlobalContext";
 import { handleOrderAction } from "../../utils/orderStateMachine";
+import { addResolvedPendingKey } from "../../utils/pendingDecisionResolvedStorage";
 
 // 模拟数据 (保持不变)
 const quotationData = {
@@ -327,8 +328,15 @@ const quotationData = {
 export default function QuotationPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data, updateData } = useGlobal();
-  const { orderNumber, orderTitle, ver, quotationTitle } = location.state || {};
+  const { data, updateData, activeProjectLeadId } = useGlobal()
+  const { orderNumber, orderTitle, ver, quotationTitle, pendingResolveKey } =
+    (location.state || {}) as {
+      orderNumber?: string
+      orderTitle?: string
+      ver?: string
+      quotationTitle?: string
+      pendingResolveKey?: string
+    }
   
   const currentOrder = data.orders?.find(o => o.id === orderNumber);
   const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';
@@ -380,6 +388,9 @@ export default function QuotationPage() {
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E80_SIGN_QUOTATION', data.orders || [], updateData);
     }
+    if (pendingResolveKey && activeProjectLeadId) {
+      addResolvedPendingKey(activeProjectLeadId, pendingResolveKey);
+    }
   };
 
   const handleFeedbackClick = () => {
@@ -395,6 +406,9 @@ export default function QuotationPage() {
 
     if (orderNumber) {
       handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+    }
+    if (pendingResolveKey && activeProjectLeadId) {
+      addResolvedPendingKey(activeProjectLeadId, pendingResolveKey);
     }
   };
 

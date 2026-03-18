@@ -16,9 +16,11 @@ import {
 } from 'lucide-react';
 import { useGlobal } from '../../context/GlobalContext';
 import { handleOrderAction } from '../../utils/orderStateMachine';
-import img主卫 from '../../assets/img/主卫.png';
-import img公卫 from '../../assets/img/公卫.jpg';
-import img儿童卫 from '../../assets/img/儿童卫.JPEG';
+import { addResolvedPendingKey } from '../../utils/pendingDecisionResolvedStorage';
+/** 静态图放在 public/img，构建路径为根路径 */
+const img主卫 = '/img/master-T.png';
+const img公卫 = '/img/public-T.jpg';
+const img儿童卫 = '/img/baby-T.JPEG';
 
 // 简单版 cn：支持字符串和对象写法，避免额外依赖
 function cn(...classes: Array<string | Record<string, boolean> | undefined | null | false>): string {
@@ -713,6 +715,7 @@ function PageViewer({
   data?: any;
   updateData?: (data: any) => void;
 }) {
+  const { activeProjectLeadId } = useGlobal();
   const [currentPageIndex, setCurrentPageIndex] = useState(initialPageIndex);
   const [maxReachedPageIndex, setMaxReachedPageIndex] = useState(
     readOnly ? version.pages.length : initialMaxReachedIndex,
@@ -861,6 +864,10 @@ function PageViewer({
 
       if (nextIndex === version.pages.length && orderNumber && data && updateData) {
         handleOrderAction(orderNumber, 'E86_FEEDBACK', data.orders || [], updateData);
+        if (activeProjectLeadId) {
+          addResolvedPendingKey(activeProjectLeadId, `${orderNumber}-scheme-feedback`);
+          addResolvedPendingKey(activeProjectLeadId, `${orderNumber}-scheme-s01`);
+        }
       }
     }
   };

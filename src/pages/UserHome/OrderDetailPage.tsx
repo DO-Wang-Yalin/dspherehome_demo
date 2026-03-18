@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { ArrowLeftRight, Bot, BarChart3, ChevronRight, ChevronLeft, LayoutGrid, Hourglass, Layout, Activity, Check, FileText, AlertTriangle, Wrench } from 'lucide-react';
 import { getOrderStatusColor, STATUS_BADGE_COLORS } from '../../utils/orderStatus';
@@ -8,11 +8,27 @@ import { INITIAL_ORDERS } from '../../data/mockOrders';
 import { getDesignVersionInfo, getDesignFirstPagePreview } from '../../pages/DesignFeedback/DesignFeedbackApp';
 import { handleOrderAction } from '../../utils/orderStateMachine';
 import { toast } from 'sonner';
+import { addResolvedPendingKey } from '../../utils/pendingDecisionResolvedStorage';
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data, updateData } = useGlobal();
+  const location = useLocation();
+  const { data, updateData, activeProjectLeadId } = useGlobal();
+
+  /** 仅 S05 客户决策：从待定「去处理」进订单详情，停留约 2 秒后记已处理（报价/结算待办走对应页面） */
+  useEffect(() => {
+    const key = (location.state as { acknowledgePendingKey?: string })?.acknowledgePendingKey;
+    if (!key || !activeProjectLeadId || !key.endsWith('-scheme-decision')) return;
+    const t = window.setTimeout(() => {
+      addResolvedPendingKey(activeProjectLeadId, key);
+      navigate(`${location.pathname}${location.search}`, {
+        replace: true,
+        state: {},
+      });
+    }, 2000);
+    return () => window.clearTimeout(t);
+  }, [id, location.pathname, location.search, location.state, activeProjectLeadId, navigate]);
 
   // Find the order data from the global state
   const orders = data.orders && data.orders.length > 0 ? data.orders : INITIAL_ORDERS;
@@ -26,7 +42,7 @@ export default function OrderDetailPage() {
    * 当订单处于上述异常状态时，仅通过「当前状态」标签和进度高亮位置体现。
    */
   const ORDER_STEPS = [
-    { id: 'S00', label: '意向报价中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
+    { id: 'S00', label: '方案筹备中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
     { id: 'S01', label: '意向沟通中', phase: '意向期', blockBg: 'bg-phase-intention/10', blockText: 'text-phase-intention' },
     { id: 'S02', label: '订单深化中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
     { id: 'S02-01', label: '提案设计中', phase: '订购期', blockBg: 'bg-phase-ordering/10', blockText: 'text-phase-ordering' },
@@ -110,18 +126,7 @@ export default function OrderDetailPage() {
       list.push({ ver: 'V1', title: '订购报价单', status: statusInfoV1.text, statusColor: statusInfoV1.color, time: '2023-11-10 10:00' });
     }
 
-    // 3. 意向报价单: S00 之后可见
-    if (currentStatusCode !== 'S00') {
-      const isSigned = currentStatusCode !== 'S01' && currentStatusCode !== 'S05';
-      const statusInfo = getUnifiedStatus(isViewed, isSigned, false);
-      list.push({ 
-        ver: 'V0', 
-        title: '意向报价单', 
-        status: statusInfo.text, 
-        statusColor: statusInfo.color, 
-        time: '2023-10-20 09:00' 
-      });
-    }
+    /** 意向阶段不提供「意向报价单」；报价单从订购报价单 V1 起（见 PAGES_GUIDE §2.15） */
 
     return list;
   }, [currentPhase, currentStatusCode, foundOrder]);

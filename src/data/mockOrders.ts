@@ -86,7 +86,7 @@ export const INITIAL_ORDERS = [
     id: 'PSO-OD_LHJCF-00592',
     projectId: 'PRJ7_X-B49-T4-LHJCF',
     title: '全屋-石材安装',
-    status: 'S00-意向报价中',
+    status: 'S00-方案筹备中',
     contains: '意向利岩板、大金空调选型',
     date: '2026-03-10',
     amount: '¥15,000 ~ ¥25,000',
