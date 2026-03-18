@@ -17,6 +17,8 @@ export interface RequirementDocRevisionEntry {
   summary: string;
   /** 涉及章节 / 备注 */
   sectionNote?: string;
+  /** 本条保存后的需求书快照 JSON（RequirementDocSnapshotStored） */
+  docSnapshotJson?: string;
 }
 
 /** 需求书成员画像：可添加/编辑成员，每个成员下可添加/编辑空间及描述 */
@@ -28,6 +30,30 @@ export interface RequirementsMember {
   spaces: MemberSpaceItem[];
   /** 主要活动及空间以外的其他说明 */
   otherActivityNote?: string;
+}
+
+/** 修订存档时的需求书快照（不含媒体 base64，仅文件名与文本字段） */
+export interface RequirementDocSnapshotStored {
+  smartHomeOptions: string[];
+  devices: string[];
+  otherNeeds: string;
+  comfortSystems: string[];
+  fengshui: string;
+  storageFocus: string[];
+  spaceOtherNote: string;
+  livingRoomNote: string;
+  diningNote: string;
+  kitchenNote: string;
+  bathroomNote: string;
+  coreSpaces: string;
+  customCoreSpaceOptions: string[];
+  childGrowth: string;
+  guestStay: string;
+  futureChanges: string;
+  requirementsMembers: RequirementsMember[];
+  floorPlanImages: Array<{ name: string }>;
+  siteMedia: Array<{ name: string; kind: string }>;
+  customSpaceItems: Array<{ name: string; description?: string }>;
 }
 
 export interface FormData {

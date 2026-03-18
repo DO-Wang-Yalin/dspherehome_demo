@@ -17,8 +17,6 @@ import BudgetPage from './pages/Budget';
 import DesignFeedbackPage from './pages/DesignFeedback';
 import QuotationPage from './pages/Quotation';
 import SettlementPage from './pages/Settlement';
-import RequirementsShowcasePage from './pages/UserHome/RequirementsShowcasePage';
-
 export default function App() {
   return (
     <GlobalProvider>
@@ -41,7 +39,6 @@ export default function App() {
             <Route path="/feedback" element={<DesignFeedbackPage />} />
             <Route path="/quotation" element={<QuotationPage />} />
             <Route path="/settlement/:id" element={<SettlementPage />} />
-            <Route path="/requirement-showcase" element={<RequirementsShowcasePage />} />
           </Routes>
         </BrowserRouter>
       </DeepEvalFormProvider>

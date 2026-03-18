@@ -15,10 +15,6 @@ export default function ProjectsPage() {
         navigate('/home');
       }}
       onBack={() => navigate('/')}
-      onDevEnterWorkbench={() => {
-        setActiveProjectLeadId(null);
-        navigate('/home');
-      }}
     />
   );
 }

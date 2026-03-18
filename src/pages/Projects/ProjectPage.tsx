@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  Code2,
   Pencil,
   Trash2,
   Plus,
@@ -57,13 +56,11 @@ function galleryForProject(index: number): string[] {
 export interface ProjectPageProps {
   onSelectProject: (project: ProjectFromLead) => void;
   onBack?: () => void;
-  onDevEnterWorkbench?: () => void;
 }
 
 export function ProjectPage({
   onSelectProject,
   onBack,
-  onDevEnterWorkbench,
 }: ProjectPageProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'projects' | 'leads'>('projects');
@@ -104,19 +101,6 @@ export function ProjectPage({
   return (
     <div className="min-h-screen w-full bg-[#FAF8F4]">
       <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 pt-8 sm:pt-10 pb-24">
-        {onDevEnterWorkbench && (
-          <div className="flex justify-end mb-4">
-            <button
-              type="button"
-              onClick={onDevEnterWorkbench}
-              className="inline-flex items-center gap-2 rounded-xl border border-dashed border-violet-300 bg-violet-50/90 px-3 py-2 text-xs font-medium text-violet-800"
-            >
-              <Code2 className="w-3.5 h-3.5" />
-              开发：进入工作台
-            </button>
-          </div>
-        )}
-
         <header className="mb-8 sm:mb-10">
           <h1 className="text-[1.65rem] sm:text-3xl font-serif font-semibold text-[#EF6B00] tracking-tight leading-tight">
             欢迎回家
