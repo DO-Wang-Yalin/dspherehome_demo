@@ -14,7 +14,8 @@
   --color-bg: #FFFDF3;
   /* 灰阶 - 文本层级与禁用态 */
   --color-dark: #4A453E;
-  --color-sub: #8C857B;
+  /* 次要文案：提升浅底(#FFFDF3)上的可读性（WCAG AA） */
+  --color-sub: #6A645B;
 
   /* 订单阶段颜色规范 */
   --color-phase-intention: #64748b;
@@ -31,5 +32,17 @@
   .hide-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Respect user accessibility preference: reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

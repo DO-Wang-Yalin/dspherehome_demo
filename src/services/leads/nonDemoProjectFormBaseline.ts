@@ -28,7 +28,8 @@ const DEEP_EVAL_ARRAY_KEYS = new Set<string>([
 
 function emptyValueForDeepEvalKey(k: (typeof DEEP_EVAL_FORM_KEYS)[number]): unknown {
   if (DEEP_EVAL_ARRAY_KEYS.has(k)) return []
-  const sample = (initialFormData as Record<string, unknown>)[k as string]
+  // TS2352: 先 cast 到 unknown 再 cast 到可索引类型，避免不安全转换告警
+  const sample = (initialFormData as unknown as Record<string, unknown>)[k as string]
   if (Array.isArray(sample)) return []
   if (typeof sample === 'boolean') return false
   return ''

@@ -19,6 +19,10 @@ export interface RequirementDocRevisionEntry {
   sectionNote?: string;
   /** 本条保存后的需求书快照 JSON（RequirementDocSnapshotStored） */
   docSnapshotJson?: string;
+  /** 变更前内容摘要（用于详细变更记录展开展示） */
+  changeDetailBefore?: string;
+  /** 变更后内容摘要（用于详细变更记录展开展示） */
+  changeDetailAfter?: string;
 }
 
 /** 需求书成员画像：可添加/编辑成员，每个成员下可添加/编辑空间及描述 */

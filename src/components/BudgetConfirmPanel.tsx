@@ -79,14 +79,14 @@ function DepositPaymentModal({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="deposit-payment-title"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col"
+        className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-xl overflow-hidden max-h-[90vh] flex flex-col motion-safe:animate-in motion-safe:zoom-in motion-safe:duration-300"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-5 pb-2 shrink-0 border-b border-gray-100">
@@ -239,14 +239,14 @@ function BudgetModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/45 backdrop-blur-[2px] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"
       role="dialog"
       aria-modal="true"
       aria-labelledby="budget-modal-title"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden"
+        className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden motion-safe:animate-in motion-safe:zoom-in motion-safe:duration-300"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-5 pb-3 border-b border-gray-100">
@@ -438,9 +438,9 @@ export function BudgetConfirmPanel() {
   )
 
   return (
-    <div className="space-y-8 pb-28 sm:pb-24">
+    <div className="space-y-8 pb-28 sm:pb-24 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500">
       {budgetUnset ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-amber-950 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
           <p className="font-medium">预算与入金数据待同步</p>
           <p className="mt-1 text-xs text-amber-900/85 leading-relaxed">
             方案与报价确认后，顾问将为您维护 EPC 区间与订单拆解；您也可主动联系顾问补充或确认预算。
@@ -489,7 +489,7 @@ export function BudgetConfirmPanel() {
         </div>
 
         {budgetPage === 'epc' ? (
-          <div className="space-y-5 pt-1" role="tabpanel">
+          <div className="space-y-5 pt-1 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" role="tabpanel">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <BudgetMetricCard
                 accent="slate"
@@ -542,7 +542,7 @@ export function BudgetConfirmPanel() {
             <BudgetSankeyByEPE unstyled chartBleed data={epcSankeyData} />
           </div>
         ) : (
-          <div className="space-y-5 pt-1" role="tabpanel">
+          <div className="space-y-5 pt-1 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300" role="tabpanel">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               <BudgetMetricCard
                 accent="slate"
@@ -629,7 +629,7 @@ export function BudgetConfirmPanel() {
       >
         <div className="pointer-events-auto flex flex-col sm:flex-row sm:items-center gap-2 rounded-2xl border border-gray-200/90 bg-white/95 backdrop-blur-md p-2 shadow-lg shadow-gray-900/10">
           {budgetAlreadyConfirmed ? (
-            <div className="flex items-center gap-2 px-3 py-2 min-w-0">
+            <div className="flex items-center gap-2 px-3 py-2 min-w-0 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
               <span className="text-xs text-gray-500 whitespace-nowrap">预算已确认</span>
               <span className="text-[11px] text-gray-400 hidden sm:inline">提交修改说明后需再次确认</span>
             </div>
@@ -637,7 +637,7 @@ export function BudgetConfirmPanel() {
             <button
               type="button"
               onClick={() => setConfirmOpen(true)}
-              className="inline-flex justify-center items-center rounded-xl bg-[#EF6B00] text-white text-sm font-medium px-5 py-2.5 hover:bg-[#D85F00] transition-colors min-w-[8.5rem]"
+              className="inline-flex justify-center items-center rounded-xl bg-[#EF6B00] text-white text-sm font-medium px-5 py-2.5 hover:bg-[#D85F00] transition-colors transition-transform active:scale-[0.99] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300 min-w-[8.5rem]"
             >
               确认当前预算
             </button>
@@ -645,7 +645,7 @@ export function BudgetConfirmPanel() {
           <button
             type="button"
             onClick={() => setModifyOpen(true)}
-            className="inline-flex justify-center items-center rounded-xl bg-white text-sm font-medium px-5 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors min-w-[8.5rem]"
+            className="inline-flex justify-center items-center rounded-xl bg-white text-sm font-medium px-5 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors transition-transform active:scale-[0.99] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300 min-w-[8.5rem]"
           >
             修改预算分配
           </button>
