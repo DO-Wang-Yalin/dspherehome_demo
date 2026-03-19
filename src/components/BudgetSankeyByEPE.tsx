@@ -1,10 +1,33 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import type {
-  StatusGroup,
-  IncomeEntry,
-  Order,
-  BudgetSankeyData,
-} from './BudgetSankey'
+// ─── EPC 独立数据定义 ───────────────────────────────────────────
+export type StatusGroup = '意向期' | '订购期' | '交付期' | '验收期' | '维保期'
+
+export interface IncomeEntry {
+  id: string
+  date: string
+  displayDate: string
+  amount: number
+  status: StatusGroup
+  isToday?: boolean
+  isFuture?: boolean
+  isUnpaid?: boolean
+}
+
+export interface Order {
+  id: string
+  number: string
+  title: string
+  status: StatusGroup
+  milestoneId: string
+  budget: number // <-- 保留 EPC 独立的 budget 字段
+}
+
+export interface BudgetSankeyData {
+  incomeEntries: IncomeEntry[]
+  milestones: any[] // 原引用中 Milestone 也在这里，由于 ByEPE 里没用到的逻辑可以先用 any
+  orders: Order[]
+  totalBudget: number
+}
 
 // 复用 BudgetSankey 的 mock（与 BudgetSankey 默认一致，便于同数据双视图）
 const INCOME_ENTRIES: IncomeEntry[] = [
@@ -65,31 +88,43 @@ function milestoneToEPE(milestoneId: string): EPECategory {
 }
 
 const VB_W = 950
-/** 纵向约为原 SCALE=18 时的 1/3，金额→像素比例不变（同比例缩放） */
-const CHART_TOP_MARGIN = 40
-const CHART_BOTTOM_MARGIN = 26
-const EPE_GAP = 7
-const DEAL_GAP = 4
-const DEAL_PAIR_GAP = 7
-const DEAL_ZERO_LINE_H = 3
-const INCOME_MIN_GAP = 6
-const INCOME_COLOR = '#FBBF24'
-const TODAY_COLOR = '#F97316'
+// ─── 布局常量配置 ────────────────────────────────────────────────────────
+const CHART_TOP_MARGIN = 40     // 图表顶部留白
+const CHART_BOTTOM_MARGIN = 26  // 图表底部留白
+const EPE_GAP = 7               // E/P/C 阶段节点之间的垂直间距
+const DEAL_GAP = 4              // “已成交”与“未成交”内部的小间距
+const DEAL_PAIR_GAP = 7         // 不同阶段成交组之间的垂直间距
+const DEAL_ZERO_LINE_H = 3      // 当金额为 0 时显示的虚线占位高度
+const INCOME_MIN_GAP = 6        // 入金色块之间的垂直间距
 
-const X = {
-  dateDot: 172,
-  incomeLeft: 188,
-  incomeRight: 250,
-  budgetLeft: 400,
-  budgetRight: 444,
-  epeLeft: 520,
-  epeRight: 660,
-  dealLeft: 720,
-  dealRight: 920,
-  dealLabelLeft: 732,
+// ─── 样式与透明度配置 ──────────────────────────────────────────────────────
+const INCOME_COLOR = '#FBBF24'  // 入金色块的主色（金黄）
+const TODAY_COLOR = '#F97316'   // “今天”标记的强调色（橙）
+const UNWON_GRAY = '#94A3B8'    // 未成交/未入金的置灰颜色
+
+const OPACITY = {
+  BAND_NORMAL: 0.28,  // 连线常态透明度
+  BAND_HOVER: 0.5,    // 连线高亮透明度
+  BAND_MUTED: 0.05,   // 连线失去焦点时的透明度
+  INC_NORMAL: 0.22,   // 左侧入金连线常态透明度
+  INC_MUTED: 0.07,    // 左侧入金连线失去焦点时的透明度
 }
 
-const UNWON_GRAY = '#94A3B8'
+// ─── 布局坐标配置 (X 轴) ──────────────────────────────────────────────────
+const X = {
+  dateDot: 172,     // 时间轴圆点位置
+  incomeLeft: 188,  // 入金色块左边界
+  incomeRight: 250, // 入金色块右边界
+  budgetLeft: 400,  // 总预算柱子左边界
+  budgetRight: 444, // 总预算柱子右边界
+  epeLeft: 520,     // E/P/C 阶段节点左边界
+  epeRight: 660,    // E/P/C 阶段节点右边界
+  dealLeft: 720,    // 成交状态（已/未成交）节点左边界
+  dealRight: 920,   // 成交状态节点右边界
+  dealLabelLeft: 732, // 成交状态文字左对齐基等
+}
+
+
 
 function rgba(hex: string, a: number): string {
   const r = parseInt(hex.slice(1, 3), 16)
@@ -137,15 +172,15 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
     const unpaidIncomeNode =
       futureIncomeTotal > 0
         ? {
-            id: 'unpaid',
-            date: '',
-            displayDate: '未入金',
-            amount: futureIncomeTotal,
-            status: '意向期' as StatusGroup,
-            isToday: false,
-            isFuture: true,
-            isUnpaid: true,
-          }
+          id: 'unpaid',
+          date: '',
+          displayDate: '未入金',
+          amount: futureIncomeTotal,
+          status: '意向期' as StatusGroup,
+          isToday: false,
+          isFuture: true,
+          isUnpaid: true,
+        }
         : null
     const sortedIncome = unpaidIncomeNode ? [...sortedPaidIncome, unpaidIncomeNode] : sortedPaidIncome
 
@@ -160,8 +195,10 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
     }
     orders.forEach((ord) => {
       const epe = milestoneToEPE(ord.milestoneId)
-      if (isClosed(ord.status)) epeBuckets[epe].closed += ord.budget
-      else epeBuckets[epe].open += ord.budget
+      // 容错处理：确保金额缺失时默认为 0，防止运算结果为 NaN
+      const budget = ord.budget || 0
+      if (isClosed(ord.status)) epeBuckets[epe].closed += budget
+      else epeBuckets[epe].open += budget
     })
 
     const epeTotal = (key: EPECategory) => epeBuckets[key].closed + epeBuckets[key].open
@@ -185,33 +222,38 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
       .filter((i) => !i.isFuture && !i.isUnpaid)
       .reduce((s, i) => s + i.amount, 0)
 
+    const paidNodes = incomeLayout.filter((i) => !i.isUnpaid)
+    const paidNodesHeight = paidNodes.length > 0
+      ? paidNodes.reduce((s, i) => s + i.h, 0) + (paidNodes.length - 1) * INCOME_MIN_GAP
+      : 0
+
     let epeY = (availableHeight - budgetH) / 2 + CHART_TOP_MARGIN
     const epeLayout: { key: EPECategory; y: number; h: number; closed: number; open: number }[] = []
-    ;(['E', 'P', 'C'] as const).forEach((key) => {
-      const total = epeTotal(key)
-      const height = Math.max(22, total * SCALE)
-      epeLayout.push({
-        key,
-        y: epeY,
-        h: height,
-        closed: epeBuckets[key].closed,
-        open: epeBuckets[key].open,
+      ; (['E', 'P', 'C'] as const).forEach((key) => {
+        const total = epeTotal(key)
+        const height = Math.max(22, total * SCALE)
+        epeLayout.push({
+          key,
+          y: epeY,
+          h: height,
+          closed: epeBuckets[key].closed,
+          open: epeBuckets[key].open,
+        })
+        epeY += height + EPE_GAP
       })
-      epeY += height + EPE_GAP
-    })
 
     const dealNodes: { id: string; y: number; h: number; label: string; epe: EPECategory; closed: boolean; amount: number; isZeroLine: boolean }[] = []
     let dealY = (availableHeight - budgetH) / 2 + CHART_TOP_MARGIN
-    ;(['E', 'P', 'C'] as const).forEach((epe) => {
-      const closedAmount = epeBuckets[epe].closed
-      const openAmount = epeBuckets[epe].open
-      const closedH = closedAmount > 0 ? Math.max(12, closedAmount * SCALE) : DEAL_ZERO_LINE_H
-      const openH = openAmount > 0 ? Math.max(12, openAmount * SCALE) : DEAL_ZERO_LINE_H
-      dealNodes.push({ id: `${epe}-closed`, y: dealY, h: closedH, label: '已成交', epe, closed: true, amount: closedAmount, isZeroLine: closedAmount === 0 })
-      dealY += closedH + DEAL_GAP
-      dealNodes.push({ id: `${epe}-open`, y: dealY, h: openH, label: '未成交', epe, closed: false, amount: openAmount, isZeroLine: openAmount === 0 })
-      dealY += openH + DEAL_PAIR_GAP
-    })
+      ; (['E', 'P', 'C'] as const).forEach((epe) => {
+        const closedAmount = epeBuckets[epe].closed
+        const openAmount = epeBuckets[epe].open
+        const closedH = closedAmount > 0 ? Math.max(12, closedAmount * SCALE) : DEAL_ZERO_LINE_H
+        const openH = openAmount > 0 ? Math.max(12, openAmount * SCALE) : DEAL_ZERO_LINE_H
+        dealNodes.push({ id: `${epe}-closed`, y: dealY, h: closedH, label: '已成交', epe, closed: true, amount: closedAmount, isZeroLine: closedAmount === 0 })
+        dealY += closedH + DEAL_GAP
+        dealNodes.push({ id: `${epe}-open`, y: dealY, h: openH, label: '未成交', epe, closed: false, amount: openAmount, isZeroLine: openAmount === 0 })
+        dealY += openH + DEAL_PAIR_GAP
+      })
 
     const incSegments = (() => {
       let accum = 0
@@ -228,13 +270,13 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
     const budgetToEPESegments: { key: EPECategory; segTop: number; segBot: number }[] = []
     const ratioSum = totalEPE > 0 ? totalEPE : totalBudget
     let accum = 0
-    ;(['E', 'P', 'C'] as const).forEach((key) => {
-      const part = totalEPE > 0 ? epeTotal(key) : totalBudget / 3
-      const segTop = budgetTop + (accum / ratioSum) * budgetH
-      accum += totalEPE > 0 ? epeTotal(key) : totalBudget / 3
-      const segBot = budgetTop + (accum / ratioSum) * budgetH
-      budgetToEPESegments.push({ key, segTop, segBot })
-    })
+      ; (['E', 'P', 'C'] as const).forEach((key) => {
+        const part = totalEPE > 0 ? epeTotal(key) : totalBudget / 3
+        const segTop = budgetTop + (accum / ratioSum) * budgetH
+        accum += totalEPE > 0 ? epeTotal(key) : totalBudget / 3
+        const segBot = budgetTop + (accum / ratioSum) * budgetH
+        budgetToEPESegments.push({ key, segTop, segBot })
+      })
 
     return {
       budgetTop,
@@ -242,6 +284,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
       budgetBot,
       msScale: SCALE,
       paidSoFar,
+      paidNodesHeight,
       incomeLayout,
       VB_H,
       totalBudget,
@@ -258,6 +301,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
     budgetH,
     msScale,
     paidSoFar,
+    paidNodesHeight,
     incomeLayout,
     VB_H,
     totalBudget: layoutTotalBudget,
@@ -290,39 +334,17 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
 
   const bandOpacity = useCallback(
     (id: string): number => {
-      if (!hovered) return 0.28
-      return isLit(id) ? 0.5 : 0.05
+      if (!hovered) return OPACITY.BAND_NORMAL
+      return isLit(id) ? OPACITY.BAND_HOVER : OPACITY.BAND_MUTED
     },
     [hovered, isLit]
   )
 
-  const incBandOpacity = !hovered ? 0.22 : 0.07
+  const incBandOpacity = !hovered ? OPACITY.INC_NORMAL : OPACITY.INC_MUTED
 
-  const budgetGradientStops = useMemo(() => {
-    const totalE = epeBuckets.E.closed + epeBuckets.E.open
-    const totalP = epeBuckets.P.closed + epeBuckets.P.open
-    const totalC = epeBuckets.C.closed + epeBuckets.C.open
-    const sum = totalE + totalP + totalC || layoutTotalBudget
-    
-    let accum = 0
-    const stops: { offset: string; color: string }[] = []
-    
-    ;(['E', 'P', 'C'] as const).forEach((key, idx) => {
-      const total = key === 'E' ? totalE : key === 'P' ? totalP : totalC
-      const start = (accum / sum) * 100
-      accum += total
-      const end = (accum / sum) * 100
-      
-      // 在每个阶段的中心点放置纯色停靠点，让颜色自然过渡
-      if (idx === 0) stops.push({ offset: '0%', color: EPE_COLORS[key] })
-      stops.push({ offset: `${(start + end) / 2}%`, color: EPE_COLORS[key] })
-      if (idx === 2) stops.push({ offset: '100%', color: EPE_COLORS[key] })
-    })
-    return stops
-  }, [epeBuckets, layoutTotalBudget])
 
   const todayIncome = incomeLayout.find((inc) => inc.isToday)
-  const todayY = todayIncome ? todayIncome.actualY : null
+  const todayY = todayIncome ? todayIncome.actualY + todayIncome.h / 2 : null
 
   const outer = unstyled
     ? 'w-full overflow-hidden'
@@ -372,10 +394,37 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
             onMouseLeave={() => setHovered(null)}
           >
             <defs>
-              <linearGradient id="bep-gradBudget" x1="0" y1="0" x2="0" y2="1">
-                {budgetGradientStops.map((stop, index) => (
-                  <stop key={index} offset={stop.offset} stopColor={stop.color} stopOpacity="0.95" />
-                ))}
+              <linearGradient id="bep-gradBudgetPaidUnpaid" x1="0" y1="0" x2="0" y2="1">
+                {(() => {
+                  const paidRatio = budgetH > 0 ? Math.min(1, paidNodesHeight / budgetH) : 0
+                  if (paidRatio <= 0) {
+                    return (
+                      <>
+                        <stop offset="0%" stopColor={UNWON_GRAY} stopOpacity="0.25" />
+                        <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.25" />
+                      </>
+                    )
+                  }
+                  if (paidRatio >= 1) {
+                    return (
+                      <>
+                        <stop offset="0%" stopColor={INCOME_COLOR} stopOpacity="0.9" />
+                        <stop offset="100%" stopColor={INCOME_COLOR} stopOpacity="0.9" />
+                      </>
+                    )
+                  }
+                  const feather = Math.min(0.06 * budgetH, 20) / budgetH
+                  const t1 = Math.max(0, paidRatio - feather)
+                  const t2 = Math.min(1, paidRatio + feather)
+                  return (
+                    <>
+                      <stop offset="0%" stopColor={INCOME_COLOR} stopOpacity="0.9" />
+                      <stop offset={`${t1 * 100}%`} stopColor={INCOME_COLOR} stopOpacity="0.9" />
+                      <stop offset={`${t2 * 100}%`} stopColor={UNWON_GRAY} stopOpacity="0.35" />
+                      <stop offset="100%" stopColor={UNWON_GRAY} stopOpacity="0.25" />
+                    </>
+                  )
+                })()}
               </linearGradient>
               {(['E', 'P', 'C'] as const).map((epe) => (
                 <linearGradient key={epe} id={`bep-epe-${epe}`} x1="0" y1="0" x2="1" y2="0">
@@ -502,17 +551,19 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
 
             {incomeLayout.map((inc) => {
               const y = inc.actualY
-              const isPast = !inc.isFuture && !inc.isToday
-              const dotColor = inc.isToday ? TODAY_COLOR : isPast ? INCOME_COLOR : '#CBD5E1'
-              const barColor = inc.isUnpaid ? '#E2E8F0' : isPast ? INCOME_COLOR : '#E2E8F0'
-              const textColor = inc.isUnpaid ? '#64748B' : isPast ? '#111827' : '#94A3B8'
               const barH = inc.amount * msScale
+              const bottomY = y + barH / 2
+              const isPast = !inc.isFuture && !inc.isToday
+              const isPaid = !inc.isUnpaid && (isPast || inc.isToday)
+              const dotColor = inc.isToday ? TODAY_COLOR : isPaid ? INCOME_COLOR : '#CBD5E1'
+              const barColor = inc.isUnpaid ? '#E2E8F0' : isPaid ? INCOME_COLOR : '#E2E8F0'
+              const textColor = inc.isUnpaid ? '#64748B' : isPaid ? '#111827' : '#94A3B8'
               return (
                 <g key={inc.id}>
                   {!inc.isUnpaid && (
                     <>
-                      <line x1={X.dateDot + 6} y1={y} x2={X.incomeLeft - 2} y2={y} stroke={isPast ? INCOME_COLOR : '#CBD5E1'} strokeWidth={1} strokeDasharray="3 3" opacity={0.55} />
-                      <circle cx={X.dateDot} cy={y} r={3.5} fill={dotColor} stroke="white" strokeWidth={1.2} />
+                      <line x1={X.dateDot + 6} y1={bottomY} x2={X.incomeLeft - 2} y2={bottomY} stroke={isPaid ? INCOME_COLOR : '#CBD5E1'} strokeWidth={1} strokeDasharray="3 3" opacity={0.55} />
+                      <circle cx={X.dateDot} cy={bottomY} r={3.5} fill={dotColor} stroke="white" strokeWidth={1.2} />
                     </>
                   )}
                   {inc.amount > 0 && (
@@ -522,12 +573,12 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
                     </>
                   )}
                   {!inc.isUnpaid && inc.amount > 0 && (
-                    <text x={8} y={y + 4} fill={isPast ? '#374151' : '#94A3B8'} fontSize={11}>
+                    <text x={8} y={bottomY + 4} fill={isPaid ? '#374151' : '#94A3B8'} fontSize={11}>
                       {inc.displayDate}
                     </text>
                   )}
                   {inc.isUnpaid && (
-                    <text x={8} y={y + 4} fill="#64748B" fontSize={11}>
+                    <text x={8} y={bottomY + 4} fill="#64748B" fontSize={11}>
                       {inc.displayDate}
                     </text>
                   )}
@@ -537,7 +588,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
 
             <g style={{ cursor: 'pointer' }} onMouseEnter={() => setHovered('budget')} onMouseLeave={() => setHovered(null)}>
               <rect x={X.budgetLeft + 2} y={budgetTop + 2} width={X.budgetRight - X.budgetLeft} height={budgetH} rx={7} fill="rgba(0,0,0,0.06)" />
-              <rect x={X.budgetLeft} y={budgetTop} width={X.budgetRight - X.budgetLeft} height={budgetH} rx={7} fill="url(#bep-gradBudget)" />
+              <rect x={X.budgetLeft} y={budgetTop} width={X.budgetRight - X.budgetLeft} height={budgetH} rx={7} fill="url(#bep-gradBudgetPaidUnpaid)" />
               <text x={(X.budgetLeft + X.budgetRight) / 2} y={budgetTop - 5} textAnchor="middle" fill="#6B7280" fontSize={10} fontWeight={600}>¥{layoutTotalBudget}w</text>
             </g>
 
@@ -547,7 +598,7 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
               const ratio = total > 0 ? bucket.closed / total : 0.5
               // 动态调整文字位置：如果成交多，文字往上走；未成交多，文字往下走
               const labelYOffset = ratio > 0.6 ? -6 : ratio < 0.4 ? 6 : 2
-              
+
               return (
                 <g
                   key={`epe-${epe.key}`}
