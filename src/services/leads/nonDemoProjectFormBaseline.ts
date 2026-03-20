@@ -33,6 +33,7 @@ const DEEP_RECORD_OBJECT_KEYS = new Set<string>([
 ])
 
 function emptyValueForDeepEvalKey(k: (typeof DEEP_EVAL_FORM_KEYS)[number]): unknown {
+  if (k === 'projectBudget') return { ...EMPTY_PROJECT_BUDGET }
   if (DEEP_EVAL_ARRAY_KEYS.has(k)) return []
   if (DEEP_RECORD_OBJECT_KEYS.has(k as string)) return {}
   // TS2352: 先 cast 到 unknown 再 cast 到可索引类型，避免不安全转换告警
@@ -46,14 +47,9 @@ export function getEmptyNonDemoProjectFormPatch(): Partial<FormData> {
   const patch: Record<string, unknown> = {
     orders: [],
     requirementDocRevisions: [],
-    projectBudget: { ...EMPTY_PROJECT_BUDGET },
     houseType: '',
     budgetSubStandard: '',
     userHeight: '',
-    styleId: '',
-    styleName: '',
-    colorGene: '',
-    styleSuggestions: '',
     contractCustomText: '',
   }
   for (const k of DEEP_EVAL_FORM_KEYS) {

@@ -117,7 +117,7 @@ export default function ContractsPage() {
 
   const handleEnterProject = () => {
     if (!contractLeadId) return;
-    enterProjectWorkbenchFromLead(contractLeadId, updateData, setActiveProjectLeadId);
+    enterProjectWorkbenchFromLead(contractLeadId, updateData, setActiveProjectLeadId, data);
     navigate('/home', { state: { activeTab: 'requirements' } });
   };
 

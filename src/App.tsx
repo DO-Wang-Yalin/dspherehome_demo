@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { GlobalProvider } from './context/GlobalContext';
 import { DeepEvalFormProvider } from './components/DeepEvalFormContext';
 
@@ -17,11 +17,21 @@ import BudgetPage from './pages/Budget';
 import DesignFeedbackPage from './pages/DesignFeedback';
 import QuotationPage from './pages/Quotation';
 import SettlementPage from './pages/Settlement';
+
+function ScrollToTopOnNavigate() {
+  const { pathname, search } = useLocation();
+  React.useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname, search]);
+  return null;
+}
+
 export default function App() {
   return (
     <GlobalProvider>
       <DeepEvalFormProvider>
         <BrowserRouter>
+          <ScrollToTopOnNavigate />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/admin" element={<Navigate to="/" replace />} />

@@ -122,6 +122,11 @@ export function WorkbenchPage({
     if (initialTab !== undefined) setActive(normalizeWorkbenchTab(initialTab))
   }, [initialTab])
 
+  const mainScrollRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    mainScrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [active])
+
   const projectBudgetRaw = data.projectBudget
   const budgetStatus = React.useMemo(() => {
     const status = projectBudgetRaw?.status ?? 'unconfirmed'
@@ -219,10 +224,10 @@ export function WorkbenchPage({
   }
 
   return (
-    <div className="min-h-screen bg-[#FFFDF3] text-gray-900 font-sans flex motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
+    <div className="h-[100dvh] min-h-0 bg-[#FFFDF3] text-gray-900 font-sans flex overflow-hidden motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-500">
       {/* Sidebar */}
       <aside
-        className="hidden md:flex shrink-0 flex-col bg-white border-r border-gray-100 py-6 relative"
+        className="hidden md:flex shrink-0 flex-col bg-white border-r border-gray-100 py-6 relative h-full min-h-0 overflow-y-auto"
         style={{ width: sidebarCollapsed ? 80 : sidebarWidth }}
       >
         <div className="px-5 min-w-0">
@@ -334,10 +339,10 @@ export function WorkbenchPage({
         )}
       </aside>
 
-      {/* Main */}
-      <main className="flex-1 min-w-0">
+      {/* Main：仅内容区滚动，侧栏与顶栏固定于视口内 */}
+      <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="w-full px-5 md:px-10 py-6 bg-white border-b border-gray-100">
+        <div className="shrink-0 w-full px-5 md:px-10 py-6 bg-white border-b border-gray-100">
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="group/tooltip relative">
@@ -392,8 +397,12 @@ export function WorkbenchPage({
           </div>
         </div>
 
-        <div className="px-5 md:px-10 py-8">
-          <div className="max-w-6xl mx-auto">
+        <div
+          ref={mainScrollRef}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain"
+        >
+          <div className="px-5 md:px-10 py-8">
+            <div className="max-w-6xl mx-auto">
             <div
               key={active}
               className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-300"
@@ -481,6 +490,7 @@ export function WorkbenchPage({
               ) : (
                 <ComingSoon title={activeLabel} onBackHome={() => setActive('orders')} />
               )}
+            </div>
             </div>
           </div>
         </div>

@@ -15,7 +15,8 @@ export default function RegisterPage() {
       <header className="w-full pt-6 sm:pt-8 pb-4 px-4 sm:px-6 flex items-center justify-center relative z-50 border-b border-stone-200/40 bg-[#FFFDF3]/95 backdrop-blur-[2px]">
         <div className="w-full max-w-6xl mx-auto flex items-center justify-center relative min-h-[2.75rem]">
           <button
-            onClick={() => navigate('/leads?step=2')}
+            type="button"
+            onClick={() => navigate('/budget-breakdown')}
             className="absolute left-0 w-11 h-11 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
           >
             <ChevronLeft size={22} />
@@ -34,8 +35,7 @@ export default function RegisterPage() {
         <StepRegister 
           data={data} 
           updateData={updateData} 
-          nextStep={() => navigate('/deep-eval')} 
-          prevStep={() => navigate('/leads?step=2')} 
+          nextStep={() => navigate('/deep-eval?step=0')} 
         />
       </main>
     </div>

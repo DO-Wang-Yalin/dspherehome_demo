@@ -63,15 +63,25 @@ export const DEEP_EVAL_FORM_KEYS = [
   'bathroomNote',
   'floorPlanImages',
   'siteMedia',
-  'customSpaceItems'
+  'customSpaceItems',
+  /** 项目中心预算资金 / EPC 拆解，与预算拆解步骤对齐 */
+  'projectBudget',
 ] as const satisfies readonly (keyof FormData)[]
 
 type DeepEvalKey = (typeof DEEP_EVAL_FORM_KEYS)[number]
 
-function pickDeepEvalPatch(obj: Partial<FormData>): Partial<FormData> {
+/** 导出供进入工作台时与会话中的 FormData 对齐合并 */
+export function pickDeepEvalPatch(obj: Partial<FormData>): Partial<FormData> {
   const out: Partial<FormData> = {}
   for (const k of DEEP_EVAL_FORM_KEYS) {
     if (k in obj && (obj as Record<string, unknown>)[k] !== undefined) {
+      if (k === 'projectBudget') {
+        const b = (obj as FormData).projectBudget
+        if (b && typeof b === 'object') {
+          out.projectBudget = { ...b }
+        }
+        continue
+      }
       ;(out as Record<string, unknown>)[k] = (obj as Record<string, unknown>)[k]
     }
   }

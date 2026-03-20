@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { domToPng } from 'modern-screenshot';
 import { FormData } from '../types';
 import { StepWrapper, TextInput, RadioCard, CheckboxCard, SegmentedRadio, IconRadioCard, SquareRadioCard, SquareCheckboxCard, Counter, SubQuestion } from './ui';
@@ -23,8 +23,13 @@ import {
   convertLeadOnContractSign,
   addUserLead,
   buildLeadSnapshotFromFormData,
+  getUserLeads,
 } from '../services/leads/savedLeadsStorage';
 import { saveDeepEvalDraftMerge } from '../services/leads/deepEvalByLeadStorage';
+import {
+  buildProjectBudgetFromAreaAndBudgetRange,
+  parseBudgetRangeToYuanPerSqm,
+} from '../utils/projectBudgetFromBreakdown';
 
 // Re-export for backwards compatibility
 export { CONTRACT_TEXT };
@@ -722,17 +727,6 @@ export const StepDeepEval2 = ({
   );
 };
 
-/** 将线索收集的预算选项解析为每平方米造价（元）。支持纯数字如 "5000" 或旧格式 "1_ 20,000元/平方米以上" */
-function parseBudgetRangeToYuanPerSqm(budgetRange: string): number {
-  if (/^\d+$/.test(budgetRange)) return Number(budgetRange)
-  const raw = budgetRange.replace(/,/g, '')
-  const numbers = raw.match(/\d+/g)?.map(Number) ?? []
-  if (numbers.length === 0) return 0
-  if (raw.includes('以上') && numbers.length >= 1) return numbers[0]
-  if (numbers.length >= 2) return Math.round((numbers[0] + numbers[1]) / 2)
-  return numbers[0]
-}
-
 /** E 高端设计 / P 严选精品 / C 匠心施工 占比（设计约 10%、货品约 55%，后续与数据端打通由算法产出） */
 const BUDGET_EPC_RATIOS = { E: 0.1, P: 0.55, C: 0.35 } as const
 
@@ -766,6 +760,7 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
   const [saveCardError, setSaveCardError] = useState<string | null>(null)
   const [isSavingCard, setIsSavingCard] = useState(false)
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null)
+  const { updateData } = useGlobal()
   const ctx = useDeepEvalForm()
   const { formData, budgetDisplayLabel, submit, isSubmitting, submitError, setSubmitError } = ctx
   const areaNum = Math.ceil(Math.max(0, parseFloat(formData.area) || 0))
@@ -826,6 +821,24 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
 
   const hasData = areaNum > 0 && yuanPerSqm > 0
   const cardNo = useMemo(() => `BD-${String(Math.floor(10000 + Math.random() * 90000))}`, [])
+
+  const pushProjectBudgetFromBreakdown = useCallback(() => {
+    if (!hasData) return
+    const pb = buildProjectBudgetFromAreaAndBudgetRange(formData.area, formData.budget)
+    if (!pb) return
+    updateData({ projectBudget: pb })
+    const leadId = getUserLeads()[0]?.id
+    if (leadId) saveDeepEvalDraftMerge(leadId, { projectBudget: pb })
+  }, [hasData, formData.area, formData.budget, updateData])
+
+  useEffect(() => {
+    pushProjectBudgetFromBreakdown()
+  }, [pushProjectBudgetFromBreakdown])
+
+  const continueAfterBreakdown = useCallback(() => {
+    pushProjectBudgetFromBreakdown()
+    nextStep()
+  }, [pushProjectBudgetFromBreakdown, nextStep])
 
   const handleSaveCard = useCallback(async () => {
     if (!cardRef.current) return
@@ -991,10 +1004,10 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
               </button>
               <button
                 type="button"
-                onClick={nextStep}
+                onClick={continueAfterBreakdown}
                 className="w-full bg-[#EF6B00] text-white py-4 px-5 rounded-xl shadow-lg shadow-[#EF6B00]/20 hover:bg-[#D85F00] active:scale-[0.99] transition-all flex items-center justify-center gap-2 font-bold text-sm"
               >
-                进入深度测评获取更新信息
+                前往注册，继续深度测评
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -1012,7 +1025,7 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
             <div className="w-full max-w-md mx-auto">
               <button
                 type="button"
-                onClick={nextStep}
+                onClick={continueAfterBreakdown}
                 className="w-full bg-[#EF6B00] text-white py-4 px-5 rounded-xl shadow-lg hover:bg-[#D85F00] flex items-center justify-center gap-2 font-bold text-sm transition-colors active:scale-[0.99]"
               >
                 继续注册获取更多信息
