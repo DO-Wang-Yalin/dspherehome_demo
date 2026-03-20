@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel';
+import { DreamOneLogo } from '../../components/DreamOneLogo';
 
 export default function BudgetBoardPage() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function BudgetBoardPage() {
             <span className="text-sm font-medium">返回项目中心</span>
           </button>
           <div className="flex items-center gap-3">
-            <img src="/img/logo.png" alt="Logo" className="h-8 w-auto" />
+            <DreamOneLogo className="h-8 w-auto sm:h-9" />
             <h1 className="text-lg font-semibold text-gray-900">预算看板</h1>
           </div>
           <div className="w-28" />

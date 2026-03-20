@@ -24,7 +24,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/admin" element={<StyleEvalPage />} />
+            <Route path="/admin" element={<Navigate to="/" replace />} />
             <Route path="/style-eval" element={<StyleEvalPage />} />
             <Route path="/leads" element={<LeadsPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -37,7 +37,7 @@ export default function App() {
             <Route path="/budget" element={<UserHomePage />} />
             <Route path="/budget-breakdown" element={<BudgetPage />} />
             <Route path="/feedback" element={<DesignFeedbackPage />} />
-            <Route path="/quotation" element={<QuotationPage />} />
+            <Route path="/quotation/:id/:ver" element={<QuotationPage />} />
             <Route path="/settlement/:id" element={<SettlementPage />} />
           </Routes>
         </BrowserRouter>

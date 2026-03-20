@@ -57,9 +57,7 @@ export default function LeadsPage() {
       <div className="min-h-screen bg-[#FFFDF3] flex flex-col">
         <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
           <h1 className="text-xl font-medium text-gray-900">提交结果</h1>
-          <div className="absolute right-6 top-8">
-            <NavigationMenu />
-          </div>
+          <NavigationMenu anchorClass="right-6" />
         </header>
         <main className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
           <div className="w-full max-w-md bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden">

@@ -568,11 +568,9 @@ export default function OrderDetailPage() {
               {orderData.quotations.map((q, idx) => (
                 <div 
                   key={idx}
-                  onClick={() => navigate('/quotation', { 
+                  onClick={() => navigate(`/quotation/${encodeURIComponent(orderData.id)}/${q.ver}`, { 
                     state: { 
-                      orderNumber: orderData.id, 
                       orderTitle: orderData.title,
-                      ver: q.ver,
                       quotationTitle: q.title
                     } 
                   })}

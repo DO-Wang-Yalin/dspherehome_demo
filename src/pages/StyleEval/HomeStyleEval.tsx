@@ -28,7 +28,6 @@ export function HomeStyleEval({
 }: HomeStyleEvalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const [quantities, setQuantities] = useState<Record<string, Record<string, number>>>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [showResult, setShowResult] = useState(false);
 
@@ -36,6 +35,13 @@ export function HomeStyleEval({
   const pageIndex = isControlled ? controlledPageIndex! : (showResult ? questions.length : currentIndex);
   const showResultPage = pageIndex >= questions.length;
   const currentQuestion = useMemo(() => questions[pageIndex] as typeof questions[0] | undefined, [pageIndex]);
+
+  /** 严格位于当前题之前的、已作答题目数（本题答完并进入下一题后，上一题才计入） */
+  const progressCompleted = useMemo(
+    () =>
+      questions.slice(0, pageIndex).filter((q) => (answers[q.id]?.length ?? 0) > 0).length,
+    [answers, pageIndex]
+  );
 
   const handleNext = () => {
     if (isControlled) {
@@ -59,7 +65,6 @@ export function HomeStyleEval({
     if (isControlled) onPageChange!(0);
     setCurrentIndex(0);
     setAnswers({});
-    setQuantities({});
     setTextAnswers({});
     setShowResult(false);
   };
@@ -73,35 +78,13 @@ export function HomeStyleEval({
     return true;
   };
 
-  const handleOptionSelect = (optionId: string, delta?: number) => {
-    if (currentQuestion.id === 'q9') {
-      setQuantities((prev) => {
-        const currentQuantities = prev[currentQuestion.id] || {};
-
-        if (delta !== undefined) {
-          const currentQty = currentQuantities[optionId] || 0;
-          const newQty = Math.max(0, currentQty + delta);
-          return { ...prev, [currentQuestion.id]: { ...currentQuantities, [optionId]: newQty } };
-        }
-
-        const currentAnswers = answers[currentQuestion.id] || [];
-        let newAnswers = [...currentAnswers];
-        if (newAnswers.includes(optionId)) {
-          newAnswers = newAnswers.filter((id) => id !== optionId);
-        } else {
-          newAnswers.push(optionId);
-        }
-        setAnswers((p) => ({ ...p, [currentQuestion.id]: newAnswers }));
-        return prev;
-      });
-    } else {
-      setAnswers((prev) => {
-        const currentAnswers = prev[currentQuestion.id] || [];
-        if (currentQuestion.type === 'single') return { ...prev, [currentQuestion.id]: [optionId] };
-        if (currentAnswers.includes(optionId)) return { ...prev, [currentQuestion.id]: currentAnswers.filter((id) => id !== optionId) };
-        return { ...prev, [currentQuestion.id]: [...currentAnswers, optionId] };
-      });
-    }
+  const handleOptionSelect = (optionId: string) => {
+    setAnswers((prev) => {
+      const currentAnswers = prev[currentQuestion.id] || [];
+      if (currentQuestion.type === 'single') return { ...prev, [currentQuestion.id]: [optionId] };
+      if (currentAnswers.includes(optionId)) return { ...prev, [currentQuestion.id]: currentAnswers.filter((id) => id !== optionId) };
+      return { ...prev, [currentQuestion.id]: [...currentAnswers, optionId] };
+    });
 
     if (currentQuestion?.type === 'single') {
       setTimeout(() => handleNext(), 400);
@@ -113,17 +96,18 @@ export function HomeStyleEval({
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-stone-800 font-sans selection:bg-orange-200">
-      <div className="max-w-4xl mx-auto px-4 py-10 md:py-14">
+    <div className="min-h-screen bg-transparent text-stone-800 font-sans antialiased selection:bg-orange-200 selection:text-stone-900">
+      <div className="max-w-6xl mx-auto w-full px-5 sm:px-8 lg:px-12 py-8 md:py-12 lg:py-16">
         {onGoHome && (
-          <div className="mb-6">
+          <div className="mb-6 md:mb-8">
             <button
               type="button"
               onClick={onGoHome}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 transition-colors"
+              aria-label="返回欢迎页"
+              title="返回欢迎页"
+              className="w-11 h-11 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
             >
-              <Home size={14} />
-              返回欢迎页
+              <Home size={20} strokeWidth={2} />
             </button>
           </div>
         )}
@@ -141,14 +125,13 @@ export function HomeStyleEval({
             </div>
           ) : currentQuestion ? (
             <div key="question-container" className="w-full">
-              <ProgressBar current={pageIndex + 1} total={questions.length} />
+              <ProgressBar completed={progressCompleted} total={questions.length} />
 
               <AnimatePresence mode="wait">
                 <div key={currentQuestion.id}>
                   <QuestionCard
                     question={currentQuestion}
                     selectedOptions={answers[currentQuestion.id] || []}
-                    selectedQuantities={quantities[currentQuestion.id] || {}}
                     textAnswer={textAnswers[currentQuestion.id]}
                     onOptionSelect={handleOptionSelect}
                     onTextChange={handleTextChange}
@@ -156,16 +139,18 @@ export function HomeStyleEval({
                 </div>
               </AnimatePresence>
 
-              <div className="flex justify-between items-center max-w-2xl mx-auto mt-12">
+              <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 w-full max-w-5xl mx-auto mt-12 md:mt-16 pt-6 md:pt-8 border-t border-stone-200/50">
                 <button
                   type="button"
                   onClick={handlePrev}
                   disabled={pageIndex === 0}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-colors ${
-                    currentIndex === 0 ? 'text-stone-300 cursor-not-allowed' : 'text-stone-500 hover:bg-stone-200/50 hover:text-stone-800'
+                  className={`flex items-center justify-center gap-2 px-7 md:px-8 py-3.5 md:py-4 rounded-full text-base md:text-[1.0625rem] font-semibold transition-colors ${
+                    pageIndex === 0
+                      ? 'text-stone-300 cursor-not-allowed bg-stone-50/50'
+                      : 'text-stone-700 bg-stone-100/80 hover:bg-stone-200/90 hover:text-stone-900'
                   }`}
                 >
-                  <ArrowLeft size={18} />
+                  <ArrowLeft size={20} strokeWidth={2} />
                   上一题
                 </button>
 
@@ -173,14 +158,14 @@ export function HomeStyleEval({
                   type="button"
                   onClick={handleNext}
                   disabled={!canProceed()}
-                  className={`flex items-center gap-2 px-8 py-3 rounded-full font-medium transition-all ${
+                  className={`flex items-center justify-center gap-2 px-9 md:px-10 py-3.5 md:py-4 rounded-full text-base md:text-[1.0625rem] font-semibold transition-all ${
                     !canProceed()
                       ? 'bg-stone-200 text-stone-400 cursor-not-allowed'
-                      : 'bg-[#EF6B00] text-white hover:bg-[#D85F00] shadow-md hover:shadow-lg'
+                      : 'bg-[#EF6B00] text-white hover:bg-[#D85F00] shadow-lg shadow-[#EF6B00]/25 hover:shadow-xl'
                   }`}
                 >
                   {pageIndex === questions.length - 1 ? '查看结果' : '下一题'}
-                  <ArrowRight size={18} />
+                  <ArrowRight size={20} strokeWidth={2} />
                 </button>
               </div>
             </div>

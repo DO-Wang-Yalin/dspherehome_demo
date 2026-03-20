@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { List, X, ChevronRight } from 'lucide-react';
+import { List, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   getNavigationStepsForFlow,
@@ -8,9 +8,29 @@ import {
 } from '../utils/navigationConfig';
 import { useGlobal } from '../context/GlobalContext';
 
-export function NavigationMenu() {
+type NavigationMenuProps = {
+  /** 锚点水平位置类，默认贴齐标题栏右缘（与 max-w 内容区一致） */
+  anchorClass?: string;
+  /** 与兄弟按钮横向排列时设为 true，外层不再使用 absolute 定位 */
+  inline?: boolean;
+};
+
+export function NavigationMenu({ anchorClass = 'right-0', inline = false }: NavigationMenuProps = {}) {
   const [showMenu, setShowMenu] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setShowMenu(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
   const location = useLocation();
   const { activeProjectLeadId } = useGlobal();
 
@@ -58,10 +78,21 @@ export function NavigationMenu() {
   const displayIndex = resolvedCurrentIndex !== -1 ? resolvedCurrentIndex : 0;
 
   return (
-    <>
+    <div
+      className={
+        inline
+          ? `relative z-50 ${anchorClass}`
+          : `absolute top-1/2 z-50 -translate-y-1/2 ${anchorClass}`
+      }
+    >
+      <div className="relative">
       <button
-        onClick={() => setShowMenu(true)}
-        className="absolute right-0 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-2 hover:bg-gray-50 transition-colors z-50"
+        ref={triggerRef}
+        type="button"
+        onClick={() => setShowMenu((v) => !v)}
+        aria-expanded={showMenu}
+        aria-haspopup="dialog"
+        className="bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100 flex items-center gap-2 hover:bg-gray-50 transition-colors"
       >
         <List size={14} className="text-gray-400" />
         <span className="text-sm font-medium text-gray-500">
@@ -71,37 +102,52 @@ export function NavigationMenu() {
 
       <AnimatePresence>
         {showMenu && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
+          <>
+            <motion.button
+              key="nav-backdrop"
+              type="button"
+              aria-label="关闭目录"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMenu(false)}
-              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[90] bg-black/25 backdrop-blur-[1px] cursor-pointer border-0 p-0 appearance-none"
             />
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+              ref={panelRef}
+              key="nav-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nav-menu-title"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+              className="absolute right-0 top-full z-[100] mt-2 w-[min(calc(100vw-1.25rem),22rem)] max-h-[min(80vh,28rem)] bg-white rounded-2xl shadow-[0_16px_48px_rgba(0,0,0,0.12)] border border-stone-100 overflow-hidden flex flex-col"
             >
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h2 className="text-lg font-bold text-gray-900">测评目录</h2>
-                <button onClick={() => setShowMenu(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <X size={20} className="text-gray-500" />
+              <div className="px-4 py-3 border-b border-stone-100 flex justify-between items-center gap-2 shrink-0 bg-white">
+                <h2 id="nav-menu-title" className="text-base font-bold text-gray-900">
+                  测评目录
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowMenu(false)}
+                  className="p-2 hover:bg-stone-100 rounded-full transition-colors -mr-1"
+                >
+                  <X size={18} className="text-gray-500" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                <div className="grid grid-cols-1 gap-2">
+              <div className="overflow-y-auto p-2 custom-scrollbar flex-1 min-h-0">
+                <div className="grid grid-cols-1 gap-1">
                   {stepsList.map((step, index) => {
                     const isCurrent = index === resolvedCurrentIndex;
                     return (
                       <div
                         key={step.id}
-                        className={`flex items-center justify-between p-4 rounded-xl transition-all border ${
+                        className={`flex items-center justify-between rounded-xl transition-all border ${
                           isCurrent
                             ? 'bg-[#EF6B00]/5 border-[#EF6B00]/20'
-                            : 'hover:bg-gray-50 border-transparent bg-white'
+                            : 'hover:bg-stone-50 border-transparent bg-transparent'
                         }`}
                       >
                         <button
@@ -110,26 +156,37 @@ export function NavigationMenu() {
                             navigate(buildStepHref(step));
                             setShowMenu(false);
                           }}
-                          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          className="flex items-center gap-2.5 flex-1 min-w-0 text-left p-3"
                         >
-                          <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isCurrent ? 'bg-[#EF6B00] text-white' : 'bg-gray-100 text-gray-400'
-                          }`}>
+                          <span
+                            className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                              isCurrent ? 'bg-[#EF6B00] text-white' : 'bg-stone-100 text-stone-500'
+                            }`}
+                          >
                             {index + 1}
                           </span>
-                          <div className="flex flex-col items-start min-w-0">
-                            {step.qId && (
-                              <span className="text-[10px] font-bold text-[#EF6B00] uppercase tracking-wider mb-0.5">
-                                {step.qId}
-                              </span>
-                            )}
-                            <span className={`font-medium truncate ${isCurrent ? 'text-[#EF6B00]' : 'text-gray-700'}`}>
+                          <div className="flex flex-col items-start min-w-0 gap-0.5">
+                            <div className="flex flex-wrap items-center gap-1 min-w-0">
+                              {step.qId && (
+                                <span className="text-[10px] font-bold text-[#EF6B00] uppercase tracking-wider">
+                                  {step.qId}
+                                </span>
+                              )}
+                              {step.fromStyleEval && (
+                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200/80 shrink-0">
+                                  风格测评迁入
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className={`text-sm font-medium leading-snug ${isCurrent ? 'text-[#EF6B00]' : 'text-gray-700'}`}
+                            >
                               {step.title}
                             </span>
                           </div>
-                          {isCurrent && (
+                          {isCurrent ? (
                             <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#EF6B00]" />
-                          )}
+                          ) : null}
                         </button>
                       </div>
                     );
@@ -137,9 +194,10 @@ export function NavigationMenu() {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </>
         )}
       </AnimatePresence>
-    </>
+      </div>
+    </div>
   );
 }

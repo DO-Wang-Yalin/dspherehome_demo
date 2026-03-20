@@ -1,5 +1,5 @@
 /**
- * 待定决策 3 类标签：方案待反馈 | 报价单待确认（订购+交付）| 结算待确认
+ * 待定决策 3 类标签：方案待反馈 | 报价待确认（订购+交付）| 结算待确认
  */
 
 export type PendingDecisionKind = 'scheme_feedback' | 'quotation_pending' | 'settlement_confirm'

@@ -227,13 +227,14 @@ export function DeepEvalFormProvider({ children }: { children: React.ReactNode }
   }, [reverseGeocode])
 
   const handleCopyProjectLocation = useCallback(() => {
-    if (formData.projectPosition) {
-      setFormData((prev) => ({ ...prev, city: formData.projectPosition }))
+    const src = (formData.projectPosition || globalData.projectLocation || '').trim()
+    if (src) {
+      setFormData((prev) => ({ ...prev, city: src }))
       setErrors((prev) => ({ ...prev, city: '' }))
     } else {
       setErrors((prev) => ({ ...prev, projectPosition: '请先填写或获取项目城市信息' }))
     }
-  }, [formData.projectPosition])
+  }, [formData.projectPosition, globalData.projectLocation])
 
   const validateStep1 = useCallback((): boolean => {
     const nextErrors: Record<string, string> = {}
@@ -252,9 +253,11 @@ export function DeepEvalFormProvider({ children }: { children: React.ReactNode }
     if (!formData.ageGroup) nextErrors.ageGroup = '请选择年龄段'
     if (!formData.industry) nextErrors.industry = '请选择所在行业'
     if (!formData.city) nextErrors.city = '请填写所在城市'
+    if (!formData.phone) nextErrors.phone = '请填写手机号'
+    else if (!isPhoneValid(formData.phone)) nextErrors.phone = '请输入正确的 11 位手机号码'
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
-  }, [formData.name, formData.ageGroup, formData.industry, formData.city])
+  }, [formData.name, formData.ageGroup, formData.industry, formData.city, formData.phone])
 
   const validateStep3 = useCallback((): boolean => {
     const nextErrors: Record<string, string> = {}

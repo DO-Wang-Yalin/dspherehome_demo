@@ -5,7 +5,7 @@ import type { FormData } from '../../types'
 
 const PREFIX = 'ai-studio:deep-eval:'
 
-/** 深度测评步骤（Step4～Step21）会写入的 FormData 字段 */
+/** 深度测评步骤（含原风格 q8–q10 衔接题 + Step4～Step21）会写入的 FormData 字段 */
 export const DEEP_EVAL_FORM_KEYS = [
   'floorPlanUploaded',
   'houseUsage',
@@ -13,13 +13,20 @@ export const DEEP_EVAL_FORM_KEYS = [
   'ceilingHeight',
   'ventilation',
   'noise',
+  'styleEvalQ8Positioning',
+  'styleEvalQ9Selections',
+  'styleEvalQ9Quantities',
+  'styleEvalQ10Needs',
   'role',
   'favoriteSpace',
+  'otherCoreMemberSpaces',
+  'otherCoreMemberNotes',
   'additionalMembers',
   'daughterSpaces',
   'sonSpaces',
   'catSpaces',
   'dogSpaces',
+  'additionalMemberNotes',
   'requirementsMembers',
   'collaboration',
   'involvement',

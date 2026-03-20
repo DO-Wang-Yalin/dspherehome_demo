@@ -94,11 +94,18 @@ export interface FormData {
   // Q2-6
   role: string;
   favoriteSpace: string[];
+  /** Q2-6-1：除主核外另两位核心成员（A/B/C）的空间多选 */
+  otherCoreMemberSpaces?: Partial<Record<'A' | 'B' | 'C', string[]>>;
+  /** Q2-6-1：对应核心成员的补充说明 */
+  otherCoreMemberNotes?: Partial<Record<'A' | 'B' | 'C', string>>;
+  /** Q2-6-1：可含女儿/儿子/猫/狗 id，以及作为「更多家庭成员」勾选的核心角色 A/B/C */
   additionalMembers: string[];
   daughterSpaces: string[];
   sonSpaces: string[];
   catSpaces: string[];
   dogSpaces: string[];
+  /** Q2-6-1：女儿/儿子/猫/狗 各类别的补充说明（键同 additionalMembers id） */
+  additionalMemberNotes?: Record<string, string>;
   /** 需求书成员列表：有值时以本列表展示与编辑，支持成员/空间增删改及空间描述 */
   requirementsMembers?: RequirementsMember[];
   // Q2-7
@@ -162,6 +169,14 @@ export interface FormData {
   styleName: string;
   colorGene: string;
   styleSuggestions: string;
+  /** 居住定位选项 id（A–F），深度测评衔接题 */
+  styleEvalQ8Positioning?: string;
+  /** 同住成员/宠物选项 id 列表 */
+  styleEvalQ9Selections?: string[];
+  /** q9 学龄前/青少年/长辈人数 */
+  styleEvalQ9Quantities?: Record<string, number>;
+  /** q10 空间兴趣多选 id */
+  styleEvalQ10Needs?: string[];
   // Contract
   contractAccepted?: boolean;
   contractSignatureData?: string;
@@ -222,11 +237,14 @@ export const initialFormData: FormData = {
   noise: '',
   role: '',
   favoriteSpace: [],
+  otherCoreMemberSpaces: {},
+  otherCoreMemberNotes: {},
   additionalMembers: [],
   daughterSpaces: [],
   sonSpaces: [],
   catSpaces: [],
   dogSpaces: [],
+  additionalMemberNotes: {},
   collaboration: '',
   involvement: '',
   timeline: '',
@@ -258,6 +276,10 @@ export const initialFormData: FormData = {
   styleName: '',
   colorGene: '',
   styleSuggestions: '',
+  styleEvalQ8Positioning: '',
+  styleEvalQ9Selections: [],
+  styleEvalQ9Quantities: {},
+  styleEvalQ10Needs: [],
   contractAccepted: false,
   contractSignatureData: '',
   contractCustomText: '',

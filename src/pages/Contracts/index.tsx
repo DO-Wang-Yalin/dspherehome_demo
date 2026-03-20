@@ -96,7 +96,7 @@ export default function ContractsPage() {
       else if (contractLeadId) {
         setActiveProjectLeadId(contractLeadId);
         navigate(`/deep-eval?leadId=${encodeURIComponent(contractLeadId)}`);
-      } else navigate('/deep-eval');
+      } else navigate('/projects');
     }
   };
 
@@ -110,14 +110,14 @@ export default function ContractsPage() {
     } else {
       if (fromHome) navigate('/home');
       else if (contractLeadId) navigate('/projects');
-      else navigate('/register');
+      else navigate('/deep-eval?step=21');
     }
   };
 
   const handleEnterProject = () => {
     if (!contractLeadId) return;
     enterProjectWorkbenchFromLead(contractLeadId, updateData, setActiveProjectLeadId);
-    navigate('/home');
+    navigate('/home', { state: { activeTab: 'requirements' } });
   };
 
   const handleContinueDeepEval = () => {
@@ -161,7 +161,7 @@ export default function ContractsPage() {
             nextStep={nextStep}
             prevStep={prevStep}
             onBackToHome={() => navigate(fromHome ? '/home' : contractLeadId ? '/projects' : '/')}
-            primaryActionLabel={fromHome ? '进入我的项目' : '完成支付进入深度测评'}
+            primaryActionLabel={fromHome ? '进入我的项目' : '完成支付，进入项目列表'}
             leadChoiceActions={
               showLeadChoiceOnPayment
                 ? {

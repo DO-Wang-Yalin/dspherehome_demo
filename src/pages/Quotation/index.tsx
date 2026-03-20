@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   FileText,
   User,
@@ -328,15 +328,16 @@ const quotationData = {
 export default function QuotationPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: idParam, ver: verParam } = useParams<{ id: string; ver: string }>();
   const { data, updateData, activeProjectLeadId } = useGlobal()
-  const { orderNumber, orderTitle, ver, quotationTitle, pendingResolveKey } =
+  const { orderTitle, quotationTitle, pendingResolveKey } =
     (location.state || {}) as {
-      orderNumber?: string
       orderTitle?: string
-      ver?: string
       quotationTitle?: string
       pendingResolveKey?: string
     }
+  const orderNumber = idParam ?? (location.state as { orderNumber?: string })?.orderNumber;
+  const ver = verParam ?? (location.state as { ver?: string })?.ver;
   
   const currentOrder = data.orders?.find(o => o.id === orderNumber);
   const currentStatusCode = currentOrder?.status.match(/^S\d{2}(-\d{2})?/)?.[0] || '';

@@ -102,7 +102,7 @@ export function ProjectPage({
     <div className="min-h-screen w-full bg-[#FAF8F4]">
       <div className="w-full max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-10 xl:px-14 pt-8 sm:pt-10 pb-24">
         <header className="mb-8 sm:mb-10">
-          <h1 className="text-[1.65rem] sm:text-3xl font-serif font-semibold text-[#EF6B00] tracking-tight leading-tight">
+          <h1 className="text-[1.65rem] sm:text-3xl font-sans font-semibold text-[#EF6B00] tracking-tight leading-tight">
             欢迎回家
           </h1>
           <p className="mt-3 text-sm sm:text-[15px] text-gray-500 leading-relaxed max-w-lg">

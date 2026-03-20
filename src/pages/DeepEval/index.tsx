@@ -25,6 +25,7 @@ import {
   Step20,
   Step21,
 } from '../../components/steps';
+import { StepStyleQ8, StepStyleQ9, StepStyleQ10 } from '../../components/StyleEvalDeepSteps';
 import { initialFormData, type FormData } from '../../types';
 import {
   DEEP_EVAL_FORM_KEYS,
@@ -35,6 +36,8 @@ import {
 const steps = [
   { id: 'q2-4', component: Step4 },
   { id: 'q2-5', component: Step5 },
+  { id: 'style-q8', component: StepStyleQ8 },
+  { id: 'style-q9', component: StepStyleQ9 },
   { id: 'q2-6', component: Step6 },
   { id: 'q2-6-1', component: Step6_1 },
   { id: 'q2-7', component: Step7 },
@@ -51,6 +54,7 @@ const steps = [
   { id: 'q2-18', component: Step18 },
   { id: 'q2-19', component: Step19 },
   { id: 'q2-20', component: Step20 },
+  { id: 'style-q10', component: StepStyleQ10 },
   { id: 'q2-21', component: Step21 },
 ];
 
@@ -97,14 +101,22 @@ export default function DeepEvalPage() {
     }
   }, [searchParams]);
 
+  const finishDeepEval = () => {
+    if (fromRequirements) {
+      navigate('/home', { state: { activeTab: 'requirements' } });
+    } else if (leadId) {
+      navigate(`/projects?highlight=${encodeURIComponent(leadId)}`);
+    } else {
+      navigate('/contracts?step=1');
+    }
+  };
+
   const nextStep = () => {
     if (currentIndex < steps.length - 1) {
       navigate(buildDeepEvalPath(currentIndex + 1, leadId, fromRequirements));
       window.scrollTo(0, 0);
-    } else if (fromRequirements) {
-      navigate('/home', { state: { activeTab: 'requirements' } });
     } else {
-      navigate(leadId ? `/projects?highlight=${encodeURIComponent(leadId)}` : '/projects');
+      finishDeepEval();
     }
   };
 
@@ -117,12 +129,15 @@ export default function DeepEvalPage() {
     } else if (leadId) {
       navigate(`/contracts?step=2&leadId=${encodeURIComponent(leadId)}`);
     } else {
-      navigate('/');
+      navigate('/register');
     }
   };
 
   const CurrentComponent = steps[currentIndex].component;
   const isLastStep = currentIndex === steps.length - 1;
+  const stepId = steps[currentIndex].id;
+  const styleQ8Ok = stepId !== 'style-q8' || !!data.styleEvalQ8Positioning?.trim();
+  const canGoNextDeep = styleQ8Ok;
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col pb-24">
@@ -136,7 +151,7 @@ export default function DeepEvalPage() {
           </button>
           <div className="text-center">
             <h1 className="text-2xl font-medium text-gray-900">
-              深度测评 ({currentIndex + 1}/{steps.length})
+              深度测评
             </h1>
             {leadId && (
               <p className="text-xs text-amber-700 mt-1">本测评进度已与此条线索绑定保存</p>
@@ -160,12 +175,8 @@ export default function DeepEvalPage() {
                 fromRequirements ? { state: { activeTab: 'requirements' } } : undefined
               )
             }
-            goToLogin={() =>
-              navigate(
-                '/home',
-                fromRequirements ? { state: { activeTab: 'requirements' } } : undefined
-              )
-            }
+            goToLogin={finishDeepEval}
+            goToWelcome={() => navigate('/')}
           />
         </AnimatePresence>
       </main>
@@ -174,8 +185,14 @@ export default function DeepEvalPage() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-50">
           <div className="max-w-[800px] mx-auto">
             <button
+              type="button"
               onClick={nextStep}
-              className="w-full bg-[#FF9C3E] text-white py-4 rounded-xl font-medium text-lg flex items-center justify-center gap-2 hover:bg-[#EF6B00] transition-colors active:scale-[0.99]"
+              disabled={!canGoNextDeep}
+              className={`w-full py-4 rounded-xl font-medium text-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.99] ${
+                canGoNextDeep
+                  ? 'bg-[#FF9C3E] text-white hover:bg-[#EF6B00]'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
             >
               下一步
               <ChevronRight size={18} />

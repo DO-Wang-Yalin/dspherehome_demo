@@ -24,11 +24,11 @@ export const questions: Question[] = [
     subtitle: '关于空间明暗：哪种比例的‘光影氛围’，最能让你感到身心自在？',
     type: 'single',
     options: [
-      { id: 'A', label: '深度包裹感', description: '像躲进一个静谧的树洞。空间被暗影包围，只有极微弱的光勾勒轮廓，让你感到彻底的安全与私密。', imageUrl: 'https://picsum.photos/seed/dark-room/400/300' },
-      { id: 'B', label: '剧场故事感', description: '像电影放映厅。大部分空间是暗的，只用一盏灯点亮你停留的地方，这种强烈的对比让你更专注。', imageUrl: 'https://picsum.photos/seed/dim-lounge/400/300' },
-      { id: 'C', label: '温和呼吸感', description: '像下午的美术馆。光线不多也不少，均匀且克制，没有刺眼的亮块，让空间显得稳重、体面。', imageUrl: 'https://picsum.photos/seed/soft-gallery/400/300' },
-      { id: 'D', label: '阳光活力感', description: '视野被充足的光线充盈。整体色调轻快，能清晰感受到阳光的能量，让人心情愉悦、充满动力。', imageUrl: 'https://picsum.photos/seed/bright-sunroom/400/300' },
-      { id: 'E', label: '极致清爽感', description: '追求“无死角”的透亮。像极致简约的实验室，没有任何视觉阴影，追求绝对的干净、透明与高效率。', imageUrl: 'https://picsum.photos/seed/white-lab/400/300' },
+      { id: 'A', label: '深度包裹感', description: '像躲进一个静谧的树洞。空间被暗影包围，只有极微弱的光勾勒轮廓，让你感到彻底的安全与私密。', imageUrl: '/img/Q1-1-A1.png' },
+      { id: 'B', label: '剧场故事感', description: '像电影放映厅。大部分空间是暗的，只用一盏灯点亮你停留的地方，这种强烈的对比让你更专注。', imageUrl: '/img/Q1-1-A2.png' },
+      { id: 'C', label: '温和呼吸感', description: '像下午的美术馆。光线不多也不少，均匀且克制，没有刺眼的亮块，让空间显得稳重、体面。', imageUrl: '/img/Q1-1-A3.png' },
+      { id: 'D', label: '阳光活力感', description: '视野被充足的光线充盈。整体色调轻快，能清晰感受到阳光的能量，让人心情愉悦、充满动力。', imageUrl: '/img/Q1-1-A4.png' },
+      { id: 'E', label: '极致清爽感', description: '追求“无死角”的透亮。像极致简约的实验室，没有任何视觉阴影，追求绝对的干净、透明与高效率。', imageUrl: '/img/Q1-1-A5.png' },
     ],
   },
   {
@@ -37,11 +37,11 @@ export const questions: Question[] = [
     subtitle: '夜幕降临，哪种‘灯光的色泽’最能让你进入理想的居家状态？',
     type: 'single',
     options: [
-      { id: 'A', label: '极冷白光', description: '像手术室或精密实验室，这种冷峻感让我感到最清醒、最专业。', imageUrl: 'https://picsum.photos/seed/cold-snow/400/300' },
-      { id: 'B', label: '中性月光', description: '偏爱自然的日光色，没有任何偏色。清爽、干净、不带私人情绪的理智空间。', imageUrl: 'https://picsum.photos/seed/neutral-daylight/400/300' },
-      { id: 'C', label: '晨曦微光', description: '淡淡的乳白色。带有一丝丝极其微弱的暖意，清爽且舒缓。', imageUrl: 'https://picsum.photos/seed/morning-light/400/300' },
-      { id: 'D', label: '黄昏暖阳', description: '柔和的香槟色或奶咖色。像夕阳洒进屋子，有一种被家温柔包裹的归属感。', imageUrl: 'https://picsum.photos/seed/warm-sunset/400/300' },
-      { id: 'E', label: '壁炉篝火', description: '浓郁的琥珀色、暖橙色。极其温馨、热烈，甚至带有一点慵懒的怀旧感。', imageUrl: 'https://picsum.photos/seed/amber-fireplace/400/300' },
+      { id: 'A', label: '极冷白光', description: '像手术室或精密实验室，这种冷峻感让我感到最清醒、最专业。', imageUrl: '/img/Q1-2-A1.png' },
+      { id: 'B', label: '中性月光', description: '偏爱自然的日光色，没有任何偏色。清爽、干净、不带私人情绪的理智空间。', imageUrl: '/img/Q1-2-A2.png' },
+      { id: 'C', label: '晨曦微光', description: '淡淡的乳白色。带有一丝丝极其微弱的暖意，清爽且舒缓。', imageUrl: '/img/Q1-2-A3.png' },
+      { id: 'D', label: '黄昏暖阳', description: '柔和的香槟色或奶咖色。像夕阳洒进屋子，有一种被家温柔包裹的归属感。', imageUrl: '/img/Q1-2-A4.png' },
+      { id: 'E', label: '壁炉篝火', description: '浓郁的琥珀色、暖橙色。极其温馨、热烈，甚至带有一点慵懒的怀旧感。', imageUrl: '/img/Q1-2-A5.png' },
     ],
   },
   {
@@ -50,11 +50,11 @@ export const questions: Question[] = [
     subtitle: '哪种‘表面的触感’，让你觉得放在家里很棒？',
     type: 'single',
     options: [
-      { id: 'A', label: '极冷硬感', description: '像拉丝金属。触感清凉、锐利且绝对平整，展现出一种理性的力量感。', imageUrl: 'https://picsum.photos/seed/brushed-metal/400/300' },
-      { id: 'B', label: '细腻理智', description: '像抛光石材。触感极其平滑，代表了完美的工业精度，精致且昂贵。', imageUrl: 'https://picsum.photos/seed/polished-stone/400/300' },
-      { id: 'C', label: '稳重平衡', description: '像哑光岩板。触感温和且扎实，不反光，在冷峻与柔和之间达到了完美的平衡。', imageUrl: 'https://picsum.photos/seed/matte-stone/400/300' },
-      { id: 'D', label: '温暖呼吸', description: '像实木开口纹。能感觉到自然的沟壑与温润，给人一种与自然连接的生命力。', imageUrl: 'https://picsum.photos/seed/wood-grain/400/300' },
-      { id: 'E', label: '原始野性', description: '像粗粝的软木或石材。表面高度不规则，带有原始的颗粒感，充满野性美感。', imageUrl: 'https://picsum.photos/seed/raw-texture/400/300' },
+      { id: 'A', label: '极冷硬感', description: '像拉丝金属。触感清凉、锐利且绝对平整，展现出一种理性的力量感。', imageUrl: '/img/Q1-3-A1.png' },
+      { id: 'B', label: '细腻理智', description: '像抛光石材。触感极其平滑，代表了完美的工业精度，精致且昂贵。', imageUrl: '/img/Q1-3-A2.png' },
+      { id: 'C', label: '稳重平衡', description: '像哑光岩板。触感温和且扎实，不反光，在冷峻与柔和之间达到了完美的平衡。', imageUrl: '/img/Q1-3-A3.png' },
+      { id: 'D', label: '温暖呼吸', description: '像实木开口纹。能感觉到自然的沟壑与温润，给人一种与自然连接的生命力。', imageUrl: '/img/Q1-3-A4.png' },
+      { id: 'E', label: '原始野性', description: '像粗粝的软木或石材。表面高度不规则，带有原始的颗粒感，充满野性美感。', imageUrl: '/img/Q1-3-A5.png' },
     ],
   },
   {
@@ -76,11 +76,11 @@ export const questions: Question[] = [
     subtitle: '如果选购一个摆件，哪种“时间留痕”最让你心动？',
     type: 'single',
     options: [
-      { id: 'A', label: '岁月的残缺', description: '表面有斑驳的裂纹、粗粝的质感，甚至有些缺口。这种经过漫长时光打磨出的“不完美”，让你觉得更有生命力。', imageUrl: 'https://picsum.photos/seed/wabi-sabi/400/300' },
-      { id: 'B', label: '复古的韵味', description: '颜色深沉，带有手工拉胚的温度感。它看起来不像是现代工业品，更像是从祖母的旧柜子里翻出来的珍藏。', imageUrl: 'https://picsum.photos/seed/vintage-antique/400/300' },
-      { id: 'C', label: '经典的平衡', description: '造型大方、做工细致。无论是放在老房子还是新公寓都非常得体，不会过时，也不显得激进。', imageUrl: 'https://picsum.photos/seed/classic-timeless/400/300' },
-      { id: 'D', label: '现代的利落', description: '线条极其流畅，表面光滑如镜。你喜欢这种没有任何划痕、极其精致且符合当代审美的完美状态。', imageUrl: 'https://picsum.photos/seed/modern-sleek/400/300' },
-      { id: 'E', label: '未来的实验', description: '使用了不寻常的材质（如液态金属、3D打印结构）。它看起来非常先锋、冷峻，像是来自未来的实验室或外星文明。', imageUrl: 'https://picsum.photos/seed/futuristic-metal/400/300' },
+      { id: 'A', label: '岁月的残缺', description: '表面有斑驳的裂纹、粗粝的质感，甚至有些缺口。这种经过漫长时光打磨出的“不完美”，让你觉得更有生命力。', imageUrl: '/img/Q1-5-A1.png' },
+      { id: 'B', label: '复古的韵味', description: '颜色深沉，带有手工拉胚的温度感。它看起来不像是现代工业品，更像是从祖母的旧柜子里翻出来的珍藏。', imageUrl: '/img/Q1-5-A2.png' },
+      { id: 'C', label: '经典的平衡', description: '造型大方、做工细致。无论是放在老房子还是新公寓都非常得体，不会过时，也不显得激进。', imageUrl: '/img/Q1-5-A3.png' },
+      { id: 'D', label: '现代的利落', description: '线条极其流畅，表面光滑如镜。你喜欢这种没有任何划痕、极其精致且符合当代审美的完美状态。', imageUrl: '/img/Q1-5-A4.png' },
+      { id: 'E', label: '未来的实验', description: '使用了不寻常的材质（如液态金属、3D打印结构）。它看起来非常先锋、冷峻，像是来自未来的实验室或外星文明。', imageUrl: '/img/Q1-5-A5.png' },
     ],
   },
   {
@@ -109,6 +109,10 @@ export const questions: Question[] = [
       { id: 'E', label: '社交坐标', description: '家是展示我个人品味与成就的最佳场所，欢迎被世界看到。' },
     ],
   },
+];
+
+/** 原风格测评 q8–q10，插入深度测评 Q2-5 与 Q2-6 之间展示 */
+export const styleEvalDeepBridgeQuestions: Question[] = [
   {
     id: 'q8',
     title: '',
@@ -129,15 +133,14 @@ export const questions: Question[] = [
     subtitle: '定制贴心的动线与材质',
     type: 'mixed',
     options: [
-      { id: 'single', label: '单身人士', group: 'family' },
-      { id: 'couple', label: '夫妻/伴侣', group: 'family' },
+      { id: 'single', label: '单身人士', group: 'core' },
+      { id: 'couple', label: '夫妻/伴侣', group: 'core' },
       { id: 'child_preschool', label: '学龄前儿童', group: 'family' },
       { id: 'child_teen', label: '青少年', group: 'family' },
       { id: 'elder', label: '长辈同住', group: 'family' },
       { id: 'pet_cat', label: '猫', group: 'pet' },
       { id: 'pet_dog', label: '狗', group: 'pet' },
       { id: 'pet_other', label: '其他宠物', group: 'pet' },
-      { id: 'pet_none', label: '暂无宠物', group: 'pet' },
     ],
   },
   {

@@ -28,7 +28,7 @@ export default function RegisterPage() {
         <StepRegister 
           data={data} 
           updateData={updateData} 
-          nextStep={() => navigate('/contracts')} 
+          nextStep={() => navigate('/deep-eval')} 
           prevStep={() => navigate('/leads?step=2')} 
         />
       </main>

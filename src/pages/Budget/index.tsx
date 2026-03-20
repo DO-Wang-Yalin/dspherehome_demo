@@ -28,7 +28,7 @@ export default function BudgetPage() {
         <StepBudgetBreakdown 
           data={data} 
           updateData={updateData} 
-          nextStep={() => navigate('/register')} 
+          nextStep={() => navigate('/deep-eval?step=0')} 
           prevStep={() => navigate('/leads?step=2')} 
         />
       </main>

@@ -11,6 +11,7 @@ import X from 'lucide-react/dist/esm/icons/x';
 
 import { getVisitorId } from '../../../utils/visitorId';
 import { saveVoyageCard } from '../../../services/designVoyage/VoyageCardService';
+import { DreamOneLogo } from '../../../components/DreamOneLogo';
 
 interface ResultPageProps {
   answers: Record<string, string[]>;
@@ -113,9 +114,10 @@ export function ResultPage({
       const ans = answers[`q${i}`]?.[0];
       userScores.push(ans ? mapScore(ans) : 3);
     }
-    return STYLE_PROFILES.map((p) => ({ ...p, distance: calculateDistance(userScores, p.scores) })).sort(
-      (a, b) => a.distance - b.distance
-    );
+    return STYLE_PROFILES.map((p) => ({
+      ...p,
+      distance: calculateDistance(userScores, p.scores),
+    })).sort((a, b) => a.distance - b.distance);
   }, [answers]);
   const bestMatch = results[0];
   const cardId = useMemo(() => Math.floor(10000 + Math.random() * 90000), []);
@@ -180,12 +182,12 @@ export function ResultPage({
       transition={{ duration: 0.6 }}
       className="w-full min-h-full relative font-sans text-dark bg-[#fffdf3]"
     >
-      <div className="min-h-full flex flex-col items-center justify-start pt-6 md:pt-10 p-4 md:p-10 pb-10">
+      <div className="min-h-full flex flex-col items-center justify-start pt-6 md:pt-12 p-4 sm:p-8 md:p-12 pb-12">
         <div
           ref={cardRef}
-          className="w-full max-w-md bg-[#FDFBF7] rounded-[32px] overflow-hidden shadow-2xl relative border border-[#F1ECE4]/80 flex flex-col"
+          className="w-full max-w-lg bg-[#FDFBF7] rounded-[28px] md:rounded-[32px] overflow-hidden shadow-2xl relative border border-[#F1ECE4]/80 flex flex-col"
         >
-          <div className="relative h-64 md:h-80 w-full shrink-0">
+          <div className="relative h-72 md:h-96 w-full shrink-0">
             <img
               src={heroImage}
               alt="Cover"
@@ -196,16 +198,16 @@ export function ResultPage({
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
-            <div className="absolute bottom-5 left-6 right-6 text-white">
-              <h1 className="text-3xl md:text-4xl font-sans font-medium tracking-wide text-[#FDFBF7] drop-shadow-md">
+            <div className="absolute bottom-6 left-6 right-6 md:bottom-8 md:left-8 md:right-8 text-white">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-[#FDFBF7] drop-shadow-lg leading-tight">
                 {persona.name}
               </h1>
             </div>
           </div>
 
-          <div className="p-6 md:p-8 flex flex-col gap-5">
-            <div className="relative pl-4 border-l-2 border-brand/40">
-              <p className="text-sm font-sans italic text-sub leading-relaxed">&quot;{persona.desc}&quot;</p>
+          <div className="p-6 md:p-9 flex flex-col gap-6">
+            <div className="relative pl-4 md:pl-5 border-l-[3px] border-brand/40">
+              <p className="text-base md:text-lg font-sans text-stone-700 italic leading-relaxed">&quot;{persona.desc}&quot;</p>
             </div>
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between bg-[#F7F5F0] px-4 py-3 rounded-xl border border-[#EAE5DE]/50">
@@ -213,7 +215,7 @@ export function ResultPage({
                   <Layers size={14} />
                   <span className="text-[10px] font-bold tracking-widest uppercase">风格核心</span>
                 </div>
-                <span className="text-sm font-bold text-dark">{bestMatch.name}</span>
+                <span className="text-base font-bold text-dark">{bestMatch.name}</span>
               </div>
               <div className="flex items-center justify-between bg-[#F7F5F0] px-4 py-3 rounded-xl border border-[#EAE5DE]/50">
                 <div className="flex items-center gap-2 text-sub">
@@ -225,7 +227,7 @@ export function ResultPage({
                     className="w-4 h-4 rounded-full border border-black/10 shadow-sm"
                     style={{ background: likedColorDef?.background ?? likedColorDef?.hex ?? '#e5e5e5' }}
                   />
-                  <span className="text-sm font-bold text-dark">{likedColorsName || bestMatch.colorGene || '—'}</span>
+                  <span className="text-base font-bold text-dark">{likedColorsName || bestMatch.colorGene || '—'}</span>
                 </div>
               </div>
               <div className="bg-[#F7F5F0] px-4 py-4 rounded-xl border border-[#EAE5DE]/50 flex flex-col gap-3">
@@ -234,12 +236,12 @@ export function ResultPage({
                   <span className="text-[10px] font-bold tracking-widest uppercase">搭配建议</span>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="flex gap-2 text-xs leading-relaxed">
-                    <span className="text-sub/70 shrink-0">硬装 |</span>
+                  <div className="flex gap-2 text-sm leading-relaxed">
+                    <span className="text-sub/70 shrink-0 font-medium">硬装 |</span>
                     <span className="text-dark/90 font-medium">{hardDecor || '—'}</span>
                   </div>
-                  <div className="flex gap-2 text-xs leading-relaxed">
-                    <span className="text-sub/70 shrink-0">软装 |</span>
+                  <div className="flex gap-2 text-sm leading-relaxed">
+                    <span className="text-sub/70 shrink-0 font-medium">软装 |</span>
                     <span className="text-dark/90 font-medium">{softDecor || '—'}</span>
                   </div>
                 </div>
@@ -247,23 +249,23 @@ export function ResultPage({
             </div>
             <div className="pt-4 flex justify-between items-end border-t border-black/5">
               <div className="flex flex-col gap-0.5">
-                <img src="/img/logo.png" alt="DREAM.ONE" className="h-5 w-auto object-contain object-left" />
+                <DreamOneLogo className="h-5 w-auto object-left" />
               </div>
               <span className="text-[9px] font-mono text-sub/40">NO.{cardId}</span>
             </div>
           </div>
         </div>
 
-        <div className="w-full max-w-md mt-6 flex flex-col gap-3">
+        <div className="w-full max-w-lg mt-8 flex flex-col gap-3 md:gap-4">
           {saveError && <p className="text-red-500 text-xs text-center">{saveError}</p>}
           <button
             type="button"
             onClick={handleSaveCard}
-            className="w-full bg-[#2C2825] text-[#F4F1EA] py-3.5 px-5 rounded-xl shadow-xl hover:bg-black transition-all active:scale-95 flex items-center justify-between group"
+            className="w-full bg-[#2C2825] text-[#F4F1EA] py-4 px-6 rounded-xl shadow-xl hover:bg-black transition-all active:scale-[0.99] flex items-center justify-between group"
           >
-            <div className="flex flex-col items-start text-left">
-              <span className="font-bold text-sm tracking-widest uppercase">保存我的风格</span>
-              <span className="text-[9px] text-white/50 font-light mt-0.5">可分享给家人或设计师</span>
+            <div className="flex flex-col items-start text-left gap-0.5">
+              <span className="font-bold text-[0.8125rem] md:text-sm tracking-wide uppercase">保存我的风格</span>
+              <span className="text-xs text-white/55 font-normal">可分享给家人或设计师</span>
             </div>
             <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
               <Download size={14} />
@@ -273,10 +275,10 @@ export function ResultPage({
             type="button"
             onClick={onGoDeepEval}
             disabled={!onGoDeepEval}
-            className="w-full bg-[#EF6B00] text-white py-4 px-5 rounded-xl shadow-lg shadow-[#EF6B00]/20 hover:bg-[#CC5B00] active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-[#EF6B00] text-white py-4 md:py-[1.125rem] px-6 rounded-xl shadow-lg shadow-[#EF6B00]/25 hover:bg-[#CC5B00] active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Sparkles size={16} fill="currentColor" className="opacity-80" />
-            <span className="font-bold text-sm tracking-widest uppercase">
+            <Sparkles size={18} fill="currentColor" className="opacity-80 shrink-0" />
+            <span className="font-bold text-sm md:text-[0.9375rem] tracking-wide text-center leading-snug">
               {deepEvalButtonLabel ?? '填写线索信息获取项目预算分配图'}
             </span>
           </button>

@@ -12,7 +12,7 @@ export default function ProjectsPage() {
     <ProjectPage
       onSelectProject={(project) => {
         enterProjectWorkbenchFromLead(project.leadId, updateData, setActiveProjectLeadId);
-        navigate('/home');
+        navigate('/home', { state: { activeTab: 'requirements' } });
       }}
       onBack={() => navigate('/')}
     />

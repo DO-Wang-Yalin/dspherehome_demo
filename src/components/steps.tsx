@@ -18,10 +18,43 @@ const contractFlowImg = '/img/contract-flow.png';
 import { HomeStyleEval } from '../pages/StyleEval/HomeStyleEval';
 import { CONTRACT_TEXT } from '../constants/contract';
 import { useGlobal } from '../context/GlobalContext';
-import { getLeadById, convertLeadOnContractSign } from '../services/leads/savedLeadsStorage';
+import {
+  getLeadById,
+  convertLeadOnContractSign,
+  addUserLead,
+  buildLeadSnapshotFromFormData,
+} from '../services/leads/savedLeadsStorage';
+import { saveDeepEvalDraftMerge } from '../services/leads/deepEvalByLeadStorage';
 
 // Re-export for backwards compatibility
 export { CONTRACT_TEXT };
+
+/** Q2-6 / Q2-6-1：核心成员角色与推荐空间（与需求书 BASELINE_ROLE_LABELS 一致） */
+export type CoreMemberRole = 'A' | 'B' | 'C'
+
+export const CORE_MEMBER_ROLE_LABEL: Record<CoreMemberRole, string> = {
+  A: '男主人',
+  B: '女主人',
+  C: '长辈/长住家属',
+}
+
+export const CORE_MEMBER_SPACE_OPTIONS: Record<CoreMemberRole, { label: string; desc: string }[]> = {
+  A: [
+    { label: '智能书房', desc: '需要高效办公与游戏娱乐的平衡。' },
+    { label: '客厅影音中心', desc: '追求极致的视听感受。' },
+    { label: '社交餐厨', desc: '喜欢邀请朋友回家小酌。' },
+  ],
+  B: [
+    { label: '梦幻衣帽间', desc: '需要博物馆级别的陈列与分类。' },
+    { label: '全能厨房', desc: '享受烹饪与家人互动的时光。' },
+    { label: '主卧疗愈区', desc: '追求极致包裹感的睡眠环境。' },
+  ],
+  C: [
+    { label: '阳光卧室', desc: '极致的采光与通风要求。' },
+    { label: '茶室/宁静角', desc: '一个可以独处、饮茶或阅读的地方。' },
+    { label: '独立卫浴', desc: '强调安全性与便捷性。' },
+  ],
+}
 
 interface StepProps {
   key?: string | number;
@@ -32,6 +65,7 @@ interface StepProps {
   goToStep?: (stepId: string) => void;
   goToWorkbench?: () => void;
   goToLogin?: () => void;
+  goToWelcome?: () => void;
 }
 
 type HouseType = '新房' | '二手房' | '老房翻新' | string;
@@ -490,23 +524,23 @@ export const StepDeepEval2 = ({
     handleChange,
     errors,
     validateStep2,
-    validateStep3,
     titleOptions,
     ageOptions,
     industryOptions,
-    isLocating,
-    handleGetCityLocation,
+    handleCopyProjectLocation,
     budgetDisplayLabel,
     submit,
     isSubmitting,
     submitError,
   } = ctx;
 
+  const projectCityPreview = (formData.projectPosition || data?.projectLocation || '').trim();
+
   React.useEffect(() => {
-    if (!returnToProjects || !data?.userPhone || formData.phone) return;
+    if (!data?.userPhone || formData.phone) return;
     const p = data.userPhone.replace(/[^\d]/g, '');
     if (p.length === 11) handleChange('phone', p);
-  }, [returnToProjects, data?.userPhone, formData.phone, handleChange]);
+  }, [data?.userPhone, formData.phone, handleChange]);
 
   const syncToGlobal = () => {
     updateData({
@@ -528,7 +562,6 @@ export const StepDeepEval2 = ({
     if (!validateStep2()) return;
     syncToGlobal();
     if (returnToProjects) {
-      if (!validateStep3()) return;
       await submit({
         onSuccess: () => onSubmittedToProjects?.(),
         skipSuccessModal: true,
@@ -600,19 +633,27 @@ export const StepDeepEval2 = ({
         <div className="flex flex-col gap-3">
           <label className="text-sm font-bold text-gray-800">所在城市</label>
           <div className="relative flex items-center">
-            <MapPin size={18} className="absolute left-4 text-gray-400" />
+            <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.75} />
             <input
               type="text"
               value={formData.city}
               onChange={(e) => handleChange('city', e.target.value)}
-              placeholder="点击右侧按钮获取定位或手动输入"
-              className="w-full py-4 bg-[#FFF9E8] rounded-xl border-none focus:ring-2 focus:ring-[#EF6B00]/20 outline-none transition-all text-gray-800 pl-11 pr-12 placeholder:text-gray-400"
+              placeholder="例：上海 / 杭州..."
+              className="w-full py-4 bg-[#FFF9E8] rounded-xl border-none focus:ring-2 focus:ring-[#EF6B00]/20 outline-none transition-all text-gray-800 pl-11 min-h-[52px] pr-[10.5rem] sm:pr-[11rem] placeholder:text-gray-400"
             />
-            <button type="button" onClick={handleGetCityLocation} disabled={isLocating} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white rounded-lg text-[#EF6B00] shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 border border-[#EF6B00]/20" title="获取当前位置">
-              {isLocating ? <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}><Loader2 size={16} /></motion.div> : <LocateFixed size={16} />}
+            <button
+              type="button"
+              onClick={handleCopyProjectLocation}
+              disabled={!projectCityPreview}
+              title={projectCityPreview || '请先在「项目概况」填写项目城市'}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-[#EF6B00] whitespace-nowrap bg-white px-2 sm:px-2.5 py-1.5 rounded-lg shadow-sm border border-gray-200/90 hover:border-[#EF6B00]/25 hover:bg-[#FFFDF3] disabled:opacity-45 disabled:pointer-events-none active:scale-[0.98] transition-all"
+            >
+              <Copy size={12} strokeWidth={2} className="text-gray-500 shrink-0" />
+              与项目城市一致
             </button>
           </div>
           {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+          {errors.projectPosition && <p className="text-amber-700 text-xs mt-1">{errors.projectPosition}</p>}
         </div>
         <div className="flex flex-col gap-3">
           <label className="text-sm font-bold text-gray-800">所在行业</label>
@@ -632,24 +673,24 @@ export const StepDeepEval2 = ({
           </div>
           {errors.industry && <p className="text-red-500 text-xs mt-1">{errors.industry}</p>}
         </div>
-        {returnToProjects && (
-          <div className="flex flex-col gap-3">
-            <label className="text-sm font-bold text-gray-800">手机号码</label>
-            <div className="relative flex items-center">
-              <Phone size={18} className="absolute left-4 text-gray-400" />
-              <input
-                type="tel"
-                inputMode="numeric"
-                maxLength={11}
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="11 位手机号，用于提交线索"
-                className="w-full py-4 bg-[#FFF9E8] rounded-xl border-none focus:ring-2 focus:ring-[#EF6B00]/20 outline-none transition-all text-gray-800 pl-11 pr-4 placeholder:text-gray-400"
-              />
-            </div>
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+        <div className="flex flex-col gap-3">
+          <label className="text-sm font-bold text-gray-800 leading-snug">
+            手机号（用于发送结果与确认细节）
+          </label>
+          <div className="relative flex items-center">
+            <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" strokeWidth={1.75} />
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={11}
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="11位手机号码..."
+              className="w-full py-4 bg-[#FFF9E8] rounded-xl border-none focus:ring-2 focus:ring-[#EF6B00]/20 outline-none transition-all text-gray-800 pl-11 pr-4 min-h-[52px] placeholder:text-gray-400"
+            />
           </div>
-        )}
+          {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+        </div>
         {submitError && returnToProjects && (
           <p className="text-sm text-amber-800 bg-amber-50 rounded-xl px-4 py-2">{submitError}</p>
         )}
@@ -920,7 +961,7 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
               </div>
             </div>
 
-            {/* 底部操作区：保存卡片到本地 + 继续注册 */}
+            {/* 底部操作区：保存卡片到本地 + 深度测评 */}
             <div className="w-full max-w-md mx-auto flex flex-col gap-3">
               {saveCardError && (
                 <p className="text-sm text-red-500 text-center">{saveCardError}</p>
@@ -946,7 +987,7 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
                 onClick={nextStep}
                 className="w-full bg-[#EF6B00] text-white py-4 px-5 rounded-xl shadow-lg shadow-[#EF6B00]/20 hover:bg-[#D85F00] active:scale-[0.99] transition-all flex items-center justify-center gap-2 font-bold text-sm"
               >
-                继续注册获取更多信息
+                进入深度测评获取更新信息
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -1087,60 +1128,81 @@ export const Step4 = ({ data, updateData }: StepProps) => {
     updateData({ floorPlanImages: next.length ? next : undefined, floorPlanUploaded: next.length > 0 });
   };
 
+  const siteMediaLoadingRef = React.useRef(false);
   const handleMediaFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
+    if (siteMediaLoadingRef.current) return;
     const next = Array.from(files).filter(
       (f) => f.type.startsWith('image/') || f.type.startsWith('video/')
     );
     if (!next.length) return;
+    siteMediaLoadingRef.current = true;
     setSiteMediaFiles(next);
     const kind = (f: File): 'image' | 'video' =>
       f.type.startsWith('video/') ? 'video' : 'image';
+    const existing = data.siteMedia ?? [];
     Promise.all(
       next.map((f) =>
         readFileAsDataUrl(f).then((url) => ({ name: f.name, url, kind: kind(f) }))
       )
     )
-      .then((siteMedia) => {
+      .then((newItems) => {
         updateData({
-          floorPlanUploaded: data.floorPlanUploaded || true,
-          siteMedia,
+          siteMedia: [...existing, ...newItems],
+          floorPlanUploaded:
+            data.floorPlanUploaded ||
+            (data.floorPlanImages?.length ?? 0) > 0 ||
+            newItems.length > 0,
         });
+        setSiteMediaFiles([]);
       })
-      .catch(() => {
-        if (!data.floorPlanUploaded) updateData({ floorPlanUploaded: true });
+      .catch(() => {})
+      .finally(() => {
+        siteMediaLoadingRef.current = false;
       });
   };
 
-  return (
-    <StepWrapper title="房型资料同步" subtitle="房屋用途与户型资料 · 开启深度分析">
-      <div className="space-y-6">
-        <SegmentedRadio
-          label="房屋用途"
-          value={data.houseUsage}
-          onChange={(v: string) => updateData({ houseUsage: v })}
-          options={['改善房', '刚需房', '投资房', '度假房/第二居所']}
-        />
+  const removeSiteMedia = (index: number) => {
+    const list = data.siteMedia ?? [];
+    const next = list.filter((_, i) => i !== index);
+    updateData({ siteMedia: next.length ? next : undefined });
+  };
 
+  return (
+    <StepWrapper title="Q1：房型资料同步" subtitle="户型图与现场影像 · 开启深度分析">
+      <div className="space-y-6">
         <div className="space-y-3">
           <SubQuestion className="flex items-center gap-2">
             <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
             上传户型图（可多张）
           </SubQuestion>
           <div
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+            className={`border-2 border-dashed border-gray-300 rounded-xl px-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer ${
+              (data.floorPlanImages?.length ?? 0) === 0 && floorPlanFiles.length === 0
+                ? 'min-h-[20rem] sm:min-h-[28rem] py-12 sm:py-16 flex flex-col justify-center'
+                : 'py-10'
+            }`}
             onClick={() => floorInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleFloorFiles(e.dataTransfer.files);
+            }}
           >
             <p className="text-gray-500 mb-4">
               {(() => {
                 const total = (data.floorPlanImages?.length ?? 0) + floorPlanFiles.length;
-                if (total > 0) return `已上传 ${total} 张户型图，点击继续添加`;
+                if (total > 0) return `已上传 ${total} 张户型图，点击或拖拽继续添加`;
                 return '点击或拖拽上传户型图，支持多张';
               })()}
             </p>
             <button
               type="button"
-              className="bg-[#FF9C3E] text-white px-6 py-2 rounded-full text-sm font-medium"
+              className="self-center bg-[#FF9C3E] text-white px-6 py-2 rounded-full text-sm font-medium"
             >
               选择文件
             </button>
@@ -1156,17 +1218,36 @@ export const Step4 = ({ data, updateData }: StepProps) => {
               }}
             />
             {(data.floorPlanImages?.length ?? 0) > 0 && (
-              <div className="mt-4 text-left space-y-2 max-h-40 overflow-y-auto">
+              <div
+                className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-left"
+                onClick={(e) => e.stopPropagation()}
+              >
                 {(data.floorPlanImages ?? []).map((img, index) => (
-                  <div key={`${img.name}-${index}`} className="flex items-center gap-2 text-xs text-gray-600">
-                    <span className="truncate flex-1">{img.name}</span>
-                    <button
-                      type="button"
-                      className="shrink-0 text-red-500 hover:text-red-600"
-                      onClick={(e) => { e.stopPropagation(); removeFloorPlanImage(index); }}
-                    >
-                      删除
-                    </button>
+                  <div
+                    key={`${img.name}-${index}`}
+                    className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
+                  >
+                    {'url' in img && img.url ? (
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="w-full h-28 object-cover bg-gray-100"
+                      />
+                    ) : (
+                      <div className="h-28 flex items-center justify-center text-[11px] text-gray-500 px-2 text-center">
+                        {img.name}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 p-2 border-t border-gray-100">
+                      <span className="truncate flex-1 text-xs text-gray-600">{img.name}</span>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs text-red-500 hover:text-red-600"
+                        onClick={() => removeFloorPlanImage(index)}
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1185,15 +1266,32 @@ export const Step4 = ({ data, updateData }: StepProps) => {
             上传现场视频/照片
           </SubQuestion>
           <div
-            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+            className={`border-2 border-dashed border-gray-300 rounded-xl px-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer ${
+              (data.siteMedia?.length ?? 0) === 0 && siteMediaFiles.length === 0
+                ? 'min-h-[20rem] sm:min-h-[28rem] py-12 sm:py-16 flex flex-col justify-center'
+                : 'py-10'
+            }`}
             onClick={() => mediaInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMediaFiles(e.dataTransfer.files);
+            }}
           >
             <p className="text-gray-500 mb-4">
-              {siteMediaFiles.length > 0 ? '已选择现场素材，可重新选择替换' : '点击或拖拽上传现场视频/照片'}
+              {siteMediaFiles.length > 0
+                ? `正在读取 ${siteMediaFiles.length} 个文件…`
+                : (data.siteMedia?.length ?? 0) > 0
+                  ? `已添加 ${data.siteMedia?.length} 个素材，点击或拖拽继续添加`
+                  : '点击或拖拽上传现场视频/照片'}
             </p>
             <button
               type="button"
-              className="bg-[#FF9C3E] text-white px-6 py-2 rounded-full text-sm font-medium"
+              className="self-center bg-[#FF9C3E] text-white px-6 py-2 rounded-full text-sm font-medium"
             >
               选择文件
             </button>
@@ -1203,13 +1301,49 @@ export const Step4 = ({ data, updateData }: StepProps) => {
               accept="image/*,video/*"
               multiple
               className="hidden"
-              onChange={(e) => handleMediaFiles(e.target.files)}
+              onChange={(e) => {
+                handleMediaFiles(e.target.files);
+                e.target.value = '';
+              }}
             />
-            {siteMediaFiles.length > 0 && (
-              <div className="mt-4 text-xs text-gray-600 text-left max-h-24 overflow-y-auto">
-                {siteMediaFiles.map((file) => (
-                  <div key={file.name} className="truncate">
-                    {file.name}
+            {(data.siteMedia?.length ?? 0) > 0 && (
+              <div
+                className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3 text-left"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {(data.siteMedia ?? []).map((item, index) => (
+                  <div
+                    key={`${item.name}-${index}`}
+                    className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm"
+                  >
+                    {item.kind === 'video' && item.url ? (
+                      <video
+                        src={item.url}
+                        controls
+                        className="w-full h-28 object-cover bg-gray-900"
+                        preload="metadata"
+                      />
+                    ) : item.url ? (
+                      <img
+                        src={item.url}
+                        alt=""
+                        className="w-full h-28 object-cover bg-gray-100"
+                      />
+                    ) : (
+                      <div className="h-28 flex items-center justify-center text-[11px] text-gray-500 px-2 text-center">
+                        {item.name}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 p-2 border-t border-gray-100">
+                      <span className="truncate flex-1 text-xs text-gray-600">{item.name}</span>
+                      <button
+                        type="button"
+                        className="shrink-0 text-xs text-red-500 hover:text-red-600"
+                        onClick={() => removeSiteMedia(index)}
+                      >
+                        删除
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1217,14 +1351,14 @@ export const Step4 = ({ data, updateData }: StepProps) => {
           </div>
         </div>
 
-        <p className="text-sm text-gray-400 text-center pt-4">此步骤也可稍后在产品里补充</p>
+        <p className="text-sm text-gray-400 text-center pt-4">此步骤也可稍后在产品里填写</p>
       </div>
     </StepWrapper>
   );
 };
 
 export const Step5 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q2-5：房屋现状评估" subtitle="采光、层高、通风、噪音情况">
+  <StepWrapper title="Q2：房屋现状评估" subtitle="采光、层高、通风、噪音情况">
     <div className="space-y-4">
       <div className="space-y-1">
         <SubQuestion className="flex items-center gap-2 mb-1">
@@ -1285,38 +1419,14 @@ export const Step5 = ({ data, updateData }: StepProps) => (
 );
 
 export const Step6 = ({ data, updateData }: StepProps) => {
-  const options = [
-    { value: 'A', label: '男主人' },
-    { value: 'B', label: '女主人' },
-    { value: 'C', label: '长辈/长住家属' }
-  ];
-
-  const getSpaceOptions = () => {
-    switch (data.role) {
-      case 'A':
-        return [
-          { label: '智能书房', desc: '需要高效办公与游戏娱乐的平衡。' },
-          { label: '客厅影音中心', desc: '追求极致的视听感受。' },
-          { label: '社交餐厨', desc: '喜欢邀请朋友回家小酌。' }
-        ];
-      case 'B':
-        return [
-          { label: '梦幻衣帽间', desc: '需要博物馆级别的陈列与分类。' },
-          { label: '全能厨房', desc: '享受烹饪与家人互动的时光。' },
-          { label: '主卧疗愈区', desc: '追求极致包裹感的睡眠环境。' }
-        ];
-      case 'C':
-        return [
-          { label: '阳光卧室', desc: '极致的采光与通风要求。' },
-          { label: '茶室/宁静角', desc: '一个可以独处、饮茶或阅读的地方。' },
-          { label: '独立卫浴', desc: '强调安全性与便捷性。' }
-        ];
-      default:
-        return [];
-    }
-  };
-
-  const spaceOptions = getSpaceOptions();
+  const options = (['A', 'B', 'C'] as CoreMemberRole[]).map((value) => ({
+    value,
+    label: CORE_MEMBER_ROLE_LABEL[value],
+  }));
+  const spaceOptions =
+    data.role === 'A' || data.role === 'B' || data.role === 'C'
+      ? CORE_MEMBER_SPACE_OPTIONS[data.role]
+      : [];
 
   const toggleSpace = (space: string) => {
     const current = data.favoriteSpace || [];
@@ -1328,7 +1438,7 @@ export const Step6 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-6：核心成员角色">
+    <StepWrapper title="Q5：核心成员角色">
       <div className="space-y-8">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1343,7 +1453,17 @@ export const Step6 = ({ data, updateData }: StepProps) => {
                 selected={data.role === opt.value}
                 onClick={() => {
                   if (data.role !== opt.value) {
-                    updateData({ role: opt.value, favoriteSpace: [] });
+                    const prevAdd = data.additionalMembers || [];
+                    const nextAdd = prevAdd.filter(
+                      (m) => !((m === 'A' || m === 'B' || m === 'C') && m === opt.value)
+                    );
+                    updateData({
+                      role: opt.value,
+                      favoriteSpace: [],
+                      otherCoreMemberSpaces: {},
+                      otherCoreMemberNotes: {},
+                      ...(nextAdd.length !== prevAdd.length ? { additionalMembers: nextAdd } : {}),
+                    });
                   }
                 }}
               />
@@ -1380,6 +1500,12 @@ export const Step6 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step6_1 = ({ data, updateData }: StepProps) => {
+  const CORE_ROLE_EMOJI: Record<CoreMemberRole, string> = {
+    A: '🧑',
+    B: '👩',
+    C: '🧓',
+  };
+
   const members = [
     { id: 'daughter', label: '女儿', emoji: '👧' },
     { id: 'son', label: '儿子', emoji: '👦' },
@@ -1410,13 +1536,71 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
     }
   };
 
+  const primary = data.role;
+  const secondaryRoles: CoreMemberRole[] =
+    primary === 'A' || primary === 'B' || primary === 'C'
+      ? (['A', 'B', 'C'] as CoreMemberRole[]).filter((r) => r !== primary)
+      : [];
+
+  const toggleOtherCoreSpace = (roleKey: CoreMemberRole, spaceLabel: string) => {
+    const map = { ...(data.otherCoreMemberSpaces ?? {}) };
+    const cur = map[roleKey] ?? [];
+    if (cur.includes(spaceLabel)) {
+      const next = cur.filter((s) => s !== spaceLabel);
+      if (next.length) map[roleKey] = next;
+      else delete map[roleKey];
+    } else {
+      map[roleKey] = [...cur, spaceLabel];
+    }
+    updateData({
+      otherCoreMemberSpaces: Object.keys(map).length ? map : {},
+    });
+  };
+
+  const setOtherCoreNote = (roleKey: CoreMemberRole, text: string) => {
+    const notes = { ...(data.otherCoreMemberNotes ?? {}) };
+    if (!text.trim()) delete notes[roleKey];
+    else notes[roleKey] = text;
+    updateData({
+      otherCoreMemberNotes: Object.keys(notes).length ? notes : {},
+    });
+  };
+
   const toggleMember = (id: string) => {
     const current = data.additionalMembers || [];
     if (current.includes(id)) {
-      updateData({ additionalMembers: current.filter((m: string) => m !== id) });
+      const notes = { ...(data.additionalMemberNotes ?? {}) };
+      delete notes[id];
+      const isCore = id === 'A' || id === 'B' || id === 'C';
+      if (isCore) {
+        const spaces = { ...(data.otherCoreMemberSpaces ?? {}) };
+        const coreNotes = { ...(data.otherCoreMemberNotes ?? {}) };
+        delete spaces[id as CoreMemberRole];
+        delete coreNotes[id as CoreMemberRole];
+        updateData({
+          additionalMembers: current.filter((m: string) => m !== id),
+          additionalMemberNotes: Object.keys(notes).length ? notes : {},
+          otherCoreMemberSpaces: Object.keys(spaces).length ? spaces : {},
+          otherCoreMemberNotes: Object.keys(coreNotes).length ? coreNotes : {},
+        });
+      } else {
+        updateData({
+          additionalMembers: current.filter((m: string) => m !== id),
+          additionalMemberNotes: Object.keys(notes).length ? notes : {},
+        });
+      }
     } else {
       updateData({ additionalMembers: [...current, id] });
     }
+  };
+
+  const setAdditionalMemberNote = (memberId: string, text: string) => {
+    const notes = { ...(data.additionalMemberNotes ?? {}) };
+    if (!text.trim()) delete notes[memberId];
+    else notes[memberId] = text;
+    updateData({
+      additionalMemberNotes: Object.keys(notes).length ? notes : {},
+    });
   };
 
   const toggleSpace = (memberId: string, space: string) => {
@@ -1429,35 +1613,61 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
     }
   };
 
+  const pickerItems: { id: string; label: string; emoji: string }[] = [
+    ...(primary && secondaryRoles.length
+      ? secondaryRoles.map((r) => ({
+          id: r,
+          label: CORE_MEMBER_ROLE_LABEL[r],
+          emoji: CORE_ROLE_EMOJI[r],
+        }))
+      : []),
+    ...members,
+  ];
+
   return (
-    <StepWrapper title="Q2-6 附加：其他家庭成员">
+    <StepWrapper title="Q6：其他核心成员与家庭成员">
       <div className="space-y-6">
-        <div className="space-y-4">
+        {!primary ? (
+          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl border border-dashed border-gray-200 text-center">
+            请先在上一题（Q5）选择您的核心成员角色；下一题中可在「更多家庭成员」里勾选<strong className="text-gray-700">其余核心角色</strong>
+            及儿女、宠物，并填写空间偏好。
+          </div>
+        ) : null}
+
+        <div className={`space-y-4 ${primary ? '' : 'opacity-60 pointer-events-none'}`}>
           <SubQuestion className="flex items-center gap-2">
             <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
-            有其他成员你想记录他们的活动空间吗？
+            更多家庭成员（可选）
           </SubQuestion>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {members.map(m => {
+          <p className="text-sm text-gray-500 -mt-2">
+            家中若还有上一题未选的核心成员，或儿女、宠物同住，请在此勾选后展开对应空间；每一类可填写说明。
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {pickerItems.map((m) => {
               const isSelected = (data.additionalMembers || []).includes(m.id);
               return (
                 <button
                   key={m.id}
+                  type="button"
                   onClick={() => toggleMember(m.id)}
                   className={`w-full flex flex-col items-center justify-center text-center p-4 rounded-xl transition-all duration-300 ${
-                    isSelected 
-                      ? 'bg-white ring-2 ring-[#EF6B00] shadow-[0_2px_10px_rgba(239,107,0,0.12)] transform scale-[1.02]' 
+                    isSelected
+                      ? 'bg-white ring-2 ring-[#EF6B00] shadow-[0_2px_10px_rgba(239,107,0,0.12)] transform scale-[1.02]'
                       : 'bg-white hover:bg-gray-50 shadow-[0_1px_5px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.06)]'
                   }`}
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-colors duration-300 text-2xl ${
-                    isSelected ? 'bg-[#EF6B00]/10' : 'bg-[#FFF9E8]'
-                  }`}>
+                  <div
+                    className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-colors duration-300 text-2xl ${
+                      isSelected ? 'bg-[#EF6B00]/10' : 'bg-[#FFF9E8]'
+                    }`}
+                  >
                     {m.emoji}
                   </div>
-                  <h3 className={`text-sm font-bold transition-colors duration-300 ${
-                    isSelected ? 'text-[#EF6B00]' : 'text-gray-800'
-                  }`}>
+                  <h3
+                    className={`text-sm font-bold transition-colors duration-300 ${
+                      isSelected ? 'text-[#EF6B00]' : 'text-gray-800'
+                    }`}
+                  >
                     {m.label}
                   </h3>
                 </button>
@@ -1469,15 +1679,50 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
         {(data.additionalMembers || []).length > 0 && (
           <div className="space-y-4 pt-6 border-t border-gray-100">
             {(data.additionalMembers || []).map((memberId: string) => {
+              if (memberId === 'A' || memberId === 'B' || memberId === 'C') {
+                const roleKey = memberId as CoreMemberRole;
+                const spaceOpts = CORE_MEMBER_SPACE_OPTIONS[roleKey];
+                const selectedSpaces = data.otherCoreMemberSpaces?.[roleKey] ?? [];
+                const note = data.otherCoreMemberNotes?.[roleKey] ?? '';
+                return (
+                  <div
+                    key={memberId}
+                    className="space-y-3 bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-100"
+                  >
+                    <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <span className="text-lg">{CORE_ROLE_EMOJI[roleKey]}</span>
+                      {CORE_MEMBER_ROLE_LABEL[roleKey]} · 重点空间
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {spaceOpts.map((opt) => (
+                        <CheckboxCard
+                          key={opt.label}
+                          label={opt.label}
+                          description={opt.desc}
+                          selected={selectedSpaces.includes(opt.label)}
+                          onClick={() => toggleOtherCoreSpace(roleKey, opt.label)}
+                        />
+                      ))}
+                    </div>
+                    <TextInput
+                      label="其他需求说明（选填）"
+                      value={note}
+                      onChange={(v: string) => setOtherCoreNote(roleKey, v)}
+                      placeholder="例如：作息习惯、储物、无障碍、设备偏好等"
+                    />
+                  </div>
+                );
+              }
+
               const config = spacesMap[memberId];
               if (!config) return null;
               const selectedSpaces = (data[`${memberId}Spaces` as keyof FormData] as string[]) || [];
-              
+
               return (
                 <div key={memberId} className="space-y-3 bg-gray-50 p-4 sm:p-5 rounded-2xl border border-gray-100">
                   <div>
                     <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                      <span className="text-lg">{members.find(m => m.id === memberId)?.emoji}</span>
+                      <span className="text-lg">{members.find((m) => m.id === memberId)?.emoji}</span>
                       {config.title}
                     </h4>
                     <p className="text-xs text-[#EF6B00] mt-1.5 bg-[#EF6B00]/5 inline-block px-2 py-1 rounded-md">
@@ -1485,7 +1730,7 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
                     </p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                    {config.options.map(opt => (
+                    {config.options.map((opt) => (
                       <CheckboxCard
                         key={opt}
                         label={opt}
@@ -1494,6 +1739,12 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
                       />
                     ))}
                   </div>
+                  <TextInput
+                    label="其他需求说明（选填）"
+                    value={data.additionalMemberNotes?.[memberId] ?? ''}
+                    onChange={(v: string) => setAdditionalMemberNote(memberId, v)}
+                    placeholder="例如：作息、安全、兴趣角、收纳等"
+                  />
                 </div>
               );
             })}
@@ -1512,7 +1763,7 @@ export const Step7 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q2-7：沟通协作方式">
+    <StepWrapper title="Q7：沟通协作方式">
       <div className="space-y-6">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1549,7 +1800,7 @@ export const Step7 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step8 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q2-8：计划节奏" subtitle="您的入住与完工预期">
+  <StepWrapper title="Q8：计划节奏" subtitle="您的入住与完工预期">
     <div className="space-y-4">
       <div className="space-y-3">
         <SubQuestion className="flex items-center gap-2">
@@ -1610,7 +1861,7 @@ export const Step9 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-9：核心空间规划数量" subtitle="核心空间数量需求及未来规划">
+    <StepWrapper title="Q9：核心空间规划数量" subtitle="核心空间数量需求及未来规划">
       <div className="space-y-8">
         {groups.map(group => (
           <div key={group.title} className="space-y-3">
@@ -1649,7 +1900,7 @@ export const Step10 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q2-10：烹饪习惯" subtitle="了解您的厨房使用需求">
+    <StepWrapper title="Q10：烹饪习惯" subtitle="了解您的厨房使用需求">
       <div className="space-y-10">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1708,7 +1959,7 @@ export const Step10 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step11 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q2-11：社交习惯" subtitle="是否经常有朋友聚会？">
+  <StepWrapper title="Q11：社交习惯" subtitle="是否经常有朋友聚会？">
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
       <SquareRadioCard label="经常" description="喜欢在家招待朋友" selected={data.partyFrequency === 'high'} onClick={() => updateData({ partyFrequency: 'high' })} />
       <SquareRadioCard label="偶尔" description="三五好友小聚" selected={data.partyFrequency === 'medium'} onClick={() => updateData({ partyFrequency: 'medium' })} />
@@ -1718,7 +1969,7 @@ export const Step11 = ({ data, updateData }: StepProps) => (
 );
 
 export const Step12 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q2-12：聚餐习惯" subtitle="就餐人数需求">
+  <StepWrapper title="Q12：聚餐习惯" subtitle="就餐人数需求">
     <div className="space-y-6">
       <div className="space-y-3">
         <SubQuestion className="flex items-center gap-2">
@@ -1776,7 +2027,7 @@ export const Step13 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-13：客厅活动习惯" subtitle="您希望在客厅，主要的家庭活动是什么（可多选）">
+    <StepWrapper title="Q13：客厅活动习惯" subtitle="您希望在客厅，主要的家庭活动是什么（可多选）">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareRadioCard
@@ -1812,7 +2063,7 @@ export const Step14 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-14：收纳重点" subtitle="请选择您最关注的收纳区域（可多选）">
+    <StepWrapper title="Q14：收纳重点" subtitle="请选择您最关注的收纳区域（可多选）">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const label =
@@ -1848,7 +2099,7 @@ export const Step15 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q2-15：干湿分离" subtitle="卫生间干湿分离需求">
+    <StepWrapper title="Q15：干湿分离" subtitle="卫生间干湿分离需求">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const { title, desc } = parseLabel(opt);
@@ -1899,7 +2150,7 @@ export const Step16 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-16：底线与妥协" subtitle="这个家的“底线”，您最不能妥协的是？">
+    <StepWrapper title="Q16：底线与妥协" subtitle="这个家的“底线”，您最不能妥协的是？">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <SubQuestion className="flex items-center gap-2 mb-0!">
@@ -1961,7 +2212,7 @@ export const Step17 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q2-17：风水布局" subtitle="关于新家的“风水布局”，您有特殊讲究吗？">
+    <StepWrapper title="Q17：风水布局" subtitle="关于新家的“风水布局”，您有特殊讲究吗？">
       <div className="space-y-6">
         <SubQuestion className="flex items-center gap-2">
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
@@ -2001,7 +2252,7 @@ export const Step18 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-18：智能需求" subtitle="您对新家的“智能程度”有什么期待？">
+    <StepWrapper title="Q18：智能需求" subtitle="您对新家的“智能程度”有什么期待？">
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {options.map(opt => (
@@ -2036,7 +2287,7 @@ export const Step19 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-19：系统选择" subtitle="请问您计划为新家配置哪些舒适系统？">
+    <StepWrapper title="Q19：系统选择" subtitle="请问您计划为新家配置哪些舒适系统？">
       <div className="grid grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
@@ -2070,7 +2321,7 @@ export const Step20 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q2-20：设备需求" subtitle="计划购入的家电设备">
+    <StepWrapper title="Q20：设备需求" subtitle="计划购入的家电设备">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
@@ -2086,7 +2337,7 @@ export const Step20 = ({ data, updateData }: StepProps) => {
   );
 };
 
-export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps) => {
+export const Step21 = ({ data, updateData, goToWorkbench, goToLogin, goToWelcome }: StepProps) => {
   const [showModal, setShowModal] = React.useState(false);
   const MY_HOME_URL = import.meta.env.VITE_MY_HOME_URL || import.meta.env.VITE_APP_HOME_URL || '/';
   const options = [
@@ -2105,7 +2356,7 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps
 
   return (
     <>
-      <StepWrapper title="Q2-21：个性需求" subtitle="其他特殊需求">
+      <StepWrapper title="Q22：个性需求" subtitle="其他特殊需求">
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {options.map(opt => (
@@ -2120,7 +2371,7 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps
           
           <div className="pt-6 border-t border-gray-100 space-y-4">
             <TextInput
-              label="其他补充需求"
+              label="其他需求"
               value={data.otherNeeds}
               onChange={(v: string) => updateData({ otherNeeds: v })}
               placeholder="任何其他想告诉我们的"
@@ -2147,15 +2398,18 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps
           />
           <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl p-6 space-y-4">
             <p className="text-sm text-gray-700 leading-relaxed">
-              感谢您的耐心，您填写的信息我们会生成一份专属项目需求书，并安排专业顾问认真阅读并分析。
+              非常感谢您的耐心。您填写的信息将用于生成专属项目需求书，供顾问团队认真阅读与分析。
             </p>
             <p className="text-sm text-gray-700 leading-relaxed">
-              如果您想更改信息，可进入您的首页查看项目需求书并编辑。
+              若您对我们的服务有兴趣，欢迎签署合同；签约后我们将以更优质的服务，与您协作推进项目。
             </p>
             <div className="pt-2 flex gap-3">
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  goToWelcome?.();
+                }}
                 className="flex-1 px-5 py-2 rounded-xl border border-gray-200 bg-white text-gray-800 text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 了解并关闭
@@ -2170,7 +2424,7 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin }: StepProps
                 }}
                 className="flex-1 px-5 py-2 rounded-xl bg-[#FF9C3E] text-white text-sm font-medium hover:bg-[#EF6B00] transition-colors"
               >
-                进入我的首页
+                签署合同
               </button>
             </div>
           </div>
@@ -2430,9 +2684,16 @@ export const StepContract = ({
     const canvas = canvasRef.current;
     if (!canvas || !hasDrawn) return;
     const dataUrl = canvas.toDataURL('image/png');
-    if (contractLeadId) {
-      convertLeadOnContractSign(contractLeadId, dataUrl);
-      const L = getLeadById(contractLeadId);
+    let effectiveLeadId = contractLeadId ?? null;
+    if (!effectiveLeadId) {
+      const snapshot = buildLeadSnapshotFromFormData(data);
+      const created = addUserLead(snapshot);
+      effectiveLeadId = created.id;
+      saveDeepEvalDraftMerge(created.id, data);
+    }
+    if (effectiveLeadId) {
+      convertLeadOnContractSign(effectiveLeadId, dataUrl);
+      const L = getLeadById(effectiveLeadId);
       if (L) {
         updateData({
           contractSignatureData: dataUrl as any,
@@ -2451,7 +2712,7 @@ export const StepContract = ({
           budgetStandard: L.budget,
         });
       }
-      setActiveProjectLeadId(contractLeadId);
+      setActiveProjectLeadId(effectiveLeadId);
     } else {
       updateData({ contractSignatureData: dataUrl as any, contractAccepted: true as any });
     }
@@ -2653,7 +2914,7 @@ export const StepContract = ({
 export const StepPayment = ({
   nextStep,
   onBackToHome,
-  primaryActionLabel = '完成支付进入深度测评',
+  primaryActionLabel = '完成支付，进入项目列表',
   leadChoiceActions,
 }: StepProps & {
   onBackToHome?: () => void;

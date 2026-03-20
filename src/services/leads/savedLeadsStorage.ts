@@ -2,6 +2,7 @@
  * 本地「我的线索」：待签约 → 签署合同后转为项目；深度测评按 leadId 绑定
  */
 
+import type { FormData } from '../../types'
 import {
   getLonghuJingchenfuDemoLead,
   LONGHU_JINGCHENFU_DEMO_LEAD_ID,
@@ -104,6 +105,24 @@ export function getUserLeads(): UserLead[] {
 export function getLeadById(id: string): UserLead | undefined {
   if (id === LONGHU_JINGCHENFU_DEMO_LEAD_ID) return getLonghuJingchenfuDemoLead()
   return load().find((l) => l.id === id)
+}
+
+/** 主导航深度测评后全局 FormData → 线索快照（用于无 leadId 签约时落库） */
+export function buildLeadSnapshotFromFormData(d: FormData): LeadFormSnapshot {
+  return {
+    projectType: d.projectType ?? '',
+    projectPosition: d.projectLocation ?? '',
+    handoverStatus: d.houseCondition ?? '',
+    area: d.projectArea ?? '',
+    budget: d.budgetStandard ?? '',
+    name: d.userName ?? '',
+    salutation: d.userTitle ?? '',
+    city: d.userCity ?? '',
+    phone: d.userPhone ?? '',
+    ageGroup: d.userAgeRange ?? '',
+    industry: d.userIndustry ?? '',
+    projectName: d.projectName ?? '',
+  }
 }
 
 export function addUserLead(snapshot: LeadFormSnapshot): UserLead {
