@@ -4,6 +4,7 @@ import { useGlobal } from '../../context/GlobalContext';
 import { AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { NavigationMenu } from '../../components/NavigationMenu';
+import { HeaderHomeButton } from '../../components/HeaderHomeButton';
 import {
   Step4,
   Step5,
@@ -135,29 +136,29 @@ export default function DeepEvalPage() {
 
   const CurrentComponent = steps[currentIndex].component;
   const isLastStep = currentIndex === steps.length - 1;
-  const stepId = steps[currentIndex].id;
-  const styleQ8Ok = stepId !== 'style-q8' || !!data.styleEvalQ8Positioning?.trim();
-  const canGoNextDeep = styleQ8Ok;
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col pb-24">
-      <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
-        <div className="w-full max-w-[800px] flex items-center justify-center relative">
+      <header className="w-full pt-6 sm:pt-8 pb-4 px-4 sm:px-6 flex items-center justify-center relative z-50 border-b border-stone-200/40 bg-[#FFFDF3]/95 backdrop-blur-[2px]">
+        <div className="w-full max-w-6xl mx-auto flex items-center justify-center relative min-h-[2.75rem]">
           <button
             onClick={prevStep}
-            className="absolute left-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+            className="absolute left-0 w-11 h-11 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={22} />
           </button>
-          <div className="text-center">
-            <h1 className="text-2xl font-medium text-gray-900">
+          <div className="text-center px-12">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-stone-900 leading-snug">
               深度测评
             </h1>
             {leadId && (
               <p className="text-xs text-amber-700 mt-1">本测评进度已与此条线索绑定保存</p>
             )}
           </div>
-          <NavigationMenu />
+          <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2 flex items-center gap-2">
+            <NavigationMenu inline anchorClass="" />
+            <HeaderHomeButton />
+          </div>
         </div>
       </header>
 
@@ -182,17 +183,12 @@ export default function DeepEvalPage() {
       </main>
 
       {!isLastStep && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 z-50">
-          <div className="max-w-[800px] mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200/40 p-4 z-50">
+          <div className="max-w-6xl mx-auto w-full px-5 sm:px-8 lg:px-12">
             <button
               type="button"
               onClick={nextStep}
-              disabled={!canGoNextDeep}
-              className={`w-full py-4 rounded-xl font-medium text-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.99] ${
-                canGoNextDeep
-                  ? 'bg-[#FF9C3E] text-white hover:bg-[#EF6B00]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
+              className="w-full py-4 rounded-xl font-medium text-lg flex items-center justify-center gap-2 transition-colors active:scale-[0.99] bg-[#FF9C3E] text-white hover:bg-[#EF6B00]"
             >
               下一步
               <ChevronRight size={18} />

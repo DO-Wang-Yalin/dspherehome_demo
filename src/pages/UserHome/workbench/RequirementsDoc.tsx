@@ -513,12 +513,14 @@ function fingerprintFromSavedFormData(d: import('../../../types').FormData): Rec
   } else {
     const list: RequirementsMember[] = []
     if (d.role) {
+      const pNote = (d.primaryCoreMemberNote ?? '').trim()
       list.push({
         id: 'role',
         name: BASELINE_ROLE_LABELS[d.role] || d.role,
         age: '',
         profession: '',
         spaces: (d.favoriteSpace ?? []).map((name) => ({ name, description: '' })),
+        otherActivityNote: pNote || undefined,
       })
     }
     ;(['A', 'B', 'C'] as const)
@@ -684,13 +686,13 @@ export function RequirementsDoc({
   const ROLE_TO_ACTIVITY_OPTIONS: Record<string, string[]> = {
     '男主人': ['智能书房', '客厅影音中心', '社交餐厨'],
     '女主人': ['梦幻衣帽间', '全能厨房', '主卧疗愈区'],
-    '长辈/长住家属': ['阳光卧室', '茶室/宁静角', '独立卫浴'],
+    '长辈/长住家属': ['适老主卧套间', '安全卫浴空间', '静养阳光角'],
     '女儿': ['梦幻公主房', '独立书画区', '乐器练琴房', '超大储衣空间'],
     '儿子': ['乐高/积木区', '运动攀爬墙', '电脑电竞区', '独立手作台'],
     '猫猫': ['猫墙/跑道', '嵌入式猫砂盆', '阳台封窗', '独立喂食区'],
     '狗狗': ['进门洗脚池', '独立卧榻', '宠物互动区', '扫拖机器人基地'],
     '其他': [
-      '智能书房', '客厅影音中心', '社交餐厨', '梦幻衣帽间', '全能厨房', '主卧疗愈区', '阳光卧室', '茶室/宁静角', '独立卫浴',
+      '智能书房', '客厅影音中心', '社交餐厨', '梦幻衣帽间', '全能厨房', '主卧疗愈区', '适老主卧套间', '安全卫浴空间', '静养阳光角',
       '梦幻公主房', '独立书画区', '乐器练琴房', '超大储衣空间', '乐高/积木区', '运动攀爬墙', '电脑电竞区', '独立手作台',
       '猫墙/跑道', '嵌入式猫砂盆', '阳台封窗', '独立喂食区', '进门洗脚池', '独立卧榻', '宠物互动区', '扫拖机器人基地',
     ],
@@ -801,7 +803,17 @@ export function RequirementsDoc({
         const list: PersonaRow[] = []
         if (d?.role) {
           const name = ROLE_LABELS[d.role] || d.role
-          list.push({ name, age: '', profession: '', height: '', stylePersona: null, mainActivitiesAndSpaces: d?.favoriteSpace ?? [], otherActivityNote: '', accent: 'amber', isStyleTaker: true })
+          list.push({
+            name,
+            age: '',
+            profession: '',
+            height: '',
+            stylePersona: null,
+            mainActivitiesAndSpaces: d?.favoriteSpace ?? [],
+            otherActivityNote: (d?.primaryCoreMemberNote ?? '').trim() || undefined,
+            accent: 'amber',
+            isStyleTaker: true,
+          })
         }
         ;(['A', 'B', 'C'] as const)
           .filter((r) => r !== d?.role)
@@ -1034,12 +1046,20 @@ export function RequirementsDoc({
     if (d.requirementsMembers?.length) {
       setMembersEdit(
         d.requirementsMembers.map((m) => {
-          if (MEMBER_ROLE_OPTIONS.includes(m.name)) {
-            return { ...m, displayName: m.displayName ?? '' }
+          const row =
+            m.id === 'role'
+              ? {
+                  ...m,
+                  otherActivityNote:
+                    (m.otherActivityNote?.trim() || (d.primaryCoreMemberNote ?? '').trim() || '') as string,
+                }
+              : m
+          if (MEMBER_ROLE_OPTIONS.includes(row.name)) {
+            return { ...row, displayName: row.displayName ?? '' }
           }
           return {
-            ...m,
-            displayName: (m.displayName ?? m.name ?? '').trim(),
+            ...row,
+            displayName: (row.displayName ?? row.name ?? '').trim(),
             name: '',
           }
         }),
@@ -1058,6 +1078,7 @@ export function RequirementsDoc({
           age: '',
           profession: '',
           spaces: (d.favoriteSpace ?? []).map((name) => ({ name, description: '' })),
+          otherActivityNote: d.primaryCoreMemberNote ?? '',
         })
       }
       ;(['A', 'B', 'C'] as const)
@@ -1184,6 +1205,7 @@ export function RequirementsDoc({
       childGrowth: d?.childGrowth ?? '',
       guestStay: d?.guestStay ?? '',
       futureChanges: d?.futureChanges ?? '',
+      primaryCoreMemberNote: (membersEdit.find((m) => m.id === 'role')?.otherActivityNote ?? '').trim(),
       requirementsMembers: membersEdit,
       floorPlanImages: planImages,
       siteMedia: mediaFiles,

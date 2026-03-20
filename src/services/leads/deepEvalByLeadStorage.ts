@@ -19,6 +19,7 @@ export const DEEP_EVAL_FORM_KEYS = [
   'styleEvalQ10Needs',
   'role',
   'favoriteSpace',
+  'primaryCoreMemberNote',
   'otherCoreMemberSpaces',
   'otherCoreMemberNotes',
   'additionalMembers',

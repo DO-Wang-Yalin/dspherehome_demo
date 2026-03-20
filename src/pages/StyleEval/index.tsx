@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { HomeStyleEval } from './HomeStyleEval';
 import { useGlobal } from '../../context/GlobalContext';
 import { NavigationMenu } from '../../components/NavigationMenu';
+import { HeaderHomeButton } from '../../components/HeaderHomeButton';
 import { isRequirementsSupplementFlow } from '../../utils/navigationConfig';
-import { ChevronLeft, Home } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 export default function StyleEvalPage() {
   const navigate = useNavigate();
@@ -91,20 +92,7 @@ export default function StyleEvalPage() {
           </h1>
           <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2 flex items-center gap-2">
             <NavigationMenu inline anchorClass="" />
-            <button
-              type="button"
-              onClick={() => {
-                if (fromRequirements) {
-                  navigate('/home', { state: { activeTab: 'requirements' } });
-                } else {
-                  navigate('/');
-                }
-              }}
-              aria-label="返回欢迎页"
-              className="w-[34px] h-[34px] shrink-0 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
-            >
-              <Home size={14} strokeWidth={2} />
-            </button>
+            <HeaderHomeButton />
           </div>
         </div>
       </header>

@@ -195,11 +195,6 @@ export function NavigationMenu({ anchorClass = 'right-0', inline = false }: Navi
                                   {step.qId}
                                 </span>
                               )}
-                              {step.fromStyleEval && (
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200/80 shrink-0">
-                                  风格测评迁入
-                                </span>
-                              )}
                             </div>
                             <span
                               className={`text-sm font-medium leading-snug ${isCurrent ? 'text-[#EF6B00]' : 'text-gray-700'}`}

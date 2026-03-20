@@ -94,6 +94,8 @@ export interface FormData {
   // Q2-6
   role: string;
   favoriteSpace: string[];
+  /** Q2-6：主核心成员（本人）的重点空间补充说明，与 DE-06 其他成员「其他需求说明」并列 */
+  primaryCoreMemberNote?: string;
   /** Q2-6-1：除主核外另两位核心成员（A/B/C）的空间多选 */
   otherCoreMemberSpaces?: Partial<Record<'A' | 'B' | 'C', string[]>>;
   /** Q2-6-1：对应核心成员的补充说明 */
@@ -237,6 +239,7 @@ export const initialFormData: FormData = {
   noise: '',
   role: '',
   favoriteSpace: [],
+  primaryCoreMemberNote: '',
   otherCoreMemberSpaces: {},
   otherCoreMemberNotes: {},
   additionalMembers: [],

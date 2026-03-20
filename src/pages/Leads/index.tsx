@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StepDeepEval1, StepDeepEval2 } from '../../components/steps';
 import { useGlobal } from '../../context/GlobalContext';
 import { NavigationMenu } from '../../components/NavigationMenu';
+import { HeaderHomeButton } from '../../components/HeaderHomeButton';
 import { ChevronLeft, CheckCircle2, FolderOpen } from 'lucide-react';
 
 export default function LeadsPage() {
@@ -55,11 +56,18 @@ export default function LeadsPage() {
   if (fromProjects && showResultFromProjects) {
     return (
       <div className="min-h-screen bg-[#FFFDF3] flex flex-col">
-        <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
-          <h1 className="text-xl font-medium text-gray-900">提交结果</h1>
-          <NavigationMenu anchorClass="right-6" />
+        <header className="w-full pt-6 sm:pt-8 pb-4 px-4 sm:px-6 flex items-center justify-center relative z-50 border-b border-stone-200/40 bg-[#FFFDF3]/95 backdrop-blur-[2px]">
+          <div className="w-full max-w-6xl mx-auto flex items-center justify-center relative min-h-[2.75rem]">
+            <h1 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-stone-900 px-12 text-center leading-snug">
+              提交结果
+            </h1>
+            <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2 flex items-center gap-2">
+              <NavigationMenu inline anchorClass="" />
+              <HeaderHomeButton />
+            </div>
+          </div>
         </header>
-        <main className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
+        <main className="flex-1 flex flex-col items-center justify-center px-5 sm:px-8 lg:px-12 pb-16">
           <div className="w-full max-w-md bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-[#EF6B00] via-[#FF9C3E] to-[#FFCE42]" />
             <div className="p-8 sm:p-10 text-center">
@@ -88,16 +96,21 @@ export default function LeadsPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col relative">
-      <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
-        <div className="w-full max-w-[800px] flex items-center justify-center relative">
+      <header className="w-full pt-6 sm:pt-8 pb-4 px-4 sm:px-6 flex items-center justify-center relative z-50 border-b border-stone-200/40 bg-[#FFFDF3]/95 backdrop-blur-[2px]">
+        <div className="w-full max-w-6xl mx-auto flex items-center justify-center relative min-h-[2.75rem]">
           <button
             onClick={prevStep}
-            className="absolute left-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+            className="absolute left-0 w-11 h-11 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={22} />
           </button>
-          <h1 className="text-2xl font-medium text-gray-900">项目线索收集</h1>
-          <NavigationMenu />
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-stone-900 px-12 text-center leading-snug">
+            项目线索收集
+          </h1>
+          <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2 flex items-center gap-2">
+            <NavigationMenu inline anchorClass="" />
+            <HeaderHomeButton />
+          </div>
         </div>
       </header>
 

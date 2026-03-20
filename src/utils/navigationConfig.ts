@@ -7,8 +7,6 @@ export type NavStep = {
   search?: string;
   /** 目录中展示的步骤编号（如 ST-01、DE-01、GL-01） */
   qId?: string;
-  /** 原属家居风格测评，已并入深度测评 — 目录中展示标记 */
-  fromStyleEval?: boolean;
 };
 
 /** 风格测评目录短标题（与 `docs/NAVIGATION_STEPS.md` 一致；答题页仍用 `questions.ts` 正文） */
@@ -63,7 +61,6 @@ export const NAVIGATION_STEPS: NavStep[] = [
     path: '/deep-eval',
     search: '?step=2',
     qId: 'DE-03',
-    fromStyleEval: true,
   },
   {
     id: 'style-q9',
@@ -71,7 +68,6 @@ export const NAVIGATION_STEPS: NavStep[] = [
     path: '/deep-eval',
     search: '?step=3',
     qId: 'DE-04',
-    fromStyleEval: true,
   },
   { id: 'q2-6', title: '核心成员', path: '/deep-eval', search: '?step=4', qId: 'DE-05' },
   { id: 'q2-6-1', title: '家庭成员', path: '/deep-eval', search: '?step=5', qId: 'DE-06' },
@@ -95,7 +91,6 @@ export const NAVIGATION_STEPS: NavStep[] = [
     path: '/deep-eval',
     search: '?step=20',
     qId: 'DE-21',
-    fromStyleEval: true,
   },
   { id: 'q2-21', title: '个性需求', path: '/deep-eval', search: '?step=21', qId: 'DE-22' },
   { id: 'contract-1', title: '意向金合同', path: '/contracts', search: '?step=1', qId: 'CT-01' },

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StepContract, StepPayment } from '../../components/steps';
 import { useGlobal } from '../../context/GlobalContext';
 import { NavigationMenu } from '../../components/NavigationMenu';
+import { HeaderHomeButton } from '../../components/HeaderHomeButton';
 import { ChevronLeft } from 'lucide-react';
 import { getLeadById } from '../../services/leads/savedLeadsStorage';
 import { enterProjectWorkbenchFromLead } from '../../services/leads/enterProjectFromLead';
@@ -131,16 +132,21 @@ export default function ContractsPage() {
 
   return (
     <div className="min-h-screen bg-[#FFFDF3] flex flex-col relative">
-      <header className="w-full pt-8 pb-4 px-6 flex items-center justify-center relative z-50">
-        <div className="w-full max-w-[800px] flex items-center justify-center relative">
+      <header className="w-full pt-6 sm:pt-8 pb-4 px-4 sm:px-6 flex items-center justify-center relative z-50 border-b border-stone-200/40 bg-[#FFFDF3]/95 backdrop-blur-[2px]">
+        <div className="w-full max-w-6xl mx-auto flex items-center justify-center relative min-h-[2.75rem]">
           <button
             onClick={prevStep}
-            className="absolute left-0 w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+            className="absolute left-0 w-11 h-11 rounded-full bg-white shadow-sm border border-stone-200/80 flex items-center justify-center text-stone-600 hover:bg-stone-50 transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={22} />
           </button>
-          <h1 className="text-2xl font-medium text-gray-900">意向金合同</h1>
-          <NavigationMenu />
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-stone-900 px-12 text-center leading-snug">
+            意向金合同
+          </h1>
+          <div className="absolute right-0 top-1/2 z-50 -translate-y-1/2 flex items-center gap-2">
+            <NavigationMenu inline anchorClass="" />
+            <HeaderHomeButton />
+          </div>
         </div>
       </header>
 

@@ -8,13 +8,19 @@ export const StepWrapper = ({ children, title, subtitle, noCard }: { children: R
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -10 }}
     transition={{ duration: 0.3 }}
-    className="flex flex-col w-full max-w-[800px] mx-auto px-4 pb-32"
+    className="flex flex-col w-full max-w-6xl mx-auto px-5 sm:px-8 lg:px-12 pb-32"
   >
     {(title || subtitle) && (
-      <div className="text-center mb-8 mt-4">
-        {title && <h2 className="text-2xl font-medium text-gray-900 mb-3">{title}</h2>}
-        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
-      </div>
+      <header className="text-center px-1 mt-4 md:mt-6 mb-8 md:mb-12">
+        <h2 className="text-2xl sm:text-3xl md:text-[1.875rem] lg:text-[2.125rem] font-semibold text-stone-900 leading-[1.38] tracking-tight max-w-[min(100%,42rem)] mx-auto">
+          {title ?? subtitle}
+        </h2>
+        {title && subtitle && (
+          <p className="text-sm text-stone-500 mt-3 md:mt-4 max-w-[min(100%,42rem)] mx-auto leading-relaxed">
+            {subtitle}
+          </p>
+        )}
+      </header>
     )}
     {noCard ? (
       children
@@ -46,36 +52,55 @@ export const TextInput = ({ label, value, onChange, placeholder, type = "text", 
   </div>
 );
 
-export const SegmentedRadio = ({ label, options, value, onChange }: any) => (
-  <div className="flex flex-col gap-3">
-    {label && <label className="text-sm font-bold text-gray-800">{label}</label>}
-    <div className="flex flex-wrap gap-3">
-      {options.map((opt: any) => {
-        const optValue = opt.value || opt;
-        const optLabel = opt.label || opt;
-        const isSelected = value === optValue;
-        return (
-          <button
-            key={optValue}
-            onClick={() => onChange(optValue)}
-            className={`flex-1 min-w-[100px] py-3.5 px-4 rounded-xl text-sm font-medium transition-all border ${
-              isSelected ? 'bg-[#FFFDF3] border-[#EF6B00] text-[#EF6B00]' : 'bg-[#FFFDF3] border-dashed border-gray-200 text-gray-600 hover:bg-[#FFF9E8]'
-            }`}
-          >
-            {optLabel}
-          </button>
-        )
-      })}
+export const SegmentedRadio = ({
+  label,
+  options,
+  value,
+  onChange,
+  optionsLayout = 'flex',
+}: {
+  label?: React.ReactNode;
+  options: any[];
+  value: any;
+  onChange: (v: any) => void;
+  optionsLayout?: 'flex' | 'grid-3';
+}) => {
+  const isGrid3 = optionsLayout === 'grid-3';
+  return (
+    <div className="flex flex-col gap-3">
+      {label && <label className="text-sm font-bold text-gray-800">{label}</label>}
+      <div className={isGrid3 ? 'grid grid-cols-1 sm:grid-cols-3 gap-2' : 'flex flex-wrap gap-3'}>
+        {options.map((opt: any) => {
+          const optValue = opt.value || opt;
+          const optLabel = opt.label || opt;
+          const isSelected = value === optValue;
+          return (
+            <button
+              key={optValue}
+              onClick={() => onChange(optValue)}
+              className={`${
+                isGrid3 ? 'w-full min-w-0' : 'flex-1 min-w-[100px]'
+              } h-[120px] flex items-center justify-center px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-medium transition-all border text-center leading-tight ${
+                isSelected
+                  ? 'bg-[#FFFDF3] border-[#EF6B00] text-[#EF6B00]'
+                  : 'bg-[#FFFDF3] border-dashed border-gray-200 text-gray-600 hover:bg-[#FFF9E8]'
+              }`}
+            >
+              {optLabel}
+            </button>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-export const RadioCard = ({ label, description, selected, onClick }: any) => (
+export const RadioCard = ({ label, description, selected, onClick, className = '' }: any) => (
   <button
     onClick={onClick}
     className={`w-full text-left p-5 rounded-xl transition-all duration-200 border ${
       selected ? 'bg-[#FFFDF3] border-[#EF6B00] ring-1 ring-[#EF6B00]' : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
-    }`}
+    } ${className}`}
   >
     <div className="flex justify-between items-center">
       <div className="flex-1">
@@ -89,59 +114,82 @@ export const RadioCard = ({ label, description, selected, onClick }: any) => (
 export const IconRadioCard = ({ icon: Icon, label, description, selected, onClick }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex flex-col items-center justify-center text-center py-2 px-1 rounded-xl transition-all duration-300 border ${
-      selected 
-        ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_2px_10px_rgba(239,107,0,0.12)] transform scale-[1.02]' 
+    className={`w-full h-[120px] flex flex-col items-center justify-center text-center py-2 px-1 sm:px-2 rounded-xl transition-all duration-300 border ${
+      selected
+        ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_2px_10px_rgba(239,107,0,0.12)]'
         : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
     }`}
   >
-    <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1.5 transition-colors duration-300 ${
-      selected ? 'bg-[#EF6B00]/10 text-[#EF6B00]' : 'bg-white text-gray-500'
-    }`}>
+    <div
+      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center mb-1 sm:mb-1.5 transition-colors duration-300 ${
+        selected ? 'bg-[#EF6B00]/10 text-[#EF6B00]' : 'bg-white text-gray-500'
+      }`}
+    >
       {Icon && <Icon size={16} strokeWidth={1.5} />}
     </div>
-    <h3 className={`text-[10px] sm:text-xs font-bold mb-0.5 transition-colors duration-300 ${
-      selected ? 'text-[#EF6B00]' : 'text-gray-800'
-    }`}>
+    <h3
+      className={`text-xs sm:text-sm font-bold mb-0.5 transition-colors duration-300 leading-tight px-0.5 ${
+        selected ? 'text-[#EF6B00]' : 'text-gray-800'
+      }`}
+    >
       {label}
     </h3>
     {description && (
-      <p className="text-[9px] sm:text-[10px] text-gray-400 leading-tight max-w-[120px]">
+      <p className="text-[10px] sm:text-xs text-gray-400 leading-tight max-w-[min(100%,7.5rem)] px-0.5">
         {description}
       </p>
     )}
   </button>
 );
 
-export const SquareRadioCard = ({ label, description, selected, onClick, icon: Icon, compact }: any) => (
+export const SquareRadioCard = ({
+  label,
+  description,
+  selected,
+  onClick,
+  icon: Icon,
+  compact,
+  largeDescription,
+  className = '',
+}: any) => (
   <button
     onClick={onClick}
-    className={compact
-      ? `flex flex-col items-center justify-center text-center py-2 px-3 rounded-xl transition-all duration-300 border min-h-0 ${
-          selected
-            ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_2px_8px_rgba(239,107,0,0.12)]'
-            : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
-        }`
-      : `aspect-square flex flex-col items-center justify-center text-center p-4 rounded-2xl transition-all duration-300 border ${
-          selected
-            ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_4px_15px_rgba(239,107,0,0.12)] transform scale-[1.02]'
-            : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
-        }`}
+    className={`${
+      compact
+        ? `flex flex-col items-center justify-center text-center py-2 px-3 rounded-xl transition-all duration-300 border min-h-0 ${
+            selected
+              ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_2px_8px_rgba(239,107,0,0.12)]'
+              : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
+          }`
+        : `aspect-square flex flex-col items-center justify-center text-center p-3 sm:p-4 rounded-2xl transition-all duration-300 border min-w-0 ${
+            selected
+              ? 'bg-white border-[#EF6B00] ring-1 ring-[#EF6B00] shadow-[0_4px_15px_rgba(239,107,0,0.12)]'
+              : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
+          }`
+    } ${className}`.trim()}
   >
     {Icon && !compact && (
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-colors duration-300 ${
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 sm:mb-3 transition-colors duration-300 ${
         selected ? 'bg-[#EF6B00]/10 text-[#EF6B00]' : 'bg-[#FFF9E8] text-gray-500'
       }`}>
         <Icon size={20} strokeWidth={1.5} />
       </div>
     )}
-    <h3 className={`font-bold transition-colors duration-300 ${compact ? 'text-sm' : ''} ${
-      selected ? 'text-[#EF6B00]' : 'text-gray-800'
-    }`}>
+    <h3
+      className={`font-bold text-center w-full transition-colors duration-300 leading-tight ${
+        compact ? 'text-sm' : ''
+      } ${selected ? 'text-[#EF6B00]' : 'text-gray-800'}`}
+    >
       {label}
     </h3>
     {description && !compact && (
-      <p className="text-[11px] text-gray-400 mt-2 leading-tight">
+      <p
+        className={
+          largeDescription
+            ? 'text-xs sm:text-sm text-gray-500 mt-1.5 sm:mt-2 leading-relaxed text-center w-full line-clamp-5 sm:line-clamp-6 px-0.5'
+            : 'text-[10px] sm:text-[11px] text-gray-400 mt-1.5 sm:mt-2 leading-snug text-center w-full line-clamp-6 px-0.5'
+        }
+      >
         {description}
       </p>
     )}
@@ -184,12 +232,12 @@ export const SquareCheckboxCard = ({ label, description, selected, onClick, icon
   </button>
 );
 
-export const CheckboxCard = ({ label, description, selected, onClick }: any) => (
+export const CheckboxCard = ({ label, description, selected, onClick, className = '' }: any) => (
   <button
     onClick={onClick}
     className={`w-full text-left p-5 rounded-xl transition-all duration-200 flex items-start gap-4 border ${
       selected ? 'bg-[#FFFDF3] border-[#EF6B00] ring-1 ring-[#EF6B00]' : 'bg-[#FFFDF3] border-dashed border-gray-200 hover:border-gray-300 hover:bg-[#FFF9E8]'
-    }`}
+    } ${className}`}
   >
     <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
       selected ? 'bg-[#EF6B00]' : 'bg-white border border-gray-300'

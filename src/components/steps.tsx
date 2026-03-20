@@ -50,9 +50,9 @@ export const CORE_MEMBER_SPACE_OPTIONS: Record<CoreMemberRole, { label: string; 
     { label: '主卧疗愈区', desc: '追求极致包裹感的睡眠环境。' },
   ],
   C: [
-    { label: '阳光卧室', desc: '极致的采光与通风要求。' },
-    { label: '茶室/宁静角', desc: '一个可以独处、饮茶或阅读的地方。' },
-    { label: '独立卫浴', desc: '强调安全性与便捷性。' },
+    { label: '适老主卧套间', desc: '睡眠区与卫浴动线最短；便于预留夜间照明、扶手与紧急动线，起居更安心。' },
+    { label: '安全卫浴空间', desc: '干湿分离、防滑与高差处理，淋浴可坐洗；降低湿滑、跌倒等日常风险。' },
+    { label: '静养阳光角', desc: '阳台或采光好的客厅一隅，晒太阳、轻活动、饮茶会友；动线平顺，少折返。' },
   ],
 }
 
@@ -397,7 +397,10 @@ export const StepDeepEval1 = ({ data, updateData, nextStep, prevStep }: StepProp
   ];
 
   return (
-    <StepWrapper title="项目概况" subtitle="作为种子用户，你的档案会被我们保存，上线后直接同步到产品里。我们不会用它打扰你；">
+    <StepWrapper
+      title="项目概况"
+      subtitle="作为种子用户，你的档案会被我们保存，上线后直接同步到产品里。我们不会用它打扰你；"
+    >
       <div className="space-y-6">
         <div className="flex flex-col gap-3">
           <label className="text-sm font-bold text-gray-800">项目城市</label>
@@ -849,7 +852,11 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
   const closePreview = useCallback(() => setPreviewImageUrl(null), [])
 
   return (
-    <StepWrapper noCard title="项目预算拆解" subtitle="基于您在「线索收集」中填写的面积与预算，拆解为设计、严选、施工三块。">
+    <StepWrapper
+      noCard
+      title="项目预算拆解"
+      subtitle="基于您在「线索收集」中填写的面积与预算，拆解为设计、严选、施工三块。"
+    >
       <div className="space-y-6">
         {hasData ? (
           <>
@@ -1020,7 +1027,10 @@ export const StepBudgetBreakdown = ({ nextStep, prevStep }: StepProps & { prevSt
 };
 
 export const Step1 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="项目概况" subtitle="作为种子用户，你的档案会被我们保存，上线后直接同步到产品里。我们不会用它打扰你；">
+  <StepWrapper
+    title="项目概况"
+    subtitle="作为种子用户，你的档案会被我们保存，上线后直接同步到产品里。我们不会用它打扰你；"
+  >
     <div className="space-y-6">
       <SegmentedRadio 
         label="项目类型" 
@@ -1179,7 +1189,7 @@ export const Step4 = ({ data, updateData }: StepProps) => {
           <div
             className={`border-2 border-dashed border-gray-300 rounded-xl px-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer ${
               (data.floorPlanImages?.length ?? 0) === 0 && floorPlanFiles.length === 0
-                ? 'min-h-[20rem] sm:min-h-[28rem] py-12 sm:py-16 flex flex-col justify-center'
+                ? 'h-[300px] py-12 sm:py-16 flex flex-col justify-center'
                 : 'py-10'
             }`}
             onClick={() => floorInputRef.current?.click()}
@@ -1268,7 +1278,7 @@ export const Step4 = ({ data, updateData }: StepProps) => {
           <div
             className={`border-2 border-dashed border-gray-300 rounded-xl px-8 text-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer ${
               (data.siteMedia?.length ?? 0) === 0 && siteMediaFiles.length === 0
-                ? 'min-h-[20rem] sm:min-h-[28rem] py-12 sm:py-16 flex flex-col justify-center'
+                ? 'h-[299px] py-12 sm:py-16 flex flex-col justify-center'
                 : 'py-10'
             }`}
             onClick={() => mediaInputRef.current?.click()}
@@ -1365,7 +1375,7 @@ export const Step5 = ({ data, updateData }: StepProps) => (
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
           采光情况
         </SubQuestion>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <IconRadioCard icon={Sun} label="极佳" description="全天有光" selected={data.lighting === '极佳，全天有阳光'} onClick={() => updateData({ lighting: '极佳，全天有阳光' })} />
           <IconRadioCard icon={CloudSun} label="良好" description="半天有光" selected={data.lighting === '良好，半天有阳光'} onClick={() => updateData({ lighting: '良好，半天有阳光' })} />
           <IconRadioCard icon={Cloud} label="一般" description="需开灯辅助" selected={data.lighting === '一般，需要开灯'} onClick={() => updateData({ lighting: '一般，需要开灯' })} />
@@ -1379,6 +1389,7 @@ export const Step5 = ({ data, updateData }: StepProps) => (
           层高情况
         </SubQuestion>
         <SegmentedRadio
+          optionsLayout="grid-3"
           options={[
             { label: '宽敞 (2.8m+)', value: '2.8米以上 (宽敞)' },
             { label: '标准 (2.6-2.8m)', value: '2.6-2.8米 (标准)' },
@@ -1394,7 +1405,7 @@ export const Step5 = ({ data, updateData }: StepProps) => (
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
           通风情况
         </SubQuestion>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <IconRadioCard icon={Wind} label="南北通透" description="对流极佳" selected={data.ventilation === '南北通透'} onClick={() => updateData({ ventilation: '南北通透' })} />
           <IconRadioCard icon={Fan} label="通风良好" description="流通顺畅" selected={data.ventilation === '通风良好'} onClick={() => updateData({ ventilation: '通风良好' })} />
           <IconRadioCard icon={CloudRain} label="单面通风" description="需加强循环" selected={data.ventilation === '单面通风'} onClick={() => updateData({ ventilation: '单面通风' })} />
@@ -1407,7 +1418,7 @@ export const Step5 = ({ data, updateData }: StepProps) => (
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
           噪音情况
         </SubQuestion>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <IconRadioCard icon={VolumeX} label="非常安静" description="无明显噪音" selected={data.noise === '非常安静'} onClick={() => updateData({ noise: '非常安静' })} />
           <IconRadioCard icon={Volume1} label="偶有噪音" description="偶尔有轻微声音" selected={data.noise === '偶有噪音'} onClick={() => updateData({ noise: '偶有噪音' })} />
           <IconRadioCard icon={Volume2} label="临街/较吵" description="能听到车流声" selected={data.noise === '临街/较吵'} onClick={() => updateData({ noise: '临街/较吵' })} />
@@ -1450,6 +1461,7 @@ export const Step6 = ({ data, updateData }: StepProps) => {
               <RadioCard
                 key={opt.value}
                 label={opt.label}
+                className="min-h-[6.75rem] sm:min-h-[7.25rem] py-6 flex flex-col justify-center"
                 selected={data.role === opt.value}
                 onClick={() => {
                   if (data.role !== opt.value) {
@@ -1460,6 +1472,7 @@ export const Step6 = ({ data, updateData }: StepProps) => {
                     updateData({
                       role: opt.value,
                       favoriteSpace: [],
+                      primaryCoreMemberNote: '',
                       otherCoreMemberSpaces: {},
                       otherCoreMemberNotes: {},
                       ...(nextAdd.length !== prevAdd.length ? { additionalMembers: nextAdd } : {}),
@@ -1483,6 +1496,7 @@ export const Step6 = ({ data, updateData }: StepProps) => {
                   key={opt.label}
                   label={opt.label}
                   description={opt.desc}
+                  className="min-h-[5.75rem] sm:min-h-[6.25rem] py-6"
                   selected={(data.favoriteSpace || []).includes(opt.label)}
                   onClick={() => toggleSpace(opt.label)}
                 />
@@ -1494,6 +1508,17 @@ export const Step6 = ({ data, updateData }: StepProps) => {
             )}
           </div>
         </div>
+
+        {data.role ? (
+          <div className="pt-6 border-t border-gray-100 space-y-3">
+            <TextInput
+              label="其他需求说明（选填）"
+              value={data.primaryCoreMemberNote ?? ''}
+              onChange={(v: string) => updateData({ primaryCoreMemberNote: v })}
+              placeholder="例如：作息习惯、储物、无障碍、设备偏好等"
+            />
+          </div>
+        ) : null}
       </div>
     </StepWrapper>
   );
@@ -1640,7 +1665,7 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
             更多家庭成员（可选）
           </SubQuestion>
           <p className="text-sm text-gray-500 -mt-2">
-            家中若还有上一题未选的核心成员，或儿女、宠物同住，请在此勾选后展开对应空间；每一类可填写说明。
+            以下成员你想要重点说明的，可进行点击填写
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {pickerItems.map((m) => {
@@ -1762,6 +1787,10 @@ export const Step7 = ({ data, updateData }: StepProps) => {
     { value: 'C', label: '贴心参谋', desc: '我仅负责协助，最终决策由主要使用者决定。' }
   ];
 
+  /** 两问选项统一为中间档高度，内容垂直居中 */
+  const de07OptionUniformClass =
+    'h-full min-h-[8.5rem] sm:min-h-[9rem] flex flex-col justify-center';
+
   return (
     <StepWrapper title="DE-07：协作方式">
       <div className="space-y-6">
@@ -1770,12 +1799,13 @@ export const Step7 = ({ data, updateData }: StepProps) => {
             <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
             在未来的项目推进中，我们应如何更好地与您及家人协作？
           </SubQuestion>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
             {options.map(opt => (
               <RadioCard
                 key={opt.value}
                 label={opt.label}
                 description={opt.desc}
+                className={de07OptionUniformClass}
                 selected={data.collaboration === opt.value}
                 onClick={() => updateData({ collaboration: opt.value })}
               />
@@ -1788,10 +1818,25 @@ export const Step7 = ({ data, updateData }: StepProps) => {
             <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
             您希望的参与方式是什么样的？
           </SubQuestion>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <SquareRadioCard label="全程参与，把控细节" selected={data.involvement === 'high'} onClick={() => updateData({ involvement: 'high' })} />
-            <SquareRadioCard label="抓大放小，定期确认" selected={data.involvement === 'medium'} onClick={() => updateData({ involvement: 'medium' })} />
-            <SquareRadioCard label="全权委托，拎包入住" selected={data.involvement === 'low'} onClick={() => updateData({ involvement: 'low' })} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
+            <SquareRadioCard
+              label="全程参与，把控细节"
+              className={`!aspect-auto ${de07OptionUniformClass}`}
+              selected={data.involvement === 'high'}
+              onClick={() => updateData({ involvement: 'high' })}
+            />
+            <SquareRadioCard
+              label="抓大放小，定期确认"
+              className={`!aspect-auto ${de07OptionUniformClass}`}
+              selected={data.involvement === 'medium'}
+              onClick={() => updateData({ involvement: 'medium' })}
+            />
+            <SquareRadioCard
+              label="全权委托，拎包入住"
+              className={`!aspect-auto ${de07OptionUniformClass}`}
+              selected={data.involvement === 'low'}
+              onClick={() => updateData({ involvement: 'low' })}
+            />
           </div>
         </div>
       </div>
@@ -1959,11 +2004,17 @@ export const Step10 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step11 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="DE-11：社交习惯" subtitle="是否经常有朋友聚会？">
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      <SquareRadioCard label="经常" description="喜欢在家招待朋友" selected={data.partyFrequency === 'high'} onClick={() => updateData({ partyFrequency: 'high' })} />
-      <SquareRadioCard label="偶尔" description="三五好友小聚" selected={data.partyFrequency === 'medium'} onClick={() => updateData({ partyFrequency: 'medium' })} />
-      <SquareRadioCard label="很少" description="更喜欢安静独处" selected={data.partyFrequency === 'low'} onClick={() => updateData({ partyFrequency: 'low' })} />
+  <StepWrapper title="DE-11：社交习惯">
+    <div className="space-y-4">
+      <SubQuestion className="flex items-center gap-2">
+        <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+        是否经常有朋友聚会？
+      </SubQuestion>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <SquareRadioCard label="经常" description="喜欢在家招待朋友" selected={data.partyFrequency === 'high'} onClick={() => updateData({ partyFrequency: 'high' })} />
+        <SquareRadioCard label="偶尔" description="三五好友小聚" selected={data.partyFrequency === 'medium'} onClick={() => updateData({ partyFrequency: 'medium' })} />
+        <SquareRadioCard label="很少" description="更喜欢安静独处" selected={data.partyFrequency === 'low'} onClick={() => updateData({ partyFrequency: 'low' })} />
+      </div>
     </div>
   </StepWrapper>
 );
@@ -2027,8 +2078,13 @@ export const Step13 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-13：客厅习惯" subtitle="您希望在客厅，主要的家庭活动是什么（可多选）">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <StepWrapper title="DE-13：客厅习惯">
+      <div className="space-y-4">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          您希望在客厅，主要的家庭活动是什么（可多选）
+        </SubQuestion>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareRadioCard
             key={opt.id}
@@ -2038,6 +2094,7 @@ export const Step13 = ({ data, updateData }: StepProps) => {
             onClick={() => toggleFeature(opt.id)}
           />
         ))}
+        </div>
       </div>
     </StepWrapper>
   );
@@ -2063,8 +2120,13 @@ export const Step14 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-14：储物重点" subtitle="请选择您最关注的收纳区域（可多选）">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <StepWrapper title="DE-14：储物重点">
+      <div className="space-y-4">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          请选择您最关注的收纳区域（可多选）
+        </SubQuestion>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const label =
             opt === '展示性收纳（书籍、收藏品）'
@@ -2086,6 +2148,7 @@ export const Step14 = ({ data, updateData }: StepProps) => {
             />
           );
         })}
+        </div>
       </div>
     </StepWrapper>
   );
@@ -2099,8 +2162,13 @@ export const Step15 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="DE-15：卫浴偏好" subtitle="卫生间干湿分离需求">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <StepWrapper title="DE-15：卫浴偏好">
+      <div className="space-y-4">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          卫生间干湿分离需求
+        </SubQuestion>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const { title, desc } = parseLabel(opt);
           const valueMap: Record<string, string> = {
@@ -2118,6 +2186,7 @@ export const Step15 = ({ data, updateData }: StepProps) => {
             />
           );
         })}
+        </div>
       </div>
     </StepWrapper>
   );
@@ -2150,11 +2219,11 @@ export const Step16 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-16：底线需求" subtitle="这个家的“底线”，您最不能妥协的是？">
+    <StepWrapper title="DE-16：底线需求">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <SubQuestion className="flex items-center gap-2 mb-0!">
-            <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
+          <SubQuestion className="flex items-center gap-2 !mb-0">
+            <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
             这个家的“底线”，您最不能妥协的是？
           </SubQuestion>
           <div className="flex items-center gap-2">
@@ -2212,15 +2281,15 @@ export const Step17 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="DE-17：风水禁忌" subtitle="关于新家的“风水布局”，您有特殊讲究吗？">
-      <div className="space-y-6">
+    <StepWrapper title="DE-17：风水禁忌">
+      <div className="space-y-4">
         <SubQuestion className="flex items-center gap-2">
-          <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
           关于新家的“风水布局”，您有特殊讲究吗？
         </SubQuestion>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {options.map(opt => (
-            <RadioCard
+        <div className="grid grid-cols-4 gap-3">
+          {options.map((opt) => (
+            <SquareRadioCard
               key={opt.label}
               label={opt.label}
               description={opt.desc}
@@ -2252,8 +2321,12 @@ export const Step18 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-18：智能家居" subtitle="您对新家的“智能程度”有什么期待？">
+    <StepWrapper title="DE-18：智能家居">
       <div className="space-y-3">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          您对新家的“智能程度”有什么期待？
+        </SubQuestion>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {options.map(opt => (
             <SquareCheckboxCard
@@ -2287,8 +2360,13 @@ export const Step19 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-19：系统选择" subtitle="请问您计划为新家配置哪些舒适系统？">
-      <div className="grid grid-cols-3 gap-3">
+    <StepWrapper title="DE-19：系统选择">
+      <div className="space-y-3">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          请问您计划为新家配置哪些舒适系统？
+        </SubQuestion>
+        <div className="grid grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
             key={opt.label}
@@ -2298,6 +2376,7 @@ export const Step19 = ({ data, updateData }: StepProps) => {
             onClick={() => toggleOption(opt.label)}
           />
         ))}
+        </div>
       </div>
     </StepWrapper>
   );
@@ -2321,8 +2400,13 @@ export const Step20 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-20：设备需求" subtitle="计划购入的家电设备">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <StepWrapper title="DE-20：设备需求">
+      <div className="space-y-3">
+        <SubQuestion className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+          计划购入的家电设备
+        </SubQuestion>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
             key={opt.label}
@@ -2332,6 +2416,7 @@ export const Step20 = ({ data, updateData }: StepProps) => {
             onClick={() => toggleOption(opt.label)}
           />
         ))}
+        </div>
       </div>
     </StepWrapper>
   );
@@ -2728,8 +2813,6 @@ export const StepContract = ({
         subtitle="请仔细阅读以下《项目服务框架协议》，确认后完成电子签署"
       >
         <div className="space-y-5">
-          
-
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-6 text-xs leading-relaxed text-gray-700 max-h-64 overflow-y-auto custom-scrollbar">
             <div className="whitespace-pre-line font-serif text-[11px] leading-7 text-gray-900 tracking-wide pr-2 space-y-1.5">
               {CONTRACT_TEXT.split('\n').map((line, idx) => {

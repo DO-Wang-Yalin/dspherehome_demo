@@ -1,7 +1,7 @@
 import React from 'react';
 import { Baby, Cat, Dog, Minus, PawPrint, Plus, Star, User, Users } from 'lucide-react';
 import type { FormData } from '../types';
-import { StepWrapper, SubQuestion, RadioCard, CheckboxCard } from './ui';
+import { StepWrapper, SubQuestion, RadioCard, SquareCheckboxCard, SquareRadioCard } from './ui';
 import { styleEvalDeepBridgeQuestions } from '../pages/StyleEval/data/questions';
 
 type StepProps = {
@@ -13,20 +13,25 @@ type StepProps = {
 
 const [q8, q9, q10] = styleEvalDeepBridgeQuestions;
 
+/** DE-03 q8 选项 id：新婚筑巢 → DE-04 默认夫妻；独立首选（单身向）→ DE-04 默认单身 */
+const Q8_NEWLYWED_ID = 'A';
+const Q8_SINGLE_HOUSEHOLD_ID = 'F';
+
 export const StepStyleQ8 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="DE-03：居住定位" subtitle={q8.subtitle}>
+  <StepWrapper title="DE-03：居住定位">
     <div className="space-y-6">
       <div className="space-y-4">
         <SubQuestion className="flex items-center gap-2">
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
-          请选最贴近的一项
+          {q8.subtitle}
         </SubQuestion>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {q8.options.map((opt) => (
-            <RadioCard
+            <SquareRadioCard
               key={opt.id}
               label={opt.label}
               description={opt.description}
+              largeDescription
               selected={data.styleEvalQ8Positioning === opt.id}
               onClick={() => updateData({ styleEvalQ8Positioning: opt.id })}
             />
@@ -49,6 +54,31 @@ export const StepStyleQ9 = ({ data, updateData }: StepProps) => {
     if (!s.includes('pet_none')) return;
     updateData({ styleEvalQ9Selections: s.filter((x) => x !== 'pet_none') });
   }, [data.styleEvalQ9Selections, updateData]);
+
+  /** DE-03 切到「新婚 / 单身向」时预填基础居住；不在用户仅清空 DE-04 时反复写回（用 prev 识别 q8 是否刚变化） */
+  const prevQ8ForCoreRef = React.useRef<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    const pos = data.styleEvalQ8Positioning ?? '';
+    const prev = prevQ8ForCoreRef.current;
+
+    const s = data.styleEvalQ9Selections ?? [];
+    const rest = s.filter((x) => x !== 'single' && x !== 'couple');
+    const hasSingle = s.includes('single');
+    const hasCouple = s.includes('couple');
+
+    if (pos === Q8_NEWLYWED_ID && prev !== Q8_NEWLYWED_ID) {
+      if (!(hasCouple && !hasSingle)) {
+        updateData({ styleEvalQ9Selections: [...rest, 'couple'] });
+      }
+    } else if (pos === Q8_SINGLE_HOUSEHOLD_ID && prev !== Q8_SINGLE_HOUSEHOLD_ID) {
+      if (!(hasSingle && !hasCouple)) {
+        updateData({ styleEvalQ9Selections: [...rest, 'single'] });
+      }
+    }
+
+    prevQ8ForCoreRef.current = pos;
+  }, [data.styleEvalQ8Positioning, updateData]);
 
   const setCoreHousehold = (id: 'single' | 'couple') => {
     const other = id === 'single' ? 'couple' : 'single';
@@ -97,6 +127,10 @@ export const StepStyleQ9 = ({ data, updateData }: StepProps) => {
     <StepWrapper title="DE-04：同住成员" subtitle={q9.subtitle}>
       <div className="space-y-8">
         <div className="space-y-4">
+          <SubQuestion className="flex items-center gap-2">
+            <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
+            {q9.title}
+          </SubQuestion>
           <SubQuestion className="flex items-center gap-2">
             <User className="w-4 h-4 text-[#EF6B00]" />
             基础居住形态
@@ -275,15 +309,15 @@ export const StepStyleQ10 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="DE-21：空间兴趣" subtitle={q10.subtitle}>
-      <div className="space-y-3">
-        <SubQuestion className="flex items-center gap-2 mb-1">
+    <StepWrapper title="DE-21：空间兴趣">
+      <div className="space-y-4">
+        <SubQuestion className="flex items-center gap-2">
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />
-          可多选
+          {q10.subtitle}
         </SubQuestion>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {q10.options.map((opt) => (
-            <CheckboxCard
+            <SquareCheckboxCard
               key={opt.id}
               label={opt.label}
               description={opt.description}
