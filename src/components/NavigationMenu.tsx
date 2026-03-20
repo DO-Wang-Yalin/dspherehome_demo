@@ -64,11 +64,14 @@ export function NavigationMenu({ anchorClass = 'right-0', inline = false }: Navi
       return (new URLSearchParams(s.search).get('step') ?? '0') === deepStepParam;
     });
   } else {
+    const have = new URLSearchParams(location.search.replace(/^\?/, ''));
+    if (location.pathname === '/leads' && !have.get('step')) {
+      have.set('step', '1');
+    }
     resolvedCurrentIndex = stepsList.findIndex((step) => {
       if (step.path !== location.pathname) return false;
       if (!step.search) return true;
       const want = new URLSearchParams(step.search.replace(/^\?/, ''));
-      const have = new URLSearchParams(location.search.replace(/^\?/, ''));
       for (const key of want.keys()) {
         if (want.get(key) !== have.get(key)) return false;
       }

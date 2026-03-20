@@ -81,7 +81,7 @@ export default function StyleEvalPage() {
       <main className="flex-1 relative overflow-x-hidden">
         <HomeStyleEval
           onGoDeepEval={() =>
-            fromRequirements ? navigate(buildDeepEvalEntry()) : navigate('/leads')
+            fromRequirements ? navigate(buildDeepEvalEntry()) : navigate('/leads?step=1')
           }
           deepEvalButtonLabel={
             fromRequirements ? '开始深度需求测评' : undefined
