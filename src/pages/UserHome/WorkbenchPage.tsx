@@ -87,7 +87,7 @@ function normalizeComfortSystemLabels(labels: string[]): string[] {
   return out
 }
 
-import BudgetSankey from '../../components/BudgetSankey'
+import BudgetSankeyWorkbench from '../../components/BudgetSankeyWorkbench'
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel'
 import { buildBudgetSankeyFromDisplayOrders } from '../../utils/ordersToBudgetSankey'
 import { ContractDetailModal } from '../../components/ContractDetailModal'
@@ -858,7 +858,7 @@ function OrderManagementSection({
         ) : (
           <div className="rounded-3xl border border-gray-100 shadow-sm overflow-hidden max-h-[min(72vh,1200px)] overflow-y-auto">
             {sankeyData ? (
-              <BudgetSankey
+              <BudgetSankeyWorkbench
                 data={sankeyData}
                 title="订单预算树"
                 subtitle={`共 ${orders.length} 笔订单 · 金额由列表展示换算为万元`}
