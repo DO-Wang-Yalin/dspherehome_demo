@@ -31,6 +31,8 @@ import {
   Bath,
   Sun,
   Wind,
+  Cloud,
+  Droplets,
   Ruler,
   Volume2,
   Upload,
@@ -60,39 +62,31 @@ import {
   Plus,
   Eye,
 } from 'lucide-react'
-/** 可添加的空间类型选项（下拉选择，与核心空间及常见扩展一致） */
-const ADDABLE_SPACE_TYPE_OPTIONS = [
+/** 与 Q2-9 核心空间规划一致：需求书编辑时完整列出，用户仅调整数量 */
+const CORE_SPACE_TYPE_OPTIONS = [
   '客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园',
   '衣帽间', '玄关', '阳台', '储物间', '健身区', '影音室', '保姆间', '家政间', '洗衣房',
 ]
 
-/** 核心空间「添加空间类型」一行：下拉选项 + 添加按钮 */
-function AddSpaceTypeRow({ onAdd, existingNames }: { onAdd: (name: string) => void; existingNames: string[] }) {
-  const available = ADDABLE_SPACE_TYPE_OPTIONS.filter((o) => !existingNames.includes(o))
-  const [value, setValue] = React.useState('')
-  const handleAdd = () => {
-    if (!value || existingNames.includes(value)) return
-    onAdd(value)
-    setValue('')
-  }
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <select
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="rounded-xl border border-gray-200 px-3 py-2 text-sm min-w-[140px]"
-      >
-        <option value="">选择要添加的空间类型</option>
-        {available.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      <button type="button" onClick={handleAdd} disabled={!value} className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-[#FFFDF3] hover:border-[#FF9C3E]/30 transition-colors disabled:opacity-50 disabled:pointer-events-none">
-        <Plus size={14} /> 添加空间类型
-      </button>
-    </div>
-  )
+/** Q2-19 Step19 选项标签一致；历史存档「全屋地暖」并入「地暖系统」 */
+const COMFORT_SYSTEM_LABEL_ALIASES: Record<string, string> = {
+  全屋地暖: '地暖系统',
+  全屋净水软水: '全屋净水',
 }
+
+function normalizeComfortSystemLabels(labels: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const l of labels) {
+    const c = COMFORT_SYSTEM_LABEL_ALIASES[l] ?? l
+    if (!seen.has(c)) {
+      seen.add(c)
+      out.push(c)
+    }
+  }
+  return out
+}
+
 import BudgetSankey from '../../components/BudgetSankey'
 import { BudgetConfirmPanel } from '../../components/BudgetConfirmPanel'
 import { buildBudgetSankeyFromDisplayOrders } from '../../utils/ordersToBudgetSankey'
@@ -1669,9 +1663,8 @@ export function RequirementsDoc({
   const [showFinishRevisionModal, setShowFinishRevisionModal] = React.useState(false)
   const [showNoChangesModal, setShowNoChangesModal] = React.useState(false)
   const [snapshotModalEntry, setSnapshotModalEntry] = React.useState<RequirementDocRevisionEntry | null>(null)
-  const [revisionUpdaterInput, setRevisionUpdaterInput] = React.useState('')
-  const [revisionSummaryInput, setRevisionSummaryInput] = React.useState('')
-  const [revisionSectionNoteInput, setRevisionSectionNoteInput] = React.useState('')
+  /** 打开「完成编辑」弹窗时快照的变更模块列表，用于只读展示与写入修订记录 */
+  const [finishRevisionLabels, setFinishRevisionLabels] = React.useState<string[]>([])
   const [spaceTab, setSpaceTab] = React.useState<string>('living')
   /** 需求书正文 vs 变更记录 */
   const [requirementsDocPage, setRequirementsDocPage] = React.useState<'content' | 'revisions'>('content')
@@ -1844,10 +1837,13 @@ export function RequirementsDoc({
   const personas = displayPersonas
   const hasMemberData = personas.length > 0
 
+  /** 与 Q2-19 Step19「系统选择」选项标题与顺序一致 */
   const systemEquipments = [
     { key: 'fresh-air', title: '新风系统', desc: '全屋换气·除味净化', icon: Wind },
-    { key: 'floor-heating', title: '全屋地暖', desc: '智能分区温控', icon: Thermometer },
     { key: 'central-ac', title: '中央空调', desc: '变频节能冷暖系统', icon: AirVent },
+    { key: 'whole-air', title: '全空气系统', desc: '一体化空气处理', icon: Cloud },
+    { key: 'water-purify', title: '全屋净水', desc: '入户水质处理', icon: Droplets },
+    { key: 'floor-heating', title: '地暖系统', desc: '舒适地面采暖', icon: Thermometer },
   ] as const
 
   /** 与 Q2-18 Step18 选项完全一致，用于正确展示测评结果 */
@@ -2023,7 +2019,7 @@ export function RequirementsDoc({
     }, {} as Record<string, boolean>)
     setSpecialDeviceSelected((prev) => ({ ...prev, ...fromDevices }))
     setCustomNeedsNote((d.otherNeeds ?? '').trim())
-    setComfortSystemsEdit(d.comfortSystems ?? [])
+    setComfortSystemsEdit(normalizeComfortSystemLabels(d.comfortSystems ?? []))
     setFengshuiEdit((d.fengshui ?? '').trim())
     setStorageFocusEdit(d.storageFocus ?? [])
     setSpaceOtherNote(d.spaceOtherNote ?? '')
@@ -2108,7 +2104,9 @@ export function RequirementsDoc({
   const selectedSpecialDevices = specialDeviceOptions.filter((o) => specialDeviceSelected[o.key])
   const displaySmartHomeLabels = useMock ? selectedSmartHome.map((o) => o.label) : (d?.smartHomeOptions ?? [])
   const displayDeviceLabels = useMock ? selectedSpecialDevices.map((o) => o.label) : (d?.devices ?? [])
-  const displayComfortLabels = useMock ? systemEquipments.map((x) => x.title) : (d?.comfortSystems ?? [])
+  const displayComfortLabels = useMock
+    ? systemEquipments.map((x) => x.title)
+    : normalizeComfortSystemLabels(d?.comfortSystems ?? [])
   const displaySmartHomeOptions = smartHomeOptions.filter((o) => displaySmartHomeLabels.includes(o.label))
   const displayDeviceOptions = specialDeviceOptions.filter((o) => displayDeviceLabels.includes(o.label))
   const displayComfortEquipments = systemEquipments.filter((x) => displayComfortLabels.includes(x.title))
@@ -2145,7 +2143,7 @@ export function RequirementsDoc({
       smartHomeOptions: smartLabels,
       devices: deviceLabels,
       otherNeeds: customNeedsNote.trim() || (d?.otherNeeds ?? ''),
-      comfortSystems: comfortSystemsEdit,
+      comfortSystems: normalizeComfortSystemLabels(comfortSystemsEdit),
       fengshui: fengshuiEdit.trim(),
       storageFocus: storageFocusEdit,
       spaceOtherNote: spaceOtherNote.trim(),
@@ -2179,17 +2177,16 @@ export function RequirementsDoc({
     const beforeFp =
       baselineFingerprintRef.current ?? (d ? fingerprintFromSavedFormData(d) : null)
     const labels = diffRequirementDocFingerprints(beforeFp, fpAfter)
-    const autoSummary = formatAutoRevisionSummary(labels)
-    const summary = revisionSummaryInput.trim() || autoSummary
+    const summary = formatAutoRevisionSummary(labels)
     const sectionFromLabels = labels.length ? labels.join('、') : undefined
-    const sectionNote = revisionSectionNoteInput.trim() || sectionFromLabels
+    const sectionNote = sectionFromLabels
     const now = new Date()
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const beforePayload = d ? requirementPayloadFromFormData(d) : null
     const entry: RequirementDocRevisionEntry = {
       id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rev-${Date.now()}`,
       date: dateStr,
-      updater: revisionUpdaterInput.trim() || ownerDisplayName,
+      updater: ownerDisplayName.trim() || '业主',
       summary,
       sectionNote: sectionNote || undefined,
       docSnapshotJson: JSON.stringify({
@@ -2205,8 +2202,7 @@ export function RequirementsDoc({
     })
     setShowFinishRevisionModal(false)
     setIsEditing(false)
-    setRequirementsDocPage('revisions')
-    setRevisionTablePage(1)
+    setRequirementsDocPage('content')
   }
 
   const isRequirementsEmpty =
@@ -2599,7 +2595,6 @@ export function RequirementsDoc({
             </div>
             {(() => {
               const customNames = d?.customCoreSpaceOptions ?? []
-              const baseOptions = ['客厅', '餐厅', '开放厨房', '封闭厨房', '主卧室', '次卧室', '小孩卧室', '老人卧室', '主卫浴室', '公卫浴室', '次卫浴室', '书房', '花园']
               const parseCounts = (str: string): Record<string, number> => {
                 const counts: Record<string, number> = {}
                 if (!str?.trim()) return counts
@@ -2610,25 +2605,28 @@ export function RequirementsDoc({
               }
               const raw = useMock ? '1客厅1餐厅1主卧室1次卧室1主卫浴室1公卫浴室' : (d?.coreSpaces ?? '')
               const counts = parseCounts(raw)
-              const fullOptionList = Array.from(new Set([...baseOptions, ...customNames, ...Object.keys(counts)]))
-              const entries = fullOptionList.filter((k) => (counts[k] ?? 0) > 0).map((k) => ({ name: k, count: counts[k] ?? 0 }))
+              const legacyExtra = Array.from(
+                new Set([...customNames, ...Object.keys(counts)]),
+              ).filter((k) => !CORE_SPACE_TYPE_OPTIONS.includes(k))
+              const fullOptionList = [...CORE_SPACE_TYPE_OPTIONS, ...legacyExtra]
+              const entries = fullOptionList
+                .filter((k) => (counts[k] ?? 0) >= 1)
+                .map((k) => ({ name: k, count: counts[k] ?? 0 }))
               const updateCoreCount = (name: string, val: number) => {
                 if (!updateData || useMock) return
                 const next = { ...counts, [name]: Math.max(0, val) }
-                const newStr = fullOptionList.filter((k) => (next[k] ?? 0) > 0).map((k) => `${next[k]}${k}`).join('')
+                const newStr = fullOptionList
+                  .filter((k) => (next[k] ?? 0) >= 1)
+                  .map((k) => `${next[k]}${k}`)
+                  .join('')
                 updateData({ coreSpaces: newStr })
-              }
-              const addCustomSpaceOption = (newName: string) => {
-                if (!updateData || useMock || !newName?.trim()) return
-                const next = [...customNames, newName.trim()]
-                updateData({ customCoreSpaceOptions: next })
               }
               const isEditable = isEditing && updateData && !useMock
               return (
                 <>
                   {isEditable ? (
                     <div className="mb-5">
-                      <div className="text-xs font-semibold text-gray-500 mb-3">核心空间（数量可改，可添加空间类型）</div>
+                      <div className="text-xs font-semibold text-gray-500 mb-3">核心空间（已列出全部类型，0 表示未配置）</div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {fullOptionList.map((name) => (
                           <div key={name} className="rounded-2xl border border-gray-100 bg-[#FFFDF3] p-4 flex items-center justify-between gap-2">
@@ -2641,7 +2639,6 @@ export function RequirementsDoc({
                           </div>
                         ))}
                       </div>
-                      <AddSpaceTypeRow onAdd={addCustomSpaceOption} existingNames={fullOptionList} />
                     </div>
                   ) : entries.length > 0 ? (
                     <div className="mb-5">
@@ -4685,11 +4682,11 @@ export function RequirementsDoc({
           <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-gray-100">
             <h3 className="text-base font-semibold text-gray-900">完成编辑</h3>
             <p className="text-sm text-gray-600 leading-relaxed">
-              将保存修改并写入「需求变更与修订记录」。变更概要已自动识别，可按需微调。
+              确认后保存当前需求书，并自动生成一条修订记录。修订明细可在顶部切换至「变更记录」查看；您将留在本页。
             </p>
             <div className="space-y-3 text-sm">
               <div>
-                <span className="text-xs text-gray-500 block mb-1">日期（自动）</span>
+                <span className="text-xs text-gray-500 block mb-1">日期</span>
                 <span className="font-medium text-gray-800">
                   {(() => {
                     const n = new Date()
@@ -4698,45 +4695,22 @@ export function RequirementsDoc({
                 </span>
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-updater">
-                  更新人
-                </label>
-                <input
-                  id="rev-updater"
-                  value={revisionUpdaterInput}
-                  onChange={(e) => setRevisionUpdaterInput(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="姓名或角色"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-summary">
-                  变更概要（已根据本次修改自动识别）
-                </label>
-                <p className="text-[11px] text-gray-400 mb-1.5 leading-snug">
-                  对比「点击编辑时」已保存内容与当前内容，列出变更模块；可微调下方文字。
+                <span className="text-xs text-gray-500 block mb-1">更新人</span>
+                <p className="rounded-xl border border-gray-100 bg-[#FAFAF9] px-3 py-2 text-gray-800">
+                  {ownerDisplayName.trim() || '业主'}
                 </p>
-                <textarea
-                  id="rev-summary"
-                  value={revisionSummaryInput}
-                  onChange={(e) => setRevisionSummaryInput(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm resize-y min-h-[72px] bg-[#FAFAF9]"
-                  readOnly={false}
-                  placeholder="自动生成中…"
-                />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-1" htmlFor="rev-section">
-                  涉及章节 / 备注（已自动填入变更模块，可改）
-                </label>
-                <input
-                  id="rev-section"
-                  value={revisionSectionNoteInput}
-                  onChange={(e) => setRevisionSectionNoteInput(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="自动根据变更模块生成"
-                />
+                <span className="text-xs text-gray-500 block mb-1">变更概要</span>
+                <p className="rounded-xl border border-gray-100 bg-[#FAFAF9] px-3 py-2 text-gray-800 whitespace-pre-wrap leading-relaxed min-h-[72px]">
+                  {formatAutoRevisionSummary(finishRevisionLabels)}
+                </p>
+              </div>
+              <div>
+                <span className="text-xs text-gray-500 block mb-1">涉及章节</span>
+                <p className="rounded-xl border border-gray-100 bg-[#FAFAF9] px-3 py-2 text-gray-800">
+                  {finishRevisionLabels.length > 0 ? finishRevisionLabels.join('、') : '—'}
+                </p>
               </div>
             </div>
             <div className="flex flex-col gap-2 pt-2">
@@ -4797,9 +4771,7 @@ export function RequirementsDoc({
                     if (labels.length === 0) {
                       setShowNoChangesModal(true)
                     } else {
-                      setRevisionUpdaterInput(ownerDisplayName)
-                      setRevisionSummaryInput(formatAutoRevisionSummary(labels))
-                      setRevisionSectionNoteInput(labels.join('、'))
+                      setFinishRevisionLabels(labels)
                       setShowFinishRevisionModal(true)
                     }
                   } else {

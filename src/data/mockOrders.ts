@@ -99,7 +99,7 @@ export const INITIAL_ORDERS = [
     status: 'S02-01 提案设计中',
     contains: '衣柜内部结构图、板材选型',
     date: '2026-03-11',
-    amount: '待定',
+    amount: '¥12,000 ~ ¥15,000定',
     isInteractive: false,
   },
   {
@@ -139,7 +139,7 @@ export const INITIAL_ORDERS = [
     status: 'S09-订单整改中',
     contains: '防水涂料施工、闭水记录',
     date: '2026-03-13',
-    amount: '¥5,500',
+    amount: '¥9,500',
     isInteractive: false,
   },
   {
@@ -149,7 +149,7 @@ export const INITIAL_ORDERS = [
     status: 'S10-订单维保中',
     contains: '滤网更换、管道清洗记录',
     date: '2026-03-15',
-    amount: '¥1,200',
+    amount: '¥9,200',
     isInteractive: false,
   },
   {

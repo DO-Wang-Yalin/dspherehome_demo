@@ -34,6 +34,23 @@ function safeId(raw: string): string {
   return raw.replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
+/** 从列表 status（如 S07-订单验收中、S06-02 方案汇报中）解析 statusCode 与 statusName */
+function parseStatusFromDisplay(status: string): { statusCode?: string; statusName?: string } {
+  const s = (status || '').trim()
+  if (!s) return {}
+  // 格式1: "S06-02 方案汇报中"（空格分隔）
+  const spaceParts = s.split(/\s+/)
+  if (spaceParts.length >= 2) {
+    return { statusCode: spaceParts[0], statusName: spaceParts[1] }
+  }
+  // 格式2: "S07-订单验收中"（首个 - 分隔 code 与 name）
+  const dashIdx = s.indexOf('-')
+  if (dashIdx > 0) {
+    return { statusCode: s.slice(0, dashIdx), statusName: s.slice(dashIdx + 1) }
+  }
+  return {}
+}
+
 export type DisplayOrder = {
   id: string
   title: string
@@ -61,6 +78,7 @@ export function buildBudgetSankeyFromDisplayOrders(orders: DisplayOrder[]): Budg
     const msId = `ms_${safeId(o.id)}`
     const phase = getOrderStatusColor(o.status)
     const sg = PHASE_TO_STATUS[phase] ?? '意向期'
+    const { statusCode, statusName } = parseStatusFromDisplay(o.status)
 
     milestones.push({
       id: msId,
@@ -76,7 +94,11 @@ export function buildBudgetSankeyFromDisplayOrders(orders: DisplayOrder[]): Budg
       title: o.title,
       status: sg,
       milestoneId: msId,
-      budget: wan,
+      budgetMin: wan,
+      budgetMax: wan,
+      statusCode: statusCode || undefined,
+      statusName: statusName || undefined,
+      date: o.date,
     })
 
     const displayDate = o.date ? o.date.replace(/-/g, '.') : `·${i + 1}`
@@ -213,7 +235,8 @@ export function buildBudgetSankeyFromProjectBudget(
         title: `${key} 已成交预算`,
         status: '验收期',
         milestoneId: milestone.id,
-        budget: closed,
+        budgetMin: closed,
+        budgetMax: closed,
       })
     }
 
@@ -224,7 +247,8 @@ export function buildBudgetSankeyFromProjectBudget(
         title: `${key} 待成交预算`,
         status: '意向期',
         milestoneId: milestone.id,
-        budget: open,
+        budgetMin: open,
+        budgetMax: open,
       })
     }
   })

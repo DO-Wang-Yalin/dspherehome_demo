@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 import {
   STATUS_COLORS,
   STATUS_LIST,
@@ -66,24 +67,11 @@ export interface BudgetSankeyData {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-function interpolateColor(c1: string, c2: string, factor: number) {
-  const r1 = parseInt(c1.slice(1, 3), 16)
-  const g1 = parseInt(c1.slice(3, 5), 16)
-  const b1 = parseInt(c1.slice(5, 7), 16)
-  const r2 = parseInt(c2.slice(1, 4), 16) || parseInt(c2.slice(1, 3), 16)
-  const g2 = parseInt(c2.slice(3, 6), 16) || parseInt(c2.slice(3, 5), 16)
-  const b2 = parseInt(c2.slice(5, 8), 16) || parseInt(c2.slice(5, 7), 16)
-  const r = Math.round(r1 + factor * (r2 - r1))
-  const g = Math.round(g1 + factor * (g2 - g1))
-  const b = Math.round(b1 + factor * (b2 - b1))
-  return `rgb(${r},${g},${b})`
-}
-
-
-
 const UNPAID_COLOR = '#d0d7d6'
 const INCOME_COLOR = '#FBBF24'
-const FEATHER_PX = 10
+
+/** 演示用：已入金展示值固定 100w，用于总预算柱渐变与页脚，便于客户理解入金 vs 实际消耗 */
+const PAID_DISPLAY_DEMO = 110
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -219,18 +207,13 @@ const TOTAL_BUDGET = 100 // 万元
 
 // ─── Layout Config ────────────────────────────────────────────────────────────
 
-const VB_W = 1200
-
 const X = {
-  dateDot: 172,
-  incomeLeft: 188,
-  incomeRight: 250,
-  // 巧妙绑定：以后只要动了 UI_CONFIG 里的间距，所有的右侧节点顺推过去，连线全部自适应重绘不留死角！
-  get budgetLeft() { return this.incomeRight + UI_CONFIG.GAP_INC_TO_BUDGET },
+  // 移除入金层后，总预算从左侧起始
+  budgetLeft: 100,
   get budgetRight() { return this.budgetLeft + 44 }, // 总预算柱子本身宽度固定44
-  get msLeft() { return this.budgetRight + UI_CONFIG.GAP_BUDGET_TO_MS },
-  get msRight() { return this.msLeft + 186 },        // 里程碑容器自身宽度固定186
-  get ordLeft() { return this.msRight + UI_CONFIG.GAP_MS_TO_ORD },
+  get allocLeft() { return this.budgetRight + UI_CONFIG.GAP_BUDGET_TO_MS },   // 预算分配柱（原里程碑位置）
+  get allocRight() { return this.allocLeft + 44 },  // 预算分配柱宽度与总预算一致
+  get ordLeft() { return this.allocRight + UI_CONFIG.GAP_MS_TO_ORD },
   get ordRight() { return this.ordLeft + 184 },      // 订单容器自身宽度固定184
   get ordLabelLeft() { return this.ordRight + 10 },
 }
@@ -333,11 +316,15 @@ const UI_CONFIG = {
    * 视觉缩放系数 (Height Scale Factor)
    * 如果觉得图表太臃肿，可调小此值（如 0.6）；如果觉得太扁平，可调大（如 1.2）。
    */
-  HEIGHT_SCALE: 1.0,
+  HEIGHT_SCALE: 0.1,
 
   // TOTAL_HEIGHT: 1200, (已由倒推算法接管)
   // 调节指南：[里程碑色块最小高度] 控制每个里程碑节点哪怕只有 0.1w，也必须最低保留的高度，以容纳文字。
   MIN_MS_HEIGHT: 46,
+  /** 全部收起时每组球的最小高度（调小=更矮，调大=更高） */
+  COLLAPSED_GROUP_MIN_H: 30,
+  /** 收起态高度按组金额比例微调时的缩放系数（调小=更矮，调大=更高） */
+  COLLAPSED_HEIGHT_SCALE: 0.09,
   // 调节指南：[里程碑垂直间距] 里程碑板块之间留出的纵向缝隙。
   MS_GAP: 12,
   // 调节指南：[订单物理高度底座] 每个订单板块的最低保底像素高度。
@@ -370,6 +357,15 @@ const UI_CONFIG = {
   GAP_MS_TO_ORD: 160,      // 里程碑层 -> 订单追踪 的连线距离
 }
 
+/**
+ * viewBox 宽度：须包住实际绘图区。原先固定 1200 远大于列布局（约至 ordRight），
+ * 响应式缩放后会在卡片内出现「图只占左侧、右侧大片空白」的错觉。
+ * 收起态文案从 ordLeft+56 起笔，可能超出订单列右缘，故与 ordRight 取较大值。
+ */
+const SANKEY_RIGHT_INSET = 12
+const SANKEY_COLLAPSED_LABEL_EST_W = 300
+const VB_W = Math.max(X.ordRight + SANKEY_RIGHT_INSET, X.ordLeft + 56 + SANKEY_COLLAPSED_LABEL_EST_W)
+
 // ─── Computed Layout ──────────────────────────────────────────────────────────
 
 /** 兼容上游：优先 budgetMin/budgetMax，兜底旧字段 budget，防止布局塌陷 */
@@ -380,15 +376,35 @@ function getOrderBudgetMid(o: { budgetMin?: number; budgetMax?: number; budget?:
   return 0
 }
 
-// 全局辅助：判断里程碑的主状态（取所含订单中最早期的颜色）
-// 阶段顺序：意向期 → 订购期 → 交付期 → 验收期 → 维保期
-function getMsPrimaryStatus(msId: string, orders: Order[]): StatusGroup {
-  const priority: StatusGroup[] = ['意向期', '订购期', '交付期', '验收期', '维保期']
-  const ords = orders.filter((o) => o.milestoneId === msId)
-  for (const sp of priority) {
-    if (ords.some((o) => getOrderPhaseForColor(o) === sp)) return sp
+// ─── 三类预算分组（意向 / 授权 / 结算，按 statusCode 映射）────────────────────────
+export type AllocGroupId = 'groupA' | 'groupB' | 'groupC'
+
+const ALLOC_GROUPS: { id: AllocGroupId; label: string; segmentLabel: string; codes: string[]; color: string }[] = [
+  { id: 'groupA', label: '意向+订购', segmentLabel: '意向', codes: ['S00', 'S01', 'S02', 'S03', 'S05'], color: STATUS_COLORS['意向期'] },
+  { id: 'groupB', label: '交付+验收', segmentLabel: '授权', codes: ['S06', 'S07', 'S08', 'S09', 'S13'], color: STATUS_COLORS['验收期'] },
+  { id: 'groupC', label: '维保', segmentLabel: '结算', codes: ['S10', 'S11', 'S12'], color: STATUS_COLORS['维保期'] },
+]
+
+function getStatusCode(ord: Order): string | undefined {
+  if (ord.statusCode) return ord.statusCode
+  const m = String(ord.status || '').match(/^S\d{2}(-\d{2})?/)
+  return m?.[0]
+}
+
+/** 按 statusCode 归组，S04 返回 null 表示排除 */
+function getOrderAllocGroup(ord: Order): AllocGroupId | null {
+  const code = getStatusCode(ord)
+  if (!code || code.startsWith('S04')) return null
+  for (const g of ALLOC_GROUPS) {
+    if (g.codes.some((c) => code === c || code.startsWith(c + '-'))) return g.id
   }
-  return '意向期'
+  return null
+}
+
+function getOrderSortDate(ord: Order, milestones: Milestone[]): string {
+  if (ord.date) return ord.date
+  const ms = milestones.find((m) => m.id === ord.milestoneId)
+  return ms?.dueDate ?? ord.id
 }
 
 function useLayout(
@@ -396,166 +412,109 @@ function useLayout(
   milestones: Milestone[],
   orders: Order[],
   totalBudget: number,
-  expandedMsIds: string[],
-  msIntentionCollapsed: boolean
+  expandedGroupIds: AllocGroupId[]
 ) {
   return useMemo(() => {
-    // ═══════════════════════════════════════════════════════════════════════
-    // 【从右向左：订单基准倒推架构】
-    // 1. pxPerWan: 由最小订单金额对应 40px 反推。
-    // 2. 订单高度: 严格比例，无底座。
-    // 3. 里程碑高度: 展开时物理包裹订单(含间距)，收起时保底 46px。
-    // 4. 预算柱: 总高度对齐里程碑总高度，彩色区域对齐入金比例。
-    // 5. 入金层: 范围严格限制在预算柱彩色部分。
-    // ═══════════════════════════════════════════════════════════════════════
-
-    // ---- 1. 计算全局比例尺 (根据订单) ----
-    const validOrders = orders.filter(o => getOrderBudgetMid(o) > 0)
-    const minOrderBudget = validOrders.length > 0
-      ? Math.min(...validOrders.map(o => getOrderBudgetMid(o)))
-      : 1
-    // 基准比例：(40px / 最小订单金额) * 缩放系数
-    const pxPerWan = (40 / minOrderBudget) * UI_CONFIG.HEIGHT_SCALE
-
-    // ---- 2. 预计算里程碑与订单布局 (处理展开收起) ----
     const ORD_GAP = 20
-    const MS_GAP = 12
-    let currentMsY = CHART_TOP_MARGIN
+    const GROUP_GAP = 12
 
-    const msLayout: any[] = []
-    const ordLayout: any[] = []
-    const collapsedLayout: any[] = []
-
-    // 区分意向阶段 (用于折叠逻辑)
-    const intentionMilestones = milestones.filter(m => getMsPrimaryStatus(m.id, orders) === '意向期')
-    const otherMilestones = milestones.filter(m => getMsPrimaryStatus(m.id, orders) !== '意向期')
-
-    // 处理意向阶段合并节点
-    if (msIntentionCollapsed && intentionMilestones.length > 0) {
-      const groupH = 80 // 折叠组给个明显高度
-      msLayout.push({
-        id: 'group_intention',
-        name: `意向阶段里程碑 (${intentionMilestones.length}个)`,
-        h: groupH,
-        y: currentMsY,
-        isGroup: true,
-        memberIds: intentionMilestones.map(m => m.id),
-        status: '意向期'
-      })
-      currentMsY += groupH + MS_GAP
+    // ---- 1. 过滤 S04 并按三类分组，组内按日期升序 ----
+    const filteredOrders = orders.filter((o) => getOrderAllocGroup(o) !== null)
+    const groupOrders: Record<AllocGroupId, Order[]> = { groupA: [], groupB: [], groupC: [] }
+    for (const ord of filteredOrders) {
+      const g = getOrderAllocGroup(ord)!
+      groupOrders[g].push(ord)
+    }
+    for (const g of ALLOC_GROUPS) {
+      groupOrders[g.id].sort((a, b) =>
+        getOrderSortDate(a, milestones).localeCompare(getOrderSortDate(b, milestones)) || a.id.localeCompare(b.id)
+      )
     }
 
-    // 全部收起时：里程碑按金额比例分配高度（最小 46px），与展开时订单逻辑一致
-    const allCollapsed = expandedMsIds.length === 0
-    const listToRender = msIntentionCollapsed ? otherMilestones : milestones
-    const msItemsForDist = listToRender
-      .filter(ms => orders.some(o => o.milestoneId === ms.id))
-      .map(ms => ({
-        id: ms.id,
-        budget: orders.filter(o => o.milestoneId === ms.id).reduce((s, o) => s + getOrderBudgetMid(o), 0),
-      }))
-    const minMsBudget = msItemsForDist.length > 0 ? Math.min(...msItemsForDist.map(m => m.budget || 1)) : 1
-    const targetCollapsedH = msItemsForDist.reduce((s, m) => s + (m.budget || 0), 0) * (UI_CONFIG.MIN_MS_HEIGHT / minMsBudget)
-    const collapsedHeights = allCollapsed && msItemsForDist.length > 0
-      ? distributeHeights(msItemsForDist, targetCollapsedH, UI_CONFIG.MIN_MS_HEIGHT)
-      : {} as Record<string, number>
+    // ---- 2. 比例尺 ----
+    const validOrders = filteredOrders.filter((o) => getOrderBudgetMid(o) > 0)
+    const minOrderBudget = validOrders.length > 0 ? Math.min(...validOrders.map((o) => getOrderBudgetMid(o))) : 1
+    const pxPerWan = (40 / minOrderBudget) * UI_CONFIG.HEIGHT_SCALE
 
-    listToRender.forEach((ms) => {
-      const msOrders = orders.filter(o => o.milestoneId === ms.id)
-      const isExpanded = expandedMsIds.includes(ms.id)
+    // ---- 3. 组布局与订单布局 ----
+    const groupLayout: { id: AllocGroupId; y: number; h: number; budget: number; orders: Order[] }[] = []
+    const ordLayout: (Order & { y: number; h: number; isExpanded: boolean; groupId: AllocGroupId })[] = []
+    const collapsedLayout: { id: string; groupId: AllocGroupId; y: number; h: number; count: number; isExpanded: boolean }[] = []
 
-      let msH = UI_CONFIG.MIN_MS_HEIGHT
+    let currentY = CHART_TOP_MARGIN
 
-      if (msOrders.length > 0) {
-        if (isExpanded) {
-          // 展开状态：物理高度 = 所有订单高度 + 间距
-          let innerOrdY = currentMsY
-          msOrders.forEach((ord) => {
-            const budget = getOrderBudgetMid(ord)
-            const h = Math.max(2, budget * pxPerWan)
-            ordLayout.push({ ...ord, y: innerOrdY, h, isExpanded: true })
-            innerOrdY += h + ORD_GAP
-          })
-          msH = innerOrdY - ORD_GAP - currentMsY
-        } else {
-          // 收缩状态：全部收起时按金额高度，否则固定 46px
-          msH = allCollapsed && collapsedHeights[ms.id] != null
-            ? collapsedHeights[ms.id]
-            : UI_CONFIG.MIN_MS_HEIGHT
-          msOrders.forEach((ord) => {
-            ordLayout.push({ ...ord, y: currentMsY, h: msH, isExpanded: false })
-          })
-        }
-      }
+    for (const g of ALLOC_GROUPS) {
+      const ords = groupOrders[g.id]
+      const isExpanded = expandedGroupIds.includes(g.id)
+      const groupBudget = ords.reduce((s, o) => s + getOrderBudgetMid(o), 0)
 
-      msLayout.push({ ...ms, y: currentMsY, h: msH })
-
-      if (msOrders.length > 0) {
-        collapsedLayout.push({
-          id: `col_${ms.id}`,
-          milestoneId: ms.id,
-          y: isExpanded ? (currentMsY + msH / 2 - 20) : currentMsY,
-          h: 40,
-          count: msOrders.length,
-          isExpanded
+      let groupH: number
+      if (ords.length === 0) {
+        groupH = 0
+      } else if (isExpanded) {
+        let innerY = currentY
+        ords.forEach((ord) => {
+          const h = Math.max(UI_CONFIG.ORDER_MIN_H, getOrderBudgetMid(ord) * pxPerWan)
+          ordLayout.push({ ...ord, y: innerY, h, isExpanded: true, groupId: g.id })
+          innerY += h + ORD_GAP
+        })
+        groupH = innerY - ORD_GAP - currentY
+      } else {
+        const proportionalH = groupBudget * pxPerWan * UI_CONFIG.COLLAPSED_HEIGHT_SCALE
+        groupH = Math.max(UI_CONFIG.COLLAPSED_GROUP_MIN_H, proportionalH)
+        ords.forEach((ord) => {
+          const ballY = currentY + groupH / 2
+          ordLayout.push({ ...ord, y: ballY - 2, h: 4, isExpanded: false, groupId: g.id })
         })
       }
 
-      currentMsY += msH + MS_GAP
-    })
+      if (ords.length > 0) {
+        groupLayout.push({ id: g.id, y: currentY, h: groupH, budget: groupBudget, orders: ords })
+        collapsedLayout.push({
+          id: `col_${g.id}`,
+          groupId: g.id,
+          y: currentY,
+          h: Math.max(40, groupH),
+          count: ords.length,
+          isExpanded: isExpanded,
+        })
+      }
 
-    // ---- 3. 预算柱与入金对齐逻辑 ----
-    // 终极对齐：预算柱的总高度必须 100% 对齐里程碑侧的总垂直跨度（包含间距像素）
-    // 但在预算柱侧，我们将这些间隙像素“分摊”给每一条连线的宽度，从而保持其“无缝紧贴”的实心感
-    const budgetBot = currentMsY - MS_GAP
+      if (groupH > 0) currentY += groupH + GROUP_GAP
+    }
+
+    const budgetBot = currentY - GROUP_GAP
     const budgetTotalH = budgetBot - CHART_TOP_MARGIN
 
-    // 计算入金实付比例 (彩色部分)
-    const paidSoFar = incomeEntries.filter(i => !i.isFuture && !i.isToday).reduce((s, i) => s + i.amount, 0)
-    const futureTotal = incomeEntries.filter(i => i.isFuture).reduce((s, i) => s + i.amount, 0)
-    const paidRatio = Math.min(1, paidSoFar / (totalBudget || 1))
-    const budgetColoredH = budgetTotalH * paidRatio
-
-    // 入金层布局：已入金 + 未入金，总高度严格对齐预算柱
-    const sortedAllIncome = [...incomeEntries]
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    const totalAmount = paidSoFar + futureTotal || 1
-    const n = sortedAllIncome.length
-    const gapsTotal = Math.max(0, n - 1) * INCOME_GAP
-    const todayMinH = 28
-    const heightsPool = budgetTotalH - gapsTotal - todayMinH
-    const pxPerWanIncome = heightsPool / totalAmount
-
-    let incAreaY = CHART_TOP_MARGIN
-    const incomeLayout = sortedAllIncome.map((inc) => {
-      const h = inc.isToday ? todayMinH : Math.max(4, inc.amount * pxPerWanIncome)
-      const centerY = incAreaY + h / 2
-      const node = { ...inc, h, actualY: centerY, idealY: centerY, timeRatio: 0 }
-      incAreaY += h + INCOME_GAP
-      return node
+    // ---- 4. 预算分配柱三段（按组金额占比） ----
+    const totalOrderBudget = filteredOrders.reduce((s, o) => s + getOrderBudgetMid(o), 0) || 1
+    let allocAccumY = CHART_TOP_MARGIN
+    const allocSegments = ALLOC_GROUPS.map((g) => {
+      const budget = groupOrders[g.id].reduce((s, o) => s + getOrderBudgetMid(o), 0)
+      const ratio = budget / totalOrderBudget
+      const h = Math.max(4, budgetTotalH * ratio)
+      const seg = { id: g.id, y: allocAccumY, h, color: g.color, segmentLabel: g.segmentLabel }
+      allocAccumY += h
+      return seg
     })
 
-    // 画布高度：入金层总高已对齐 budgetTotalH，取与里程碑侧较大值
-    const incBot = incAreaY - INCOME_GAP
-    const VB_H = Math.max(budgetBot, incBot) + CHART_BOTTOM_MARGIN
+    const paidSoFar = incomeEntries.filter((i) => !i.isFuture && !i.isToday).reduce((s, i) => s + i.amount, 0)
 
     return {
-      msLayout,
+      groupLayout,
       ordLayout,
       collapsedLayout,
+      allocSegments,
       budgetTop: CHART_TOP_MARGIN,
       budgetH: budgetTotalH,
       budgetBot,
-      budgetColoredH, // 传递给 SVG 用于绘制填充
       paidSoFar,
-      futureTotal: incomeEntries.filter(i => i.isFuture).reduce((s, i) => s + i.amount, 0),
-      incomeLayout,
-      VB_H,
+      VB_H: budgetBot + CHART_BOTTOM_MARGIN,
       availableHeight: budgetTotalH,
       totalBudget,
       pxPerWan,
     }
-  }, [incomeEntries, milestones, orders, totalBudget, expandedMsIds, msIntentionCollapsed])
+  }, [incomeEntries, milestones, orders, totalBudget, expandedGroupIds])
 }
 
 // ─── Legend Component ─────────────────────────────────────────────────────────
@@ -580,7 +539,7 @@ function Legend() {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-interface BudgetSankeyProps {
+interface BudgetSankeyWorkbenchProps {
   /** When provided, use this data instead of built-in mock. */
   data?: BudgetSankeyData | null
   /** Optional subtitle (e.g. project name). */
@@ -593,9 +552,11 @@ interface BudgetSankeyProps {
   responsive?: boolean
 }
 
-const animStyle = { transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)' }
+const ANIM_MS = 400
+const ANIM_EASE = [0.4, 0, 0.2, 1] as const
+const animStyle = { transition: `all ${ANIM_MS}ms cubic-bezier(${ANIM_EASE.join(',')})` }
 
-function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: BudgetSankeyProps = {}) {
+function BudgetSankeyWorkbench({ data, subtitle, title, unstyled, responsive = true }: BudgetSankeyWorkbenchProps = {}) {
   const incomeEntries = data?.incomeEntries ?? INCOME_ENTRIES
   const rawMilestones = data?.milestones ?? MILESTONES
   const orders = data?.orders ?? ORDERS
@@ -616,153 +577,71 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
     })
   }, [rawMilestones, orders])
 
-  const [expandedMsIds, setExpandedMsIds] = useState<string[]>([])
+  const navigate = useNavigate()
+  const [expandedGroupIds, setExpandedGroupIds] = useState<AllocGroupId[]>(['groupA', 'groupB', 'groupC'])
   const [hovered, setHovered] = useState<string | null>(null)
-  const [msIntentionCollapsed, setMsIntentionCollapsed] = useState(false)
 
-  // 判定是否激活 (用于连线高亮)
-  const layout = useLayout(incomeEntries, milestones, orders, totalBudget, expandedMsIds, msIntentionCollapsed)
+  const layout = useLayout(incomeEntries, milestones, orders, totalBudget, expandedGroupIds)
   const {
-    msLayout,
+    groupLayout,
     ordLayout,
+    collapsedLayout,
+    allocSegments,
     budgetTop,
     budgetH,
     budgetBot,
-    msScale,
     paidSoFar,
-    futureTotal,
-    incomeLayout,
     VB_H,
     availableHeight,
     totalBudget: layoutTotalBudget,
   } = layout
 
-  // 辅助函数：判断里程碑是否为最后一期彩色节点（MS12 / 验收期）
-  // 辅助函数：判断里程碑是否为最后一期彩色节点（MS12 / 验收期）
-  const msPrimaryStatus = useCallback((msId: string): StatusGroup => {
-    return getMsPrimaryStatus(msId, orders)
-  }, [orders])
-
-  const getGradientColorAtRatio = useCallback((ratio: number) => {
-    const incomeRatio = layoutTotalBudget > 0 ? (paidSoFar / layoutTotalBudget) : 0
-    const feather = budgetH > 0 ? (FEATHER_PX / budgetH) : 0.01
-    const start = Math.max(0, incomeRatio - feather)
-    if (ratio < start) return INCOME_COLOR
-    if (ratio > incomeRatio) return UNPAID_COLOR
-    const factor = (ratio - start) / feather
-    return interpolateColor(INCOME_COLOR, UNPAID_COLOR, factor)
-  }, [paidSoFar, layoutTotalBudget, budgetH])
-
-
-
   const isLit = useCallback(
     (id: string): boolean => {
       if (!hovered) return true
       if (hovered === id) return true
-      if (hovered.startsWith('ms')) {
-        const ord = ordLayout.find((o) => o.id === id)
-        return id === hovered || (!!ord && ord.milestoneId === hovered)
-      }
       if (hovered.startsWith('ord')) {
         const ord = ordLayout.find((o) => o.id === hovered)
         if (!ord) return false
-        return id === hovered || id === ord.milestoneId
+        return id === hovered || id === ord.groupId
+      }
+      if (hovered.startsWith('col-')) {
+        const gId = hovered.replace('col-', '') as AllocGroupId
+        return id === gId || id === hovered
       }
       return true
     },
     [hovered, ordLayout]
   )
 
-  const bandOpacity = useCallback(
-    (id: string): number => {
-      if (!hovered) return UI_CONFIG.OPACITY_BAND_NORMAL
-      return isLit(id) ? UI_CONFIG.OPACITY_BAND_HOVER : UI_CONFIG.OPACITY_BAND_MUTED
-    },
-    [hovered, isLit]
-  )
-
-  const incBandOpacity = !hovered ? UI_CONFIG.OPACITY_INC_NORMAL : UI_CONFIG.OPACITY_INC_MUTED
-
-  // 【核心重构：双向喇叭模型】
-  const msBudgetSegments = useMemo(() => {
-    // 方案 B：张力喇叭模型。左侧（预算柱侧）严丝合缝紧贴，右侧（里程碑侧）发散对齐。
-    const totalMsBudg = milestones.reduce((s, m) => s + (m.budgetMin + m.budgetMax) / 2, 0)
-    const groupIntention = msLayout.find(n => n.id === 'group_intention')
-    let accumLeftY = budgetTop
-
-    return milestones.map((ms) => {
-      const b = (ms.budgetMin + ms.budgetMax) / 2
-      // 预算柱侧高度占位：纯按金额权重在紧凑的 budgetH 中分摊
-      const hLeft = (b / (totalMsBudg || 1)) * budgetH
-      const segTop = accumLeftY
-      const segBot = accumLeftY + hLeft
-      accumLeftY = segBot
-
-      // 里程碑侧对齐物理色块
-      let destY = 0, destH = 0
-      if (msIntentionCollapsed && getMsPrimaryStatus(ms.id, orders) === '意向期') {
-        destY = groupIntention?.y || 0
-        destH = groupIntention?.h || 0
-      } else {
-        const node = msLayout.find(m => m.id === ms.id)
-        destY = node?.y || 0
-        destH = node?.h || 0
-      }
-      return { id: ms.id, segTop, segBot, y: destY, h: destH }
-    })
-  }, [milestones, budgetTop, budgetH, msLayout, msIntentionCollapsed, orders])
-
-  const incSegments = useMemo(() => {
-    // 方案 B：汇聚模型。左侧（入金节点）有间隙，右侧（预算柱侧）无缝紧贴。
-    // 排除 amount<=0 的节点（如「今天」时间标记），避免无节点却有 flow 的异常
-    let accumRightY = budgetTop
-    const paidIncomes = incomeLayout.filter(i => !i.isFuture && i.amount > 0)
-
-    return paidIncomes.map((inc) => {
-      const hRight = (inc.amount / (paidSoFar || 1)) * (layout.budgetColoredH || 0)
-      const top = accumRightY
-      const bot = accumRightY + hRight
-      accumRightY = bot
-      return { inc, budgetTop: top, budgetBot: bot }
-    })
-  }, [budgetTop, layout.budgetColoredH, incomeLayout, paidSoFar])
-
   const handleBudgetClick = useCallback(() => {
     message.info(`预计总预算：¥${layoutTotalBudget}w`, 3)
   }, [layoutTotalBudget])
 
-  const handleOrderClick = useCallback((ord: Order) => {
-    const orderNumber = normalizeOrderNumber(ord.number)
-    const amountStr = ord.budgetMin === ord.budgetMax ? String(ord.budgetMin) : `${ord.budgetMin}~${ord.budgetMax}`
-    const statusStr = formatStatusDisplay(ord)
-    message.info(
-      `${orderNumber} · ${ord.title} · ${statusStr} · ¥${amountStr}w`,
-      3.5
-    )
-  }, [])
+  const handleOrderClick = useCallback(
+    (ord: Order) => {
+      const orderId = ord.id.startsWith('ord_') ? ord.number : ord.id
+      navigate(`/order/${orderId}`)
+    },
+    [navigate]
+  )
 
-  const todayIncome = incomeLayout.find((inc) => inc.isToday)
-  const todayY = todayIncome ? todayIncome.actualY + todayIncome.h / 2 : null
-
-  // 全部展开/收起逻辑整合
-  const allExpanded = expandedMsIds.length === milestones.length
+  const allExpanded = expandedGroupIds.length === 3
   const toggleAll = () => {
-    if (allExpanded) setExpandedMsIds([])
-    else setExpandedMsIds(milestones.map(m => m.id))
+    if (allExpanded) setExpandedGroupIds([])
+    else setExpandedGroupIds(['groupA', 'groupB', 'groupC'])
   }
 
   const budgetGradientStops = useMemo(() => {
-    const incomeRatio = layoutTotalBudget > 0 ? (paidSoFar / layoutTotalBudget) : 0
-    const featherRatio = budgetH > 0 ? (FEATHER_PX / budgetH) : 0.01
-
-    // 我们在 incomeRatio 处做羽化过渡：从金黄到背景灰
+    const incomeRatio = layoutTotalBudget > 0 ? (PAID_DISPLAY_DEMO / layoutTotalBudget) : 0
+    const boundary = (1 - incomeRatio) * 100
     return [
-      { offset: '0%', color: INCOME_COLOR },
-      { offset: `${Math.max(0, incomeRatio - featherRatio) * 100}%`, color: INCOME_COLOR },
-      { offset: `${incomeRatio * 100}%`, color: UNPAID_COLOR },
-      { offset: '100%', color: UNPAID_COLOR },
+      { offset: '0%', color: UNPAID_COLOR },
+      { offset: `${boundary}%`, color: UNPAID_COLOR },
+      { offset: `${boundary}%`, color: INCOME_COLOR },
+      { offset: '100%', color: INCOME_COLOR },
     ]
-  }, [paidSoFar, layoutTotalBudget, budgetH])
+  }, [layoutTotalBudget, budgetH])
 
   const chartBg = '#F9FAFB'
 
@@ -801,15 +680,18 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
       </div>
 
 
-      {/* 2. SVG Chart Area */}
-      <div className="w-full overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div style={{ minWidth: VB_W }}>
+      {/* 2. SVG Chart Area：responsive 时宽度随父级（卡片）100%，不再用 minWidth 撑出横向滚动 */}
+      <div
+        className={responsive ? 'w-full min-w-0' : 'w-full overflow-x-auto'}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className={responsive ? 'w-full' : undefined} style={responsive ? undefined : { minWidth: VB_W }}>
           <svg
             viewBox={`0 0 ${VB_W} ${VB_H}`}
             width={responsive ? '100%' : VB_W}
-            className={responsive ? 'block h-auto max-w-none' : undefined}
+            className={responsive ? 'block h-auto w-full max-w-full' : undefined}
             preserveAspectRatio={responsive ? 'xMidYMid meet' : undefined}
-            style={responsive ? undefined : { display: 'block' }}
+            style={{ display: 'block' }}
             onMouseLeave={() => setHovered(null)}
           >
             <defs>
@@ -819,39 +701,23 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
                   <stop key={idx} offset={stop.offset} stopColor={stop.color} />
                 ))}
               </linearGradient>
-
-              {/* Inflow Glow Gradients: From Gold to Exact Budget Color */}
-              {incSegments.map(({ inc }) => {
-                return (
-                  <linearGradient key={`ifg-${inc.id}`} id={`ifg-${inc.id}`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={inc.isUnpaid ? UNPAID_COLOR : INCOME_COLOR} />
-                    <stop offset="100%" stopColor={INCOME_COLOR} />
-                  </linearGradient>
-                )
-              })}
-
-              {/* Milestone Glow Gradients: Budget exact color to MS node color */}
-              {msBudgetSegments.map((seg) => {
-                const midY = (seg.segTop + seg.segBot) / 2
-                const ratio = budgetH > 0 ? (midY - budgetTop) / budgetH : 0
-                const leftColor = getGradientColorAtRatio(ratio)
-                const rightColor = STATUS_COLORS[msPrimaryStatus(seg.id)]
-                return (
-                  <linearGradient key={`mfg-${seg.id}`} id={`mfg-${seg.id}`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={leftColor} />
-                    <stop offset="100%" stopColor={rightColor} />
-                  </linearGradient>
-                )
-              })}
-
-              {/* Order Glow Gradients: From MS color to Order Status color */}
+              <clipPath id="alloc-col-clip">
+                <rect
+                  x={X.allocLeft}
+                  y={budgetTop}
+                  width={X.allocRight - X.allocLeft}
+                  height={budgetH}
+                  rx={7}
+                />
+              </clipPath>
+              {/* Flow gradients: alloc segment color → order/ball color */}
               {ordLayout.map((ord) => {
-                const c = STATUS_COLORS[getOrderPhaseForColor(ord)]
-                const msc = STATUS_COLORS[msPrimaryStatus(ord.milestoneId)]
+                const g = ALLOC_GROUPS.find((x) => x.id === ord.groupId)!
+                const ordColor = STATUS_COLORS[getOrderPhaseForColor(ord)]
                 return (
                   <linearGradient key={`ofg-${ord.id}`} id={`ofg-${ord.id}`} x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor={msc} />
-                    <stop offset="100%" stopColor={c} />
+                    <stop offset="0%" stopColor={g.color} />
+                    <stop offset="100%" stopColor={ordColor} />
                   </linearGradient>
                 )
               })}
@@ -862,208 +728,23 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
 
             {/* Column labels */}
             {[
-              { cx: (X.dateDot + X.incomeRight) / 2 - 10, label: '入金' },
               { cx: (X.budgetLeft + X.budgetRight) / 2, label: '总预算' },
-              { cx: (X.msLeft + X.msRight) / 2, label: '里程碑' },
+              { cx: (X.allocLeft + X.allocRight) / 2, label: '预算进度' },
               { cx: (X.ordLeft + X.ordRight) / 2, label: '订单追踪' },
             ].map(({ cx, label }) => (
-              <text key={label} x={cx} y={50} textAnchor="middle" fill="#6B7280" fontSize={14} fontWeight={600}>{label}</text>
+              <text
+                key={label}
+                x={cx}
+                y={50}
+                textAnchor="middle"
+                fill="#6B7280"
+                fontSize={14}
+                fontWeight={600}
+                style={label === '总预算' ? { height: '15px' } : undefined}
+              >
+                {label}
+              </text>
             ))}
-
-            {/* Timeline Line */}
-            <line x1={X.dateDot} y1={CHART_TOP_MARGIN} x2={X.dateDot} y2={VB_H - CHART_BOTTOM_MARGIN} stroke="#E2E8F0" strokeWidth={1} />
-
-            {/* ==== 动态流向渲染：入金层 -> 总预算层 ==== */}
-            {incSegments.map(({ inc, budgetTop: bt, budgetBot: bb }) => {
-              const incEntry = incomeLayout.find(i => i.id === inc.id)!
-              const iy = incEntry.actualY
-              // 【核心Bug修复】：弃用外部固定的 msScale，改用刚由水桶算法精密算出的入金节点自身真实高度 (h / 2)
-              // 这保证了由左至右连线边缘的完美衔接和流出的物理体积等价
-              const halfH = incEntry.h / 2
-              return (
-                <path
-                  key={`iflow-${inc.id}`}
-                  d={bandPath(X.incomeRight, iy - halfH, iy + halfH, X.budgetLeft, bt, bb)}
-                  fill={`url(#ifg-${inc.id})`}
-                  opacity={incBandOpacity}
-                />
-              )
-            })}
-
-            {/* Milestone Paths */}
-            {msBudgetSegments.map((seg) => (
-              <path
-                key={`mflow-${seg.id}`}
-                d={bandPath(X.budgetRight, seg.segTop, seg.segBot, X.msLeft, seg.y, seg.y + seg.h, UI_CONFIG.FLOW_CURVE_RATIO)}
-                fill={`url(#mfg-${seg.id})`}
-                opacity={bandOpacity(seg.id)}
-                onMouseEnter={() => setHovered(seg.id)}
-              />
-            ))}
-
-            {/* Order Paths */}
-            {msLayout.map((ms) => {
-              const isExpanded = expandedMsIds.includes(ms.id)
-              const msOrders = orders.filter((o) => o.milestoneId === ms.id)
-              if (msOrders.length === 0) return null
-
-              const lit = isLit(ms.id)
-              const col = layout.collapsedLayout.find((cl) => cl.milestoneId === ms.id)!
-
-              // 展开状态与收起状态通用：按订单底层永远渲染所有 DOM，借此触发 CSS transition 的原生物理尺寸形变
-              const siblingTotalBudg = msOrders.reduce((s, o) => s + getOrderBudgetMid(o), 0)
-              let currentOffsetRatio = 0
-
-              return msOrders.map((ord) => {
-                const ratio = siblingTotalBudg > 0 ? getOrderBudgetMid(ord) / siblingTotalBudg : 0
-
-                // 左侧锚点：展开时按比例分割，收起时第一条覆盖全高、其余保持比例位置(opacity=0不可见)
-                const isFirstInGroup = ord.id === msOrders[0].id
-                const msTop = isExpanded
-                  ? ms.y + currentOffsetRatio * ms.h
-                  : (isFirstInGroup ? ms.y : ms.y + currentOffsetRatio * ms.h)
-                const msBot = isExpanded
-                  ? ms.y + currentOffsetRatio * ms.h + ratio * ms.h
-                  : (isFirstInGroup ? ms.y + ms.h : ms.y + currentOffsetRatio * ms.h + ratio * ms.h)
-                currentOffsetRatio += ratio
-
-                const ordNode = ordLayout.find((o) => o.id === ord.id)!
-
-                // ！！！动态合并形变！！！
-                // 收起时，这些子线条的所有右边缘都会非常生猛但顺滑地“挤”向圆球的坐标范围（圆球居中父节点）
-                const collapsedCenterY = col.y + ms.h / 2
-                const destTop = isExpanded ? ordNode.y : collapsedCenterY - 1
-                const destBot = isExpanded ? (ordNode.y + ordNode.h) : collapsedCenterY + 1
-
-                // ！！！反馈1：收起时颜色统一！！！
-                // 展开时用各订单对应的渐变色 url，收起时统一回退为里程碑的主状态单色
-                const ps = msPrimaryStatus(ms.id)
-                const milestoneColor = STATUS_COLORS[ps]
-                const flowFill = isExpanded ? `url(#ofg-${ord.id})` : milestoneColor
-
-                // 光晕连线透明度判定：收敛时，褪去原本光环变成漏斗光晕
-                // 当收起时，只有该组第一个订单渲染透明度，其余订单透明度归零，防止 N 条 0.05 路径叠加。
-                const flowOpacity = isExpanded
-                  ? bandOpacity(ord.id)
-                  : (isFirstInGroup ? (lit ? 0.3 : 0.05) : 0)
-
-                return (
-                  <path
-                    key={`oflow-${ord.id}`}
-                    style={{ ...animStyle, cursor: 'pointer' }}
-                    d={bandPath(X.msRight, msTop, msBot, X.ordLeft, destTop, destBot, UI_CONFIG.FLOW_CURVE_RATIO)}
-                    fill={flowFill}
-                    opacity={flowOpacity}
-                    onMouseEnter={() => setHovered(ord.id)}
-                    onClick={() => handleOrderClick(ord)}
-                  />
-                )
-              })
-            })}
-
-            {incomeLayout.map((inc) => {
-              const y = inc.actualY
-              const barH = inc.h
-              const timelineY = y + barH / 2
-              const isPast = !inc.isFuture && !inc.isToday
-              const dotColor = inc.isToday ? TODAY_COLOR : isPast ? INCOME_COLOR : '#CBD5E1'
-              const barColor = inc.isUnpaid ? '#E2E8F0' : isPast ? INCOME_COLOR : '#E2E8F0'
-              const textColor = inc.isUnpaid ? '#64748B' : isPast ? '#111827' : '#94A3B8'
-              return (
-                <g key={inc.id}>
-                  {/* 时间轴锚点在节点下沿，已入金与未入金均显示 */}
-                  <line
-                    x1={X.dateDot + 6}
-                    y1={timelineY}
-                    x2={X.incomeLeft - 2}
-                    y2={timelineY}
-                    stroke={isPast ? INCOME_COLOR : inc.isUnpaid ? '#CBD5E1' : '#CBD5E1'}
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
-                    opacity={0.55}
-                  />
-                  <circle
-                    cx={X.dateDot}
-                    cy={timelineY}
-                    r={4.5}
-                    fill={dotColor}
-                    stroke="white"
-                    strokeWidth={1.5}
-                  />
-
-                  {inc.amount > 0 && (
-                    <>
-                      <rect
-                        x={X.incomeLeft}
-                        y={y - barH / 2}
-                        width={X.incomeRight - X.incomeLeft}
-                        height={barH}
-                        rx={3}
-                        fill={barColor}
-                        opacity={0.88}
-                      />
-                      <text
-                        x={(X.incomeLeft + X.incomeRight) / 2}
-                        y={y + 5}
-                        textAnchor="middle"
-                        fill={textColor}
-                        fontSize={14}
-                        fontWeight={600}
-                      >
-                        ¥{inc.amount}w
-                      </text>
-                    </>
-                  )}
-
-                  {inc.isToday ? (
-                    <g>
-                      <rect
-                        x={12}
-                        y={y - 12}
-                        width={78}
-                        height={24}
-                        rx={12}
-                        fill="none"
-                        stroke={STATUS_COLORS['订购期']}
-                        strokeWidth={1.2}
-                      />
-                      <text
-                        x={51}
-                        y={y + 5}
-                        textAnchor="middle"
-                        fill={STATUS_COLORS['订购期']}
-                        fontSize={13}
-                        fontWeight={600}
-                      >
-                        {inc.displayDate}
-                      </text>
-                      <rect
-                        x={94}
-                        y={y - 10}
-                        width={38}
-                        height={20}
-                        rx={10}
-                        fill={STATUS_COLORS['验收期']}
-                      />
-                      <text
-                        x={113}
-                        y={y + 5}
-                        textAnchor="middle"
-                        fill="white"
-                        fontSize={12}
-                        fontWeight={700}
-                      >
-                        今日
-                      </text>
-                    </g>
-                  ) : (
-                    <text x={12} y={timelineY + 4} fill={textColor} fontSize={13}>
-                      {inc.displayDate}
-                    </text>
-                  )}
-                </g>
-              )
-            })}
 
             {/* Main Budget Column: Single layer with gradient for Paid-to-Unpaid transition */}
             <g
@@ -1079,7 +760,7 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
                 height={budgetH}
                 rx={7}
                 fill="url(#gradBudget)"
-                className="transition-all duration-500"
+                style={animStyle}
               />
               <text
                 x={(X.budgetLeft + X.budgetRight) / 2}
@@ -1093,111 +774,142 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
               </text>
             </g>
 
-            {msLayout.map((ms) => {
-              const ps = msPrimaryStatus(ms.id)
-              const c = STATUS_COLORS[ps]
-              const lit = isLit(ms.id)
-              const isExpanded = expandedMsIds.includes(ms.id)
-              const isGroup = ms.isGroup
-              const bw = X.msRight - X.msLeft
-              const h = ms.h
-
+            {/* Flow: 总预算柱彩色部分 → 预算进度柱（入金流向） */}
+            {(() => {
+              const incomeRatio = layoutTotalBudget > 0 ? PAID_DISPLAY_DEMO / layoutTotalBudget : 0
+              const coloredTop = budgetTop + (1 - incomeRatio) * budgetH
+              const coloredBot = budgetTop + budgetH
+              if (coloredBot <= coloredTop + 4) return null
               return (
-                <g
-                  key={ms.id}
-                  opacity={lit ? UI_CONFIG.OPACITY_NODE_NORMAL : UI_CONFIG.OPACITY_NODE_MUTED}
-                  style={{ ...animStyle, cursor: 'pointer', pointerEvents: 'auto' }}
-                  onMouseEnter={() => setHovered(ms.id === 'group_intention' ? 'intention_group' : ms.id)}
-                  onMouseLeave={() => setHovered(null)}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    toggleAll()
-                  }}
-                >
-                  {/* 叠层效果：如果是组，背后多画两个偏移的矩形 */}
-                  {isGroup && (
-                    <>
-                      <rect x={X.msLeft + 4} y={ms.y + 4} width={bw} height={h} rx={5} fill={rgba(c, 0.05)} stroke={rgba(c, 0.1)} />
-                      <rect x={X.msLeft + 2} y={ms.y + 2} width={bw} height={h} rx={5} fill={rgba(c, 0.08)} stroke={rgba(c, 0.2)} />
-                    </>
-                  )}
-
-                  <rect
-                    x={X.msLeft}
-                    y={ms.y}
-                    width={bw}
-                    height={h}
-                    rx={5}
-                    fill={rgba(c, 0.1)}
-                  />
-                  <rect
-                    x={X.msLeft}
-                    y={ms.y}
-                    width={4}
-                    height={h}
-                    rx={2}
-                    fill={c}
-                    opacity={0.75}
-                  />
-                  <rect
-                    x={X.msLeft}
-                    y={ms.y}
-                    width={bw}
-                    height={h}
-                    rx={5}
-                    fill="none"
-                    stroke={rgba(c, 0.35)}
-                    strokeWidth={1}
-                  />
-
-                  {/* 里程碑文本渲染：反馈2 - 展开时垂直居中并影藏金额 */}
-                  <motion.text
-                    initial={false}
-                    animate={{
-                      y: (isExpanded || isGroup) ? ms.y + h / 2 + 5 : ms.y + 19,
-                      opacity: 1
-                    }}
-                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                    x={X.msLeft + 10}
-                    fill="#1F2937"
-                    fontSize={13}
-                    fontWeight={600}
-                  >
-                    {ms.name}
-                  </motion.text>
-                  {!isGroup && (
-                    <motion.text
-                      initial={false}
-                      animate={{
-                        y: isExpanded ? ms.y + h / 2 + 5 : ms.y + 36,
-                        opacity: isExpanded ? 0 : 1
-                      }}
-                      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                      x={X.msLeft + 10}
-                      fill="#6B7280"
-                      fontSize={11}
-                      fontWeight={400}
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      ¥{ms.budgetMin === ms.budgetMax ? ms.budgetMin : ms.budgetMin + '~' + ms.budgetMax}w
-                    </motion.text>
-                  )}
-                </g>
+                <path
+                  d={bandPath(X.budgetRight, coloredTop, coloredBot, X.allocLeft, coloredTop, coloredBot, UI_CONFIG.FLOW_CURVE_RATIO)}
+                  fill={INCOME_COLOR}
+                  opacity={0.15}
+                  style={{ ...animStyle, cursor: 'pointer' }}
+                  onMouseEnter={() => setHovered('budget')}
+                  onClick={toggleAll}
+                />
               )
+            })()}
+
+            {/* 预算分配柱：三段色块（意向+订购 / 交付+验收 / 维保） */}
+            <g
+              style={{ cursor: 'pointer' }}
+              onClick={handleBudgetClick}
+              onMouseEnter={() => setHovered('alloc')}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <rect
+                x={X.allocLeft}
+                y={budgetTop}
+                width={X.allocRight - X.allocLeft}
+                height={budgetH}
+                rx={7}
+                fill="#F8FAFC"
+              />
+              <g clipPath="url(#alloc-col-clip)">
+                {allocSegments.map((seg) => (
+                  <g key={seg.id}>
+                    <rect
+                      x={X.allocLeft}
+                      y={seg.y}
+                      width={X.allocRight - X.allocLeft}
+                      height={seg.h}
+                      fill={seg.color}
+                      opacity={0.85}
+                      style={animStyle}
+                    />
+                    <text
+                      x={(X.allocLeft + X.allocRight) / 2}
+                      y={seg.y + seg.h / 2}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#374151"
+                      fontSize={12}
+                      fontWeight={600}
+                    >
+                      {seg.segmentLabel}
+                    </text>
+                  </g>
+                ))}
+              </g>
+              <rect
+                x={X.allocLeft}
+                y={budgetTop}
+                width={X.allocRight - X.allocLeft}
+                height={budgetH}
+                rx={7}
+                fill="none"
+                stroke="#E5E7EB"
+                strokeWidth={1}
+              />
+            </g>
+
+            {/* Flow: 预算分配柱 → 订单（展开）或组球（收起，漏斗形收束） */}
+            {groupLayout.flatMap((grp) => {
+              const seg = allocSegments.find((s) => s.id === grp.id)
+              if (!seg || grp.orders.length === 0) return []
+              const isExpanded = expandedGroupIds.includes(grp.id)
+              const g = ALLOC_GROUPS.find((x) => x.id === grp.id)!
+              const bandMuted = hovered && hovered !== 'alloc' && !hovered.startsWith('ord') && !hovered.startsWith('col-')
+                ? UI_CONFIG.OPACITY_BAND_MUTED
+                : UI_CONFIG.OPACITY_BAND_NORMAL
+
+              if (isExpanded) {
+                let acc = 0
+                const totalB = grp.budget || 1
+                return grp.orders.map((ord) => {
+                  const segTop = seg.y + (acc / totalB) * seg.h
+                  const segBot = seg.y + ((acc + getOrderBudgetMid(ord)) / totalB) * seg.h
+                  acc += getOrderBudgetMid(ord)
+                  const ol = ordLayout.find((o) => o.id === ord.id)
+                  if (!ol) return null
+                  const ordLit = !hovered || hovered === ord.id || hovered === grp.id
+                  return (
+                    <path
+                      key={`flow-${grp.id}-${ord.id}`}
+                      style={{ ...animStyle, cursor: 'pointer' }}
+                      d={bandPath(X.allocRight, segTop, segBot, X.ordLeft, ol.y, ol.y + ol.h, UI_CONFIG.FLOW_CURVE_RATIO)}
+                      fill={`url(#ofg-${ord.id})`}
+                      opacity={ordLit ? UI_CONFIG.OPACITY_BAND_HOVER : bandMuted}
+                      onMouseEnter={() => setHovered(ord.id)}
+                      onClick={toggleAll}
+                    />
+                  )
+                }).filter((x): x is React.ReactElement => x != null)
+              }
+              const col = collapsedLayout.find((c) => c.groupId === grp.id)
+              if (!col || col.isExpanded) return []
+              const centerY = col.y + col.h / 2
+              const colLit = !hovered || hovered === `col-${grp.id}` || hovered === grp.id
+              return [
+                <path
+                  key={`flow-${grp.id}`}
+                  style={{ ...animStyle, cursor: 'pointer' }}
+                  d={bandPath(X.allocRight, seg.y, seg.y + seg.h, X.ordLeft, centerY - 1, centerY + 1, UI_CONFIG.FLOW_CURVE_RATIO)}
+                  fill={g.color}
+                  opacity={colLit ? 0.3 : 0.05}
+                  onMouseEnter={() => setHovered(`col-${grp.id}`)}
+                  onClick={toggleAll}
+                />,
+              ]
             })}
 
             {ordLayout.map((ord) => {
               const c = STATUS_COLORS[getOrderPhaseForColor(ord)]
               const lit = isLit(ord.id)
               const bw = X.ordRight - X.ordLeft
-              // 直接使用经水桶算法完美兜底后的真实计算高度 ord.h，根除 Math.max 越权导致的渲染踩踏
               const h = ord.h
 
               return (
-                <g
+                <motion.g
                   key={`ogroup-${ord.id}`}
-                  opacity={ord.isExpanded ? (lit ? UI_CONFIG.OPACITY_NODE_NORMAL : UI_CONFIG.OPACITY_NODE_MUTED) : 0}
-                  style={{ ...animStyle, cursor: 'pointer', pointerEvents: ord.isExpanded ? 'auto' : 'none' }}
+                  initial={false}
+                  animate={{
+                    opacity: ord.isExpanded ? (lit ? UI_CONFIG.OPACITY_NODE_NORMAL : UI_CONFIG.OPACITY_NODE_MUTED) : 0,
+                  }}
+                  transition={{ duration: ANIM_MS / 1000, ease: [...ANIM_EASE] }}
+                  style={{ cursor: 'pointer', pointerEvents: ord.isExpanded ? 'auto' : 'none' }}
                   onMouseEnter={() => setHovered(ord.id)}
                   onMouseLeave={() => setHovered(null)}
                   onClick={() => handleOrderClick(ord)}
@@ -1260,22 +972,31 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
                     fontSize={11}
                     fontWeight={400}
                   >
-                    ¥{ord.budgetMin === ord.budgetMax ? ord.budgetMin : ord.budgetMin + '~' + ord.budgetMax}w · {formatStatusDisplay(ord)}
+                    ¥{ord.budgetMin === ord.budgetMax ? ord.budgetMin : ord.budgetMin + '~' + ord.budgetMax}w · {ord.statusCode && ord.statusName ? `${ord.statusCode}-${ord.statusName}` : (ord.statusName ?? formatStatusDisplay(ord))}
                   </text>
-                </g>
+                </motion.g>
               )
             })}
 
-            {layout.collapsedLayout.map((col) => {
-              const ms = msLayout.find((m) => m.id === col.milestoneId)!
-              const c = STATUS_COLORS[msPrimaryStatus(ms.id)]
-              const centerY = col.isExpanded ? col.y + 20 : col.y + ms.h / 2
+            {collapsedLayout.map((col) => {
+              const g = ALLOC_GROUPS.find((x) => x.id === col.groupId)!
+              const c = g.color
+              const centerY = col.y + col.h / 2
+              const lit = isLit(col.groupId) && isLit(`col-${col.groupId}`)
               return (
-                <g
+                <motion.g
                   key={col.id}
-                  style={{ ...animStyle, cursor: 'pointer', pointerEvents: col.isExpanded ? 'none' : 'auto', opacity: col.isExpanded ? 0 : (hovered && !hovered.includes(col.milestoneId) ? 0.3 : 1) }}
-                  onClick={() => toggleAll()}
-                  onMouseEnter={() => setHovered(`col-${col.milestoneId}`)}
+                  initial={false}
+                  animate={{
+                    opacity: col.isExpanded ? 0 : lit ? 1 : 0.35,
+                  }}
+                  transition={{ duration: ANIM_MS / 1000, ease: [...ANIM_EASE] }}
+                  style={{
+                    cursor: 'pointer',
+                    pointerEvents: col.isExpanded ? 'none' : 'auto',
+                  }}
+                  onClick={() => (col.isExpanded ? undefined : toggleAll())}
+                  onMouseEnter={() => setHovered(`col-${col.groupId}`)}
                   onMouseLeave={() => setHovered(null)}
                 >
                   <circle style={animStyle} cx={X.ordLeft + 26} cy={centerY} r={20} fill={c} opacity={0.15} />
@@ -1284,38 +1005,26 @@ function BudgetSankey({ data, subtitle, title, unstyled, responsive = false }: B
                     {col.count}
                   </text>
                   <text style={animStyle} x={X.ordLeft + 56} y={centerY + 4} fill="#6B7280" fontSize={13} fontWeight={500}>
-                    展开 {col.count} 个订单
+                    {col.isExpanded ? '' : `${g.label} · 展开 ${col.count} 个订单`}
                   </text>
-                </g>
+                </motion.g>
               )
             })}
 
-            {todayY !== null && (
-              <line
-                x1={X.dateDot}
-                y1={todayY}
-                x2={X.msLeft}
-                y2={todayY}
-                stroke={TODAY_COLOR}
-                strokeWidth={1}
-                strokeDasharray="4 3"
-                opacity={0.4}
-              />
-            )}
           </svg>
         </div>
       </div>
 
       <div className={footCls}>
         <span className="text-gray-400" style={{ fontSize: 11 }}>
-          横向滑动查看完整图表 · 点击节点查看详情
+          {responsive ? '图表宽度随卡片自适应 · 点击节点查看详情' : '横向滑动查看完整图表 · 点击节点查看详情'}
         </span>
         <span className="text-gray-400" style={{ fontSize: 11 }}>
-          已入金 ¥{paidSoFar}w / 总预算 ¥{layoutTotalBudget}w
+          已入金 ¥{PAID_DISPLAY_DEMO}w / 总预算 ¥{layoutTotalBudget}w
         </span>
       </div>
     </div>
   )
 }
 
-export default BudgetSankey
+export default BudgetSankeyWorkbench

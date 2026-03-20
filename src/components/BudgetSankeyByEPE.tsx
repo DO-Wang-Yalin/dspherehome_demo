@@ -19,7 +19,11 @@ export interface Order {
   title: string
   status: StatusGroup
   milestoneId: string
-  budget: number // <-- 保留 EPC 独立的 budget 字段
+  /** 兼容旧数据字段 */
+  budget?: number
+  /** 兼容与 BudgetSankey 对齐的新字段 */
+  budgetMin?: number
+  budgetMax?: number
 }
 
 export interface BudgetSankeyData {
@@ -85,6 +89,14 @@ function milestoneToEPE(milestoneId: string): EPECategory {
   if (milestoneId === 'ms02') return 'E'
   if (milestoneId === 'ms06' || milestoneId === 'ms08') return 'P'
   return 'C'
+}
+
+function getOrderBudget(ord: Order): number {
+  if (typeof ord.budget === 'number') return ord.budget
+  if (typeof ord.budgetMin === 'number' && typeof ord.budgetMax === 'number') {
+    return (ord.budgetMin + ord.budgetMax) / 2
+  }
+  return 0
 }
 
 const VB_W = 950
@@ -195,8 +207,8 @@ function BudgetSankeyByEPE({ data, subtitle, unstyled, chartBleed }: BudgetSanke
     }
     orders.forEach((ord) => {
       const epe = milestoneToEPE(ord.milestoneId)
-      // 容错处理：确保金额缺失时默认为 0，防止运算结果为 NaN
-      const budget = ord.budget || 0
+      // 同时兼容 budget 与 budgetMin/budgetMax 两套字段
+      const budget = getOrderBudget(ord)
       if (isClosed(ord.status)) epeBuckets[epe].closed += budget
       else epeBuckets[epe].open += budget
     })
