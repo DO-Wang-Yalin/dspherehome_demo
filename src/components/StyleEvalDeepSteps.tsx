@@ -14,7 +14,7 @@ type StepProps = {
 const [q8, q9, q10] = styleEvalDeepBridgeQuestions;
 
 export const StepStyleQ8 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q3：居住定位" subtitle={q8.subtitle}>
+  <StepWrapper title="DE-03：居住定位" subtitle={q8.subtitle}>
     <div className="space-y-6">
       <div className="space-y-4">
         <SubQuestion className="flex items-center gap-2">
@@ -94,7 +94,7 @@ export const StepStyleQ9 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q4：同住成员与宠物" subtitle={q9.subtitle}>
+    <StepWrapper title="DE-04：同住成员" subtitle={q9.subtitle}>
       <div className="space-y-8">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -275,7 +275,7 @@ export const StepStyleQ10 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q21：空间兴趣" subtitle={q10.subtitle}>
+    <StepWrapper title="DE-21：空间兴趣" subtitle={q10.subtitle}>
       <div className="space-y-3">
         <SubQuestion className="flex items-center gap-2 mb-1">
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full" />

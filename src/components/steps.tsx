@@ -114,7 +114,7 @@ export const StepWelcome = ({ nextStep, goToStep, goToWorkbench, goToLogin }: St
           </button>
         </div>
 
-        {/* 线索收集卡片：进入 DE-1 项目概况 */}
+        {/* 线索收集卡片：进入 LD-01 项目概况 */}
         <div className="rounded-2xl bg-white shadow-[0_10px_40px_rgba(0,0,0,0.06)] border border-gray-100 px-6 py-5 flex flex-col">
           <div className="space-y-4 flex-1">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#EF6B00]/5 px-3 py-1">
@@ -226,7 +226,7 @@ export const StepHomeStyleEval = ({
   </StepWrapper>
 );
 
-/** 注册页：手机号 + 验证码，放在欢迎页之后、DE-2 之前 */
+/** 注册页：手机号 + 验证码，放在欢迎页之后、线索 LD-02 之前 */
 export const StepRegister = ({ data, updateData, nextStep }: StepProps) => {
   const [phone, setPhone] = useState(data.userPhone || '');
   const [code, setCode] = useState('');
@@ -372,7 +372,7 @@ export const StepRegister = ({ data, updateData, nextStep }: StepProps) => {
   );
 };
 
-/** 深度测评-1：项目概况（独立步骤，目录显示「深度测评-1 项目概况」）— 设计对齐 Q2-1 */
+/** 深度测评-1：项目概况（独立步骤；目录编号 LD-01）— 设计对齐 Q2-1 */
 export const StepDeepEval1 = ({ data, updateData, nextStep, prevStep }: StepProps & { prevStep?: () => void }) => {
   const ctx = useDeepEvalForm();
   const { formData, handleChange, errors, validateStep1, projectTypeOptions, budgetOptions, budgetDisplayLabel, isLocating, handleGetLocation } = ctx;
@@ -504,7 +504,7 @@ export const StepDeepEval1 = ({ data, updateData, nextStep, prevStep }: StepProp
   );
 };
 
-/** 深度测评-2：您的信息（独立步骤，目录显示「深度测评-2 您的信息」）— 页面设计对齐 Q2-0 */
+/** 深度测评-2：您的信息（独立步骤；目录编号 LD-02）— 页面设计对齐 Q2-0 */
 export const StepDeepEval2 = ({
   data,
   updateData,
@@ -1169,7 +1169,7 @@ export const Step4 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q1：房型资料同步" subtitle="户型图与现场影像 · 开启深度分析">
+    <StepWrapper title="DE-01：房型资料同步" subtitle="户型图与现场影像 · 开启深度分析">
       <div className="space-y-6">
         <div className="space-y-3">
           <SubQuestion className="flex items-center gap-2">
@@ -1358,7 +1358,7 @@ export const Step4 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step5 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q2：房屋现状评估" subtitle="采光、层高、通风、噪音情况">
+  <StepWrapper title="DE-02：房屋现状" subtitle="采光、层高、通风、噪音情况">
     <div className="space-y-4">
       <div className="space-y-1">
         <SubQuestion className="flex items-center gap-2 mb-1">
@@ -1438,7 +1438,7 @@ export const Step6 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q5：核心成员角色">
+    <StepWrapper title="DE-05：核心成员">
       <div className="space-y-8">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1625,7 +1625,7 @@ export const Step6_1 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q6：其他核心成员与家庭成员">
+    <StepWrapper title="DE-06：家庭成员">
       <div className="space-y-6">
         {!primary ? (
           <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-xl border border-dashed border-gray-200 text-center">
@@ -1763,7 +1763,7 @@ export const Step7 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q7：沟通协作方式">
+    <StepWrapper title="DE-07：协作方式">
       <div className="space-y-6">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1800,7 +1800,7 @@ export const Step7 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step8 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q8：计划节奏" subtitle="您的入住与完工预期">
+  <StepWrapper title="DE-08：计划节奏" subtitle="您的入住与完工预期">
     <div className="space-y-4">
       <div className="space-y-3">
         <SubQuestion className="flex items-center gap-2">
@@ -1861,7 +1861,7 @@ export const Step9 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q9：核心空间规划数量" subtitle="核心空间数量需求及未来规划">
+    <StepWrapper title="DE-09：空间规划" subtitle="核心空间数量需求及未来规划">
       <div className="space-y-8">
         {groups.map(group => (
           <div key={group.title} className="space-y-3">
@@ -1900,7 +1900,7 @@ export const Step10 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q10：烹饪习惯" subtitle="了解您的厨房使用需求">
+    <StepWrapper title="DE-10：烹饪习惯" subtitle="了解您的厨房使用需求">
       <div className="space-y-10">
         <div className="space-y-4">
           <SubQuestion className="flex items-center gap-2">
@@ -1959,7 +1959,7 @@ export const Step10 = ({ data, updateData }: StepProps) => {
 };
 
 export const Step11 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q11：社交习惯" subtitle="是否经常有朋友聚会？">
+  <StepWrapper title="DE-11：社交习惯" subtitle="是否经常有朋友聚会？">
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
       <SquareRadioCard label="经常" description="喜欢在家招待朋友" selected={data.partyFrequency === 'high'} onClick={() => updateData({ partyFrequency: 'high' })} />
       <SquareRadioCard label="偶尔" description="三五好友小聚" selected={data.partyFrequency === 'medium'} onClick={() => updateData({ partyFrequency: 'medium' })} />
@@ -1969,7 +1969,7 @@ export const Step11 = ({ data, updateData }: StepProps) => (
 );
 
 export const Step12 = ({ data, updateData }: StepProps) => (
-  <StepWrapper title="Q12：聚餐习惯" subtitle="就餐人数需求">
+  <StepWrapper title="DE-12：聚餐习惯" subtitle="就餐人数需求">
     <div className="space-y-6">
       <div className="space-y-3">
         <SubQuestion className="flex items-center gap-2">
@@ -2027,7 +2027,7 @@ export const Step13 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q13：客厅活动习惯" subtitle="您希望在客厅，主要的家庭活动是什么（可多选）">
+    <StepWrapper title="DE-13：客厅习惯" subtitle="您希望在客厅，主要的家庭活动是什么（可多选）">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareRadioCard
@@ -2063,7 +2063,7 @@ export const Step14 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q14：收纳重点" subtitle="请选择您最关注的收纳区域（可多选）">
+    <StepWrapper title="DE-14：储物重点" subtitle="请选择您最关注的收纳区域（可多选）">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const label =
@@ -2099,7 +2099,7 @@ export const Step15 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q15：干湿分离" subtitle="卫生间干湿分离需求">
+    <StepWrapper title="DE-15：卫浴偏好" subtitle="卫生间干湿分离需求">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => {
           const { title, desc } = parseLabel(opt);
@@ -2150,7 +2150,7 @@ export const Step16 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q16：底线与妥协" subtitle="这个家的“底线”，您最不能妥协的是？">
+    <StepWrapper title="DE-16：底线需求" subtitle="这个家的“底线”，您最不能妥协的是？">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <SubQuestion className="flex items-center gap-2 mb-0!">
@@ -2212,7 +2212,7 @@ export const Step17 = ({ data, updateData }: StepProps) => {
   ];
 
   return (
-    <StepWrapper title="Q17：风水布局" subtitle="关于新家的“风水布局”，您有特殊讲究吗？">
+    <StepWrapper title="DE-17：风水禁忌" subtitle="关于新家的“风水布局”，您有特殊讲究吗？">
       <div className="space-y-6">
         <SubQuestion className="flex items-center gap-2">
           <div className="w-1 h-4 bg-[#EF6B00] rounded-full"></div>
@@ -2252,7 +2252,7 @@ export const Step18 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q18：智能需求" subtitle="您对新家的“智能程度”有什么期待？">
+    <StepWrapper title="DE-18：智能家居" subtitle="您对新家的“智能程度”有什么期待？">
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {options.map(opt => (
@@ -2287,7 +2287,7 @@ export const Step19 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q19：系统选择" subtitle="请问您计划为新家配置哪些舒适系统？">
+    <StepWrapper title="DE-19：系统选择" subtitle="请问您计划为新家配置哪些舒适系统？">
       <div className="grid grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
@@ -2321,7 +2321,7 @@ export const Step20 = ({ data, updateData }: StepProps) => {
   };
 
   return (
-    <StepWrapper title="Q20：设备需求" subtitle="计划购入的家电设备">
+    <StepWrapper title="DE-20：设备需求" subtitle="计划购入的家电设备">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map(opt => (
           <SquareCheckboxCard
@@ -2356,7 +2356,7 @@ export const Step21 = ({ data, updateData, goToWorkbench, goToLogin, goToWelcome
 
   return (
     <>
-      <StepWrapper title="Q22：个性需求" subtitle="其他特殊需求">
+      <StepWrapper title="DE-22：个性需求" subtitle="其他特殊需求">
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {options.map(opt => (

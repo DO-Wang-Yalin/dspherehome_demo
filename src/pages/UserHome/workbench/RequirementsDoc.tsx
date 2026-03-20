@@ -70,7 +70,7 @@ const CORE_SPACE_TYPE_OPTIONS = [
   '衣帽间', '玄关', '阳台', '储物间', '健身区', '影音室', '保姆间', '家政间', '洗衣房',
 ]
 
-/** Q19 Step19 选项标签一致；历史存档「全屋地暖」并入「地暖系统」 */
+/** DE-19（深度测评 step=18）选项标签一致；历史存档「全屋地暖」并入「地暖系统」 */
 const COMFORT_SYSTEM_LABEL_ALIASES: Record<string, string> = {
   全屋地暖: '地暖系统',
   全屋净水软水: '全屋净水',
@@ -89,7 +89,7 @@ function normalizeComfortSystemLabels(labels: string[]): string[] {
   return out
 }
 type RequirementDocPayloadShape = {
-  // 项目概览（含项目现状 Q2）
+  // 项目概览（含项目现状 DE-02）
   projectLocation?: string
   projectType?: string
   projectArea?: string
@@ -696,7 +696,7 @@ export function RequirementsDoc({
     ],
   }
   const MEMBER_ACTIVITY_SPACE_OPTIONS_FALLBACK = ROLE_TO_ACTIVITY_OPTIONS['其他']
-  /** 风水要求选项（与 Q17 Step17 一致） */
+  /** 风水要求选项（与 DE-17 step=16 一致） */
   const FENGSHUI_OPTIONS = [
     '没讲究，怎么舒服怎么来',
     '避开大众忌讳就行',
@@ -845,7 +845,7 @@ export function RequirementsDoc({
   const personas = displayPersonas
   const hasMemberData = personas.length > 0
 
-  /** 与 Q19 Step19「系统选择」选项标题与顺序一致 */
+  /** 与 DE-19「系统选择」选项标题与顺序一致 */
   const systemEquipments = [
     { key: 'fresh-air', title: '新风系统', desc: '全屋换气·除味净化', icon: Wind },
     { key: 'central-ac', title: '中央空调', desc: '变频节能冷暖系统', icon: AirVent },
@@ -854,7 +854,7 @@ export function RequirementsDoc({
     { key: 'floor-heating', title: '地暖系统', desc: '舒适地面采暖', icon: Thermometer },
   ] as const
 
-  /** 与 Q18 Step18 选项完全一致，用于正确展示测评结果 */
+  /** 与 DE-18 选项完全一致，用于正确展示测评结果 */
   const smartHomeOptions = [
     { key: 'wifi', label: '全屋网络覆盖', icon: Wifi },
     { key: 'scene', label: '一键场景控制', icon: Zap },
@@ -865,7 +865,7 @@ export function RequirementsDoc({
     { key: 'curtain', label: '遮阳自动系统', icon: Sun },
   ] as const
 
-  /** 与 Q14 选项一致，用于需求书内收纳重点编辑 */
+  /** 与 DE-14「储物重点」选项一致，用于需求书内收纳编辑 */
   const STORAGE_FOCUS_OPTIONS = [
     '衣帽间/衣柜系统',
     '厨房餐储收纳',
@@ -922,10 +922,10 @@ export function RequirementsDoc({
   const bathroomItems = useMock ? ['必须彻底干湿分离（洗手台外置）'] : (val(d?.dryWetSeparation ?? '', '') ? [DRY_WET_LABELS[d!.dryWetSeparation] ?? d!.dryWetSeparation] : [])
 
   const spaceResultMap: Record<string, { title: string; q: string; icon: React.ElementType; items: string[] }> = {
-    living: { title: '客厅', q: 'Q13', icon: Sofa, items: ['影音娱乐', '社交会客', '冥想放松'] },
-    dining: { title: '餐厅', q: 'Q12', icon: Utensils, items: ['平时就餐：3-4人', '节假日最多：7-10人'] },
-    kitchen: { title: '厨房', q: 'Q11', icon: ChefHat, items: ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'] },
-    bathroom: { title: '卫生间', q: 'Q15', icon: Bath, items: ['必须彻底干湿分离（洗手台外置）'] },
+    living: { title: '客厅', q: 'DE-13', icon: Sofa, items: ['影音娱乐', '社交会客', '冥想放松'] },
+    dining: { title: '餐厅', q: 'DE-12', icon: Utensils, items: ['平时就餐：3-4人', '节假日最多：7-10人'] },
+    kitchen: { title: '厨房', q: 'DE-11', icon: ChefHat, items: ['烹饪习惯：经常做饭（重油烟）', '第二厨房：需要中西分厨'] },
+    bathroom: { title: '卫生间', q: 'DE-15', icon: Bath, items: ['必须彻底干湿分离（洗手台外置）'] },
   }
 
   const customSpaceDisplayItems = (d?.customSpaceItems ?? []).map((s) => (s.description?.trim() ? `${s.name}：${s.description}` : s.name))
@@ -1570,7 +1570,7 @@ export function RequirementsDoc({
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 lg:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-1 h-4 rounded-full bg-[#EF6B00]" />
-              <div className="font-semibold">项目现状（Q2）</div>
+              <div className="font-semibold">项目现状（DE-02）</div>
             </div>
 
             {isEditing && updateData && !useMock ? (
@@ -1699,7 +1699,7 @@ export function RequirementsDoc({
                   <ImageIcon size={18} />
                 </span>
                 <div className="min-w-0">
-                  <div className="text-base font-semibold truncate">户型图（Q1）</div>
+                  <div className="text-base font-semibold truncate">户型图（DE-01）</div>
                   <div className="text-xs text-gray-500">支持多张图片上传并预览</div>
                 </div>
               </div>
@@ -1771,7 +1771,7 @@ export function RequirementsDoc({
                   <Video size={18} />
                 </span>
                 <div className="min-w-0">
-                  <div className="text-base font-semibold truncate">现场视频 / 照片（Q1）</div>
+                  <div className="text-base font-semibold truncate">现场视频 / 照片（DE-01）</div>
                   <div className="text-xs text-gray-500">支持图片/视频上传并预览</div>
                 </div>
               </div>
@@ -2150,7 +2150,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900">系统设备</div>
-                  <div className="text-xs text-gray-500">Q19 选项结果</div>
+                  <div className="text-xs text-gray-500">DE-19 选项结果</div>
                 </div>
               </div>
             </div>
@@ -2204,7 +2204,7 @@ export function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（Q19）
+                  暂无，请先完成深度测评（DE-19）
                 </div>
               )}
             </div>
@@ -2219,7 +2219,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900">智能家居系统</div>
-                  <div className="text-xs text-gray-500">Q18 选项结果</div>
+                  <div className="text-xs text-gray-500">DE-18 选项结果</div>
                 </div>
               </div>
             </div>
@@ -2266,7 +2266,7 @@ export function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（Q18）
+                  暂无，请先完成深度测评（DE-18）
                 </div>
               )}
             </div>
@@ -2281,7 +2281,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900">全屋设备需求</div>
-                  <div className="text-xs text-gray-500">Q20 选项结果</div>
+                  <div className="text-xs text-gray-500">DE-20 选项结果</div>
                 </div>
               </div>
             </div>
@@ -2328,13 +2328,13 @@ export function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（Q20）
+                  暂无，请先完成深度测评（DE-20）
                 </div>
               )}
             </div>
           </div>
 
-          {/* 风水要求（Q17） */}
+          {/* 风水要求（DE-17） */}
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
@@ -2343,7 +2343,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900">风水要求</div>
-                  <div className="text-xs text-gray-500">Q17 选项结果</div>
+                  <div className="text-xs text-gray-500">DE-17 选项结果</div>
                 </div>
               </div>
             </div>
@@ -2365,13 +2365,13 @@ export function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（Q17）
+                  暂无，请先完成深度测评（DE-17）
                 </div>
               )}
             </div>
           </div>
 
-          {/* 收纳重点（Q14） */}
+          {/* 储物重点（DE-14） */}
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
               <div className="flex items-center gap-2">
@@ -2380,7 +2380,7 @@ export function RequirementsDoc({
                 </span>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-gray-900">收纳重点</div>
-                  <div className="text-xs text-gray-500">Q14 选项结果</div>
+                  <div className="text-xs text-gray-500">DE-14 选项结果</div>
                 </div>
               </div>
             </div>
@@ -2420,7 +2420,7 @@ export function RequirementsDoc({
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
-                  暂无，请先完成深度测评（Q14）
+                  暂无，请先完成深度测评（DE-14）
                 </div>
               )}
             </div>
@@ -2430,7 +2430,7 @@ export function RequirementsDoc({
           <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100">
               <div className="text-sm font-semibold text-gray-900">个性化定制说明</div>
-              <div className="text-xs text-gray-500">Q16 底线与妥协 · Q22 其他需求</div>
+              <div className="text-xs text-gray-500">DE-16 底线需求 · DE-22 个性需求</div>
             </div>
             <div className="p-6">
               {isEditing ? (
@@ -2466,7 +2466,7 @@ export function RequirementsDoc({
                 ) : (
                   <div className="rounded-2xl border border-dashed border-gray-200 bg-[#FFFDF3] p-6 text-center text-sm text-gray-600">
                     暂无
-                    <div className="mt-1 text-xs text-gray-500">进入编辑模式后可补充说明，或完成 Q16、Q22 自动生成</div>
+                    <div className="mt-1 text-xs text-gray-500">进入编辑模式后可补充说明，或完成 DE-16、DE-22 自动生成</div>
                   </div>
                 )
               })()}

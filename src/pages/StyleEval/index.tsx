@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { HomeStyleEval } from './HomeStyleEval';
 import { useGlobal } from '../../context/GlobalContext';
@@ -21,10 +21,37 @@ export default function StyleEvalPage() {
     return `/deep-eval?${p.toString()}`;
   };
 
+  const pushStyleEvalUrl = useCallback(
+    (opts: { showResult: boolean; pageIndex?: number }) => {
+      const p = new URLSearchParams(location.search);
+      if (opts.showResult) {
+        p.delete('sePage');
+        p.set('showResult', 'true');
+      } else {
+        p.delete('showResult');
+        p.set('sePage', String(opts.pageIndex ?? 0));
+      }
+      const qs = p.toString();
+      navigate(qs ? `/style-eval?${qs}` : '/style-eval', { replace: true });
+    },
+    [location.search, navigate],
+  );
+
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get('showResult') === 'true') {
       setShowResult(true);
+      return;
+    }
+    setShowResult(false);
+    const se = searchParams.get('sePage');
+    if (se !== null && se !== '') {
+      const n = Number(se);
+      if (!Number.isNaN(n) && n >= 0 && n <= 6) {
+        setCurrentIndex(n);
+      }
+    } else {
+      setCurrentIndex(0);
     }
   }, [location.search]);
 
@@ -32,6 +59,7 @@ export default function StyleEvalPage() {
     if (showResult) {
       setShowResult(false);
       setCurrentIndex(6); // Last question (q1–q7)
+      pushStyleEvalUrl({ showResult: false, pageIndex: 6 });
       return;
     }
 
@@ -42,7 +70,9 @@ export default function StyleEvalPage() {
         navigate('/');
       }
     } else {
-      setCurrentIndex((prev) => prev - 1);
+      const next = currentIndex - 1;
+      setCurrentIndex(next);
+      pushStyleEvalUrl({ showResult: false, pageIndex: next });
     }
   };
 
@@ -89,10 +119,13 @@ export default function StyleEvalPage() {
           onStyleResult={(r) => updateData({ styleId: r.styleId, styleName: r.styleName, colorGene: r.colorGene, styleSuggestions: r.styleSuggestions })}
           controlledPageIndex={showResult ? 7 : currentIndex}
           onPageChange={(idx) => {
-            if (idx === 7) setShowResult(true);
-            else {
+            if (idx === 7) {
+              setShowResult(true);
+              pushStyleEvalUrl({ showResult: true });
+            } else {
               setShowResult(false);
               setCurrentIndex(idx);
+              pushStyleEvalUrl({ showResult: false, pageIndex: idx });
             }
           }}
         />

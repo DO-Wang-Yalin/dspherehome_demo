@@ -49,7 +49,9 @@ export function NavigationMenu({ anchorClass = 'right-0', inline = false }: Navi
       return `/deep-eval?${p.toString()}`;
     }
     if (step.path === '/style-eval' && reqFlow) {
-      return '/style-eval?from=requirements';
+      const p = new URLSearchParams((step.search || '').replace(/^\?/, ''));
+      p.set('from', 'requirements');
+      return `/style-eval?${p.toString()}`;
     }
     return `${step.path}${step.search || ''}`;
   };
@@ -57,7 +59,25 @@ export function NavigationMenu({ anchorClass = 'right-0', inline = false }: Navi
   const deepStepParam = location.pathname === '/deep-eval' ? new URLSearchParams(location.search).get('step') ?? '0' : null;
   let resolvedCurrentIndex = -1;
   if (location.pathname === '/style-eval') {
-    resolvedCurrentIndex = stepsList.findIndex((s) => s.id === 'style-eval');
+    const have = new URLSearchParams(location.search.replace(/^\?/, ''));
+    if (have.get('showResult') === 'true') {
+      resolvedCurrentIndex = stepsList.findIndex((step) => {
+        if (step.path !== '/style-eval' || !step.search) return false;
+        return new URLSearchParams(step.search.replace(/^\?/, '')).get('showResult') === 'true';
+      });
+    } else if (!have.get('sePage')) {
+      resolvedCurrentIndex = stepsList.findIndex((s) => s.id === 'style-st-01');
+    } else {
+      resolvedCurrentIndex = stepsList.findIndex((step) => {
+        if (step.path !== '/style-eval') return false;
+        if (!step.search) return true;
+        const want = new URLSearchParams(step.search.replace(/^\?/, ''));
+        for (const key of want.keys()) {
+          if (want.get(key) !== have.get(key)) return false;
+        }
+        return true;
+      });
+    }
   } else if (location.pathname === '/deep-eval' && deepStepParam !== null) {
     resolvedCurrentIndex = stepsList.findIndex((s) => {
       if (s.path !== '/deep-eval' || !s.search) return false;
